@@ -1,0 +1,39 @@
+.skool/
+.cursor/
+
+# Node / Sass tooling
+node_modules/
+npm-debug.log*
+
+# DDEV generated/runtime files
+.ddev/.dbimageBuild/
+.ddev/.ddev-docker-compose-base.yaml
+.ddev/.ddev-docker-compose-full.yaml
+.ddev/.homeadditions/
+.ddev/.webimageBuild/
+.ddev/traefik/
+
+# Local WordPress configuration
+wordpress/wp-config.php
+wordpress/wp-config-ddev.php
+
+# WordPress core downloaded by DDEV/WP-CLI
+wordpress/*
+!wordpress/wp-content/
+
+# Project-owned WordPress code
+wordpress/wp-content/*
+!wordpress/wp-content/themes/
+wordpress/wp-content/themes/*
+!wordpress/wp-content/themes/hungry-4-joy/
+!wordpress/wp-content/themes/hungry-4-joy/**
+!wordpress/wp-content/plugins/
+wordpress/wp-content/plugins/*
+!wordpress/wp-content/plugins/hungry-4-joy-donations/
+!wordpress/wp-content/plugins/hungry-4-joy-donations/**
+
+# WordPress runtime content
+wordpress/wp-content/uploads/
+wordpress/wp-content/upgrade/
+wordpress/wp-content/cache/
+wordpress/wp-content/debug.log

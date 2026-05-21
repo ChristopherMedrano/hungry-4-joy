@@ -1,0 +1,17 @@
+/*
+Theme Name: Hungry-4-Joy
+Theme URI: https://example.test/
+Author: Christopher Medrano
+Description: Child theme for the Hungry-4-Joy educational donation ecosystem.
+Template: twentytwentyfive
+Requires at least: 6.7
+Tested up to: 7.0
+Requires PHP: 7.2
+Version: 0.1.0
+Text Domain: hungry-4-joy
+*/
+
+/*
+ * Keep theme CSS focused on presentation.
+ * Donation logic, checkout data, and integration behavior should live in a plugin.
+ */

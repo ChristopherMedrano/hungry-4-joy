@@ -1,0 +1,11 @@
+{
+  "name": "hungry-4-joy",
+  "description": "Real-world demo of a lean nonprofit donation ecosystem.",
+  "scripts": {
+    "build:wp-css": "sass wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css",
+    "watch:wp-css": "sass --watch wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss:wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css"
+  },
+  "devDependencies": {
+    "sass": "^1.99.0"
+  }
+}
