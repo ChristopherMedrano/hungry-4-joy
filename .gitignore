@@ -1,9 +1,11 @@
 .skool/
 .cursor/
+.claude/
 
 # Node / Sass tooling
 node_modules/
 npm-debug.log*
+test-results/
 
 # DDEV generated/runtime files
 .ddev/.dbimageBuild/
