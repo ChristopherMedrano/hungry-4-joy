@@ -1,6 +1,7 @@
 .skool/
 .cursor/
 .claude/
+ai/
 
 # Node / Sass tooling
 node_modules/
