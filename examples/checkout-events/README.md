@@ -1,6 +1,6 @@
 # Simulated Checkout Event Examples
 
-These local fixtures model safe checkout events for the Hungry-4-Joy MVP 2 checkout contract.
+These local fixtures model safe checkout events for the Hungry-4-Joy Milestone 2 checkout contract.
 
 They are reference payloads only. They do not call a hosted cart, create a checkout session, collect payment details, or write production data.
 
