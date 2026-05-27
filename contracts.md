@@ -275,72 +275,16 @@ Failed checkout events should include enough safe information to troubleshoot wi
 | `failure.failure_message` | `Payment was declined by the test gateway.` | Redacted message safe for logs and dashboard views. |
 | `failure.provider_status` | `declined` | Safe provider status value. |
 
-### Successful Donation Example
+### Local Fixture Examples
 
-```json
-{
-  "event_id": "evt_h4j_20260527_0001",
-  "event_type": "donation.created",
-  "event_created_at": "2026-05-27T14:05:00Z",
-  "checkout_provider": "foxy",
-  "checkout_session_id": "sess_demo_9M4K2",
-  "transaction_id": "txn_demo_1042",
-  "transaction_status": "completed",
-  "idempotency_key": "evt_h4j_20260527_0001",
-  "source_page": "home",
-  "campaign": {
-    "campaign_id": "loaves-campaign-01",
-    "campaign_name": "Loaves 4 Joy"
-  },
-  "donation": {
-    "amount": 25,
-    "currency": "USD",
-    "donation_label": "3 loaves",
-    "donation_type": "one_time"
-  },
-  "donor": {
-    "email": "jordan.helper@example.test",
-    "first_name": "Jordan",
-    "last_name": "Helper"
-  }
-}
-```
+The standalone JSON fixtures are the source of truth for simulated checkout event examples:
 
-### Failed Payment Example
+- [`donation-created.one-time.json`](examples/checkout-events/donation-created.one-time.json)
+- [`payment-failed.one-time.json`](examples/checkout-events/payment-failed.one-time.json)
 
-```json
-{
-  "event_id": "evt_h4j_20260527_0002",
-  "event_type": "payment.failed",
-  "event_created_at": "2026-05-27T14:08:00Z",
-  "checkout_provider": "foxy",
-  "checkout_session_id": "sess_demo_8Q2L1",
-  "transaction_id": null,
-  "transaction_status": "failed",
-  "idempotency_key": "evt_h4j_20260527_0002",
-  "source_page": "home",
-  "campaign": {
-    "campaign_id": "fish-campaign-02",
-    "campaign_name": "Fish 4 Joy"
-  },
-  "donation": {
-    "amount": 40,
-    "currency": "USD",
-    "donation_label": "family meal kit",
-    "donation_type": "one_time"
-  },
-  "donor": {
-    "email": "casey.giver@example.test",
-    "first_name": "Casey",
-    "last_name": "Giver"
-  },
-  "failure": {
-    "failure_code": "card_declined",
-    "failure_message": "Payment was declined by the test gateway.",
-    "provider_status": "declined"
-  }
-}
-```
+This contract defines the required fields, event types, statuses, and validation rules. The fixture files provide complete reusable payloads for future local middleware tests.
+
+Keep examples in the fixture files instead of duplicating full JSON payloads in this document.
 
 ### Validation Rules
 
