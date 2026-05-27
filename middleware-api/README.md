@@ -49,7 +49,7 @@ The checkout event receiver route is available at:
 POST http://127.0.0.1:<printed-port>/api/checkout/events
 ```
 
-Current receiver response:
+Valid receiver response:
 
 ```json
 {
@@ -58,7 +58,17 @@ Current receiver response:
 }
 ```
 
-The receiver route currently only acknowledges JSON requests with `202 Accepted`. It does not validate event shape, verify signatures, store events, enforce idempotency, sync CRM data, emit analytics, or power dashboard views yet.
+The receiver validates the safe checkout event contract before acknowledging the request. Invalid payloads receive Laravel's JSON validation response with `422 Unprocessable Content`.
+
+Current validation covers:
+
+- Required event envelope fields.
+- Supported event types: `donation.created` and `payment.failed`.
+- Supported provider: `foxy`.
+- Campaign and donation fields.
+- Safe donor/contact fields.
+- Failed payment failure details.
+- Obvious forbidden payment or secret fields such as `card_number`, `cvv`, `api_key`, `access_token`, `client_secret`, `payment_method_secret`, and `raw_payment`.
 
 ## Verification
 
@@ -76,7 +86,7 @@ php artisan route:list --path=api
 
 ## Current Boundary
 
-Issue #22 adds the checkout event receiver route only. It does not add event validation, signature validation, event persistence, duplicate prevention, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
+Issue #23 adds checkout event payload validation. It does not add signature validation, event persistence, duplicate prevention, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
 
 Do not run migrations as part of this issue. Checkout event validation, persistence, and duplicate prevention are planned for later middleware/API issues.
 

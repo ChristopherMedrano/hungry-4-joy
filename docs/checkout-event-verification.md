@@ -249,8 +249,10 @@ Capture these for the next middleware/API milestone:
 Current Laravel receiver status:
 
 - `POST /api/checkout/events` exists.
-- It acknowledges JSON requests with `202 Accepted`.
-- It does not validate, verify signatures, store events, enforce idempotency, sync CRM data, emit analytics, or power dashboard views yet.
+- It validates required checkout event fields, known event types, known transaction statuses, campaign fields, donation fields, donor fields, and failed-payment failure details.
+- It rejects obvious forbidden payment or secret fields such as `card_number`, `cvv`, `api_key`, `access_token`, `client_secret`, `payment_method_secret`, and `raw_payment`.
+- It acknowledges valid JSON requests with `202 Accepted`.
+- It does not verify signatures, store events, enforce idempotency, sync CRM data, emit analytics, or power dashboard views yet.
 
 ## Final Verification Commands
 
