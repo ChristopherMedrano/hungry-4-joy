@@ -3,8 +3,8 @@
 This document describes the first Hungry-4-Joy campaign page slice.
 
 The campaign page is a WordPress block template in the Hungry-4-Joy child
-theme. It is meant to prove the public-site side of the donation flow before
-checkout, middleware, CRM sync, analytics, or dashboard work is connected.
+theme. It proves the public-site side of the donation flow and now connects
+one-time donation buttons to a safe Foxy demo cart handoff.
 
 ## Files
 
@@ -34,7 +34,7 @@ npm run build:wp-css
 
 ## Page Structure
 
-The current page is a single public campaign page with local anchor navigation.
+The current page is a single public campaign page with local anchor navigation and Foxy demo cart donation links.
 
 Main sections:
 
@@ -54,9 +54,7 @@ The page uses semantic landmarks and headings:
 
 ## Donation Buttons
 
-Donation options are currently plain links styled as buttons. They stay on the
-same page for Sprint 1 and do not call Foxy.io, submit a cart, or collect
-payment data.
+Donation options are plain links styled as buttons. They point to the Hungry-4-Joy Foxy demo cart and preserve safe campaign/donation metadata in the cart request. Foxy's loader script can intercept those links for sidecart behavior; without the loader, they still work as full-page cart redirects.
 
 The checkout and payment safety boundary is documented in
 [`payment-safety-boundary.md`](payment-safety-boundary.md).
@@ -65,14 +63,14 @@ Each donation link should include:
 
 - Human-readable button text.
 - A descriptive `aria-label`.
-- Safe `data-*` metadata for the future checkout handoff.
+- Safe `data-*` metadata for the demo cart handoff and future checkout event attribution.
 
 Example:
 
 ```html
 <a
   class="h4j-donation-button"
-  href="#campaign-one"
+  href="https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&code=loaves-campaign-01&quantity=1&donation_label=3+loaves&donation_type=one_time&source_page=home&campaign_name=Loaves+4+Joy&checkout_provider=foxy"
   aria-label="Give $25 to Loaves 4 Joy for 3 loaves"
   data-campaign-id="loaves-campaign-01"
   data-campaign-name="Loaves 4 Joy"
@@ -86,7 +84,7 @@ Example:
 
 When adding or editing a donation option:
 
-- Keep `href` as a local campaign anchor until checkout is explicitly wired.
+- Keep `href` pointed at the Foxy demo cart domain unless a later issue changes the checkout provider.
 - Keep `data-donation-amount` numeric and omit the dollar sign.
 - Keep visible text, `aria-label`, and metadata consistent.
 - Use stable, lowercase, URL-safe campaign IDs.
@@ -107,32 +105,27 @@ Required fields:
 | `data-donation-label` | Human-readable option label. |
 | `data-donation-type` | Giving type, currently `one_time`. |
 | `data-source-page` | Page or placement where the donation started. |
-| `data-checkout-provider` | Intended future checkout provider, currently `foxy`. |
+| `data-checkout-provider` | Checkout provider for the demo handoff, currently `foxy`. |
 
-This metadata is inspectable in browser developer tools. A future checkout
-slice can read the same fields and map them into the hosted checkout handoff.
+This metadata is inspectable in browser developer tools. The Foxy demo cart link should contain matching `name`, `price`, `code`, `quantity`, `donation_label`, `donation_type`, `source_page`, `campaign_name`, and `checkout_provider` parameters.
 
-## Modeled Checkout Handoff
+## Foxy Demo Cart Handoff
 
-The current page does not submit to checkout. The handoff is documented as a
-model so the next integration step can be designed without making a live cart
-request.
+The current page submits each one-time donation option to the Foxy demo cart. The handoff is still demo-only and uses safe cart fields rather than provider API credentials.
 
 Each donation button maps to a one-item checkout handoff:
 
 | Button Metadata | Handoff Use |
 | --- | --- |
-| `data-campaign-id` | Stable campaign code or campaign option. |
-| `data-campaign-name` | Checkout item name or campaign display option. |
-| `data-donation-amount` | Checkout item price. |
-| `data-donation-label` | Donation label option. |
-| `data-donation-type` | Giving type option, currently `one_time`. |
-| `data-source-page` | Source page option for attribution. |
-| `data-checkout-provider` | Internal adapter selection, currently `foxy`. |
+| `data-campaign-id` | Foxy `code`. |
+| `data-campaign-name` | Foxy `name` and `campaign_name` option. |
+| `data-donation-amount` | Foxy `price`. |
+| `data-donation-label` | Foxy `donation_label` option. |
+| `data-donation-type` | Foxy `donation_type` option, currently `one_time`. |
+| `data-source-page` | Foxy `source_page` option for attribution. |
+| `data-checkout-provider` | Foxy `checkout_provider` option, currently `foxy`. |
 
-For the current milestone, the modeled handoff stays metadata-only. The buttons keep
-local anchor `href` values and do not call a hosted cart, create a checkout
-session, collect payment details, or write production data.
+For issue #55, the handoff calls a hosted demo cart and may open Foxy's sidecart. It does not collect payment details on WordPress, call provider APIs, commit provider secrets, create checkout webhooks, or write production data.
 
 ## Current Boundaries
 
@@ -143,11 +136,10 @@ WordPress owns:
 - Safe campaign and donation metadata.
 - Basic accessibility and SEO hygiene.
 
-Future checkout work owns:
+Checkout owns:
 
-- Hosted cart or checkout handoff.
+- Hosted cart or checkout UI.
 - Payment status handling.
-- Translating safe button metadata into a provider-specific cart request.
 - Transaction events.
 
 Later post-MVP checkout work may add recurring gift setup if the campaign page

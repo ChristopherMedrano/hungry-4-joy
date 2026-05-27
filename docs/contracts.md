@@ -10,15 +10,15 @@ The project-wide checkout and payment safety boundary is documented in [`payment
 
 ## 1. Campaign Checkout Metadata
 
-Status: Sprint 1 contract.
+Status: Sprint 1 metadata contract, extended by the MVP 3 Foxy demo cart handoff.
 
-This contract defines the safe metadata attached to donation options on the WordPress campaign page before checkout is connected.
+This contract defines the safe metadata attached to donation options on the WordPress campaign page and preserved through the demo cart handoff.
 
 The purpose is to make each donation option identifiable before the visitor enters the hosted checkout flow.
 
-For Sprint 1, this contract can be implemented with inspectable `data-*` attributes on donation buttons.
+The WordPress page keeps this metadata inspectable with `data-*` attributes on donation buttons.
 
-A future Foxy-style checkout implementation may map the same metadata into a form submission or cart request. The contract should stay stable even if the markup changes from button attributes to a hosted checkout handoff.
+The current Foxy demo cart implementation maps the same metadata into cart request parameters. The contract should stay stable even if a later issue changes the handoff mechanism.
 
 ### Source
 
@@ -26,11 +26,9 @@ WordPress campaign page.
 
 ### Destination
 
-Cart / Checkout.
+Foxy demo cart.
 
-For Sprint 1, this may exist only as markup-level metadata. A later checkout integration can read the values and pass them into the real checkout layer.
-
-`checkout_provider` is internal handoff context for this demo. It helps the project identify the intended checkout integration, but it does not necessarily need to be sent to the checkout provider.
+`checkout_provider` is internal handoff context for this demo. Issue #55 also sends it to Foxy as a safe custom option so the selected provider context survives manual cart inspection.
 
 ### Required Fields
 
@@ -56,8 +54,8 @@ For Sprint 1, this may exist only as markup-level metadata. A later checkout int
 
 ```html
 <a
-  class="h4j-donation-button"
-  href="#campaign-one"
+  class="h4j-donation-button foxycart"
+  href="https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&code=loaves-campaign-01&quantity=1&donation_label=3+loaves&donation_type=one_time&source_page=home&campaign_name=Loaves+4+Joy&checkout_provider=foxy"
   data-campaign-id="loaves-campaign-01"
   data-campaign-name="Loaves 4 Joy"
   data-donation-amount="25"
@@ -86,25 +84,25 @@ If a later checkout script reads the button dataset, the data should normalize i
 }
 ```
 
-### Future Checkout Handoff Model
+### Foxy Demo Cart Handoff
 
-Status: Milestone 2 model only.
+Status: MVP 3 demo cart handoff.
 
-The current page does not submit to checkout. A future checkout script or WordPress plugin can read the same `data-*` values and transform them into a hosted cart request.
+The current page maps each donation button into a Foxy demo cart request at `https://hungry-4-joy.foxycart.com/cart`. The same links work as full-page cart redirects and are also compatible with Foxy's sidecart loader when the loader script is available.
 
-This model is intentionally provider-light. It describes the project-owned shape first, then shows how those fields may map into a hosted checkout item.
+This handoff is intentionally narrow. It proves safe one-time donation metadata can reach a provider cart without adding production credentials, checkout webhooks, CRM sync, analytics, dashboard behavior, subscription handling, or refund handling.
 
 #### WordPress Dataset To Handoff Mapping
 
 | WordPress Attribute | Internal Handoff Field | Checkout Item Field | Notes |
 | --- | --- | --- | --- |
-| `data-campaign-id` | `campaign.id` | `code` or campaign option | Stable attribution key. |
-| `data-campaign-name` | `campaign.name` | `name` or campaign option | Human-readable campaign label. |
+| `data-campaign-id` | `campaign.id` | `code` | Stable attribution key. |
+| `data-campaign-name` | `campaign.name` | `name` and `campaign_name` option | Human-readable campaign label. |
 | `data-donation-amount` | `donation.amount` | `price` | Numeric amount, no currency symbol. |
-| `data-donation-label` | `donation.label` | donation label option | Keeps the selected public label visible later. |
-| `data-donation-type` | `donation.type` | giving type option | Milestone 2 value is `one_time`. |
-| `data-source-page` | `source.page` | source page option | Identifies where the donation started. |
-| `data-checkout-provider` | `checkout.provider` | internal config only | Selects the intended checkout adapter; not automatically sent externally. |
+| `data-donation-label` | `donation.label` | `donation_label` option | Keeps the selected public label visible later. |
+| `data-donation-type` | `donation.type` | `donation_type` option | MVP value is `one_time`. |
+| `data-source-page` | `source.page` | `source_page` option | Identifies where the donation started. |
+| `data-checkout-provider` | `checkout.provider` | `checkout_provider` option | Preserves the demo provider context as safe metadata. |
 
 #### Internal Handoff Shape
 
@@ -112,7 +110,7 @@ This model is intentionally provider-light. It describes the project-owned shape
 {
   "checkout": {
     "provider": "foxy",
-    "mode": "modeled"
+    "mode": "demo_cart"
   },
   "campaign": {
     "id": "loaves-campaign-01",
@@ -142,9 +140,16 @@ This model is intentionally provider-light. It describes the project-owned shape
     "donation_label": "3 loaves",
     "donation_type": "one_time",
     "source_page": "home",
-    "campaign_name": "Loaves 4 Joy"
+    "campaign_name": "Loaves 4 Joy",
+    "checkout_provider": "foxy"
   }
 }
+```
+
+#### Demo Foxy Cart Link Shape
+
+```text
+https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&code=loaves-campaign-01&quantity=1&donation_label=3+loaves&donation_type=one_time&source_page=home&campaign_name=Loaves+4+Joy&checkout_provider=foxy
 ```
 
 #### Ownership Boundary
@@ -154,14 +159,15 @@ WordPress owns:
 - Rendering donation buttons and readable campaign content.
 - Attaching safe metadata to each donation option.
 - Keeping visible labels, `aria-label` values, and metadata consistent.
-- Keeping the current `href` values as local anchors until checkout is explicitly wired.
+- Mapping one-time donation buttons to safe Foxy demo cart links.
+- Loading Foxy's sidecart script for the demo store when available.
 
-The future checkout handoff owns:
+The Foxy demo cart handoff owns:
 
 - Reading selected button metadata.
 - Validating amount, campaign, and giving-type values before handoff.
 - Translating the internal handoff shape into the hosted checkout provider format.
-- Creating a checkout session or cart request only after a later issue explicitly adds that behavior.
+- Creating an inspectable demo cart request without secrets or production credentials.
 
 The checkout provider owns:
 
@@ -169,7 +175,7 @@ The checkout provider owns:
 - Payment authorization, declines, and sensitive payment method handling.
 - Producing safe checkout events after checkout activity.
 
-For Milestone 2, this section does not add a real checkout URL, hosted cart call, production write, secret, token, or payment credential.
+For MVP 3 issue #55, this section adds a demo cart URL and sidecart loader only. It does not add production checkout writes, webhook receiver behavior, provider API calls, secrets, tokens, authorization headers, raw payment data, subscription behavior, or refund behavior.
 
 See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any checkout handoff behavior.
 
@@ -179,7 +185,7 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any
 - `donation_amount` should be numeric and greater than zero.
 - `donation_type` should use a known value such as `one_time`.
 - `checkout_provider` should use a known value such as `foxy`.
-- `checkout_provider` is internal integration context and is not automatically part of the external checkout payload.
+- `checkout_provider` is internal integration context and may be sent as a safe custom cart option for manual demo inspection.
 - Metadata should not include sensitive payment details.
 - Visible button text should match the metadata value where practical.
 

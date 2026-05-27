@@ -25,4 +25,12 @@ function h4j_enqueue_child_theme_assets() {
 		array( 'twentytwentyfive-style', 'h4j-fonts' ),
 		$style_version
 	);
+
+	wp_enqueue_script(
+		'h4j-foxy-loader',
+		'https://cdn.foxycart.com/hungry-4-joy/loader.js',
+		array(),
+		null,
+		true
+	);
 }

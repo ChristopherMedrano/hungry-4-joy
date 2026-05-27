@@ -6,24 +6,24 @@ It is not a full PCI compliance program. The practical goal is to keep raw payme
 
 ## Current Milestone Scope
 
-Milestone 2 models checkout metadata and checkout event payloads only.
+MVP 3 issue #55 connects one-time donation buttons to a Foxy demo cart handoff after Milestone 2 modeled checkout metadata and checkout event payloads.
 
 In scope:
 
 - One-time donation button metadata.
-- Modeled checkout handoff shapes.
+- Foxy demo cart links and sidecart loader behavior.
+- Safe cart fields such as name, price, code, quantity, and custom options.
 - Simulated checkout event fixtures.
 - Safe transaction identifiers, statuses, timestamps, campaign codes, amounts, and donor/contact fields.
 - Local documentation and local reference payloads for future middleware work.
 
 Out of scope:
 
-- Live hosted cart requests.
-- Real checkout session creation.
 - Production payment writes.
 - Raw payment method collection.
 - Subscription, recurring gift, or refund payloads.
 - Storing real payment credentials or provider secrets.
+- Provider API calls, API keys, access tokens, authorization headers, or webhook secrets.
 
 ## System Ownership
 
@@ -56,7 +56,7 @@ Checkout-owned responsibilities:
 - Sensitive payment method handling.
 - Producing safe checkout result events.
 
-For Milestone 2, the repo only models a future checkout handoff. It does not perform a hosted cart request or production checkout write.
+For issue #55, the repo performs a safe demo cart request only. It does not perform a production checkout write, provider API write, webhook receiver action, or credentialed provider call.
 
 ### Laravel May Receive Later
 
@@ -97,7 +97,7 @@ They should not:
 - Use real donor contact information.
 - Include real provider payloads.
 - Include secrets, tokens, authorization headers, or payment credentials.
-- Imply that checkout is connected.
+- Imply that a checkout event receiver is connected.
 - Trigger any production write or hosted cart action.
 
 ## Do Not Include
@@ -119,7 +119,8 @@ The project must not include these values in markup, docs, JSON fixtures, logs, 
 
 Before adding checkout-related code or docs, confirm:
 
-- The change is metadata-only or simulated unless a later issue explicitly wires checkout.
+- The change is either safe demo cart handoff behavior, metadata-only modeling, or simulated event data.
+- The issue #55 demo cart handoff uses only safe cart fields and public store URLs.
 - WordPress owns only public content and safe metadata.
 - Checkout owns payment collection and sensitive payment handling.
 - Laravel receives only safe event data.
