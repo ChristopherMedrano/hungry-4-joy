@@ -201,6 +201,8 @@ wordpress/wp-content/cache/
 ## Documentation
 
 - [Architecture](architecture.md)
+- [Campaign Page Setup](campaign-page.md)
+- [Data Contracts](contracts.md)
 - [Workflow](workflow.md)
 
 ## Guiding Principle
