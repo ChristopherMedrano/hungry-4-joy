@@ -43,7 +43,7 @@ MVP responsibilities:
 - donation landing pages
 - project/campaign pages
 - donation amount buttons
-- one-time/monthly giving option
+- one-time giving options
 - campaign or project metadata passed into checkout
 - basic accessibility, SEO, and performance hygiene
 - semantic headings, labels, button text, focus states, and color contrast
@@ -68,14 +68,14 @@ PCI boundary:
 
 - The project should not collect, transmit, or store raw card data.
 - WordPress and Laravel should only handle safe donation metadata, transaction IDs, statuses, timestamps, campaign codes, and donor/contact data.
-- Payment authorization, declines, refunds, and sensitive payment method handling belong to FoxyCart and the connected test payment setup or gateway.
+- Payment authorization, declines, and sensitive payment method handling belong to FoxyCart and the connected test payment setup or gateway.
 
-Example events:
+MVP event examples:
 
 - `donation.created`
 - `payment.failed`
-- `subscription.created`
-- `refund.created`
+
+Subscription and refund workflows are out of scope for the current MVP. They can be modeled later if the public site adds recurring donation controls or refund reconciliation work.
 
 What this demonstrates:
 

@@ -122,7 +122,9 @@ Future checkout work owns:
 
 - Hosted cart or checkout handoff.
 - Payment status handling.
-- Recurring gift setup.
+
+Later post-MVP checkout work may add recurring gift setup if the campaign page
+adds recurring donation controls.
 - Transaction events.
 
 Future Laravel middleware owns:
