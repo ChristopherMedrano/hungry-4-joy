@@ -63,11 +63,11 @@
 
 			<div class="h4j-card">
 				<p class="h4j-label">Pick a Loaf</p>
-				<!-- Donation buttons expose safe checkout metadata for Sprint 1; they do not call Foxy yet. -->
+				<!-- Demo cart links pass safe donation metadata to Foxy without provider secrets or payment data. -->
 				<div class="h4j-donation-options" aria-label="Suggested loaf donations">
 					<a
-						class="h4j-donation-button"
-						href="#campaign-one"
+						class="h4j-donation-button foxycart"
+						href="https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=10&code=loaves-campaign-01&quantity=1&donation_label=1+loaf&donation_type=one_time&source_page=home&campaign_name=Loaves+4+Joy&checkout_provider=foxy"
 						aria-label="Give $10 to Loaves 4 Joy for 1 loaf"
 						data-campaign-id="loaves-campaign-01"
 						data-campaign-name="Loaves 4 Joy"
@@ -78,8 +78,8 @@
 						data-checkout-provider="foxy"
 					>$10 &middot; 1 loaf</a>
 					<a
-						class="h4j-donation-button"
-						href="#campaign-one"
+						class="h4j-donation-button foxycart"
+						href="https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&code=loaves-campaign-01&quantity=1&donation_label=3+loaves&donation_type=one_time&source_page=home&campaign_name=Loaves+4+Joy&checkout_provider=foxy"
 						aria-label="Give $25 to Loaves 4 Joy for 3 loaves"
 						data-campaign-id="loaves-campaign-01"
 						data-campaign-name="Loaves 4 Joy"
@@ -90,8 +90,8 @@
 						data-checkout-provider="foxy"
 					>$25 &middot; 3 loaves</a>
 					<a
-						class="h4j-donation-button"
-						href="#campaign-one"
+						class="h4j-donation-button foxycart"
+						href="https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=100&code=loaves-campaign-01&quantity=1&donation_label=A+basketful&donation_type=one_time&source_page=home&campaign_name=Loaves+4+Joy&checkout_provider=foxy"
 						aria-label="Give $100 to Loaves 4 Joy for a basketful"
 						data-campaign-id="loaves-campaign-01"
 						data-campaign-name="Loaves 4 Joy"
@@ -119,11 +119,11 @@
 
 			<div class="h4j-card">
 				<p class="h4j-label">Pick a Catch</p>
-				<!-- Keep this metadata in sync with contracts.md until the checkout handoff is wired. -->
+				<!-- Keep this metadata in sync with contracts.md and the Foxy demo cart handoff. -->
 				<div class="h4j-donation-options" aria-label="Suggested fish donations">
 					<a
-						class="h4j-donation-button"
-						href="#campaign-two"
+						class="h4j-donation-button foxycart"
+						href="https://hungry-4-joy.foxycart.com/cart?name=Fish+4+Joy&price=10&code=fish-campaign-02&quantity=1&donation_label=1+fish&donation_type=one_time&source_page=home&campaign_name=Fish+4+Joy&checkout_provider=foxy"
 						aria-label="Give $10 to Fish 4 Joy for 1 fish"
 						data-campaign-id="fish-campaign-02"
 						data-campaign-name="Fish 4 Joy"
@@ -134,8 +134,8 @@
 						data-checkout-provider="foxy"
 					>$10 &middot; 1 fish</a>
 					<a
-						class="h4j-donation-button"
-						href="#campaign-two"
+						class="h4j-donation-button foxycart"
+						href="https://hungry-4-joy.foxycart.com/cart?name=Fish+4+Joy&price=25&code=fish-campaign-02&quantity=1&donation_label=3+fish&donation_type=one_time&source_page=home&campaign_name=Fish+4+Joy&checkout_provider=foxy"
 						aria-label="Give $25 to Fish 4 Joy for 3 fish"
 						data-campaign-id="fish-campaign-02"
 						data-campaign-name="Fish 4 Joy"
@@ -146,8 +146,8 @@
 						data-checkout-provider="foxy"
 					>$25 &middot; 3 fish</a>
 					<a
-						class="h4j-donation-button"
-						href="#campaign-two"
+						class="h4j-donation-button foxycart"
+						href="https://hungry-4-joy.foxycart.com/cart?name=Fish+4+Joy&price=100&code=fish-campaign-02&quantity=1&donation_label=A+full+net&donation_type=one_time&source_page=home&campaign_name=Fish+4+Joy&checkout_provider=foxy"
 						aria-label="Give $100 to Fish 4 Joy for a full net"
 						data-campaign-id="fish-campaign-02"
 						data-campaign-name="Fish 4 Joy"

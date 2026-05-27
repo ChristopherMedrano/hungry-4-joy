@@ -1,13 +1,14 @@
 # Checkout Event Verification Walkthrough
 
-This walkthrough reviews the Hungry-4-Joy Milestone 2 checkout event model before Laravel middleware work begins.
+This walkthrough reviews the Hungry-4-Joy checkout event model and Foxy demo cart handoff before Laravel receiver work begins.
 
 Use it when changing donation button metadata, checkout handoff docs, simulated checkout event fixtures, or the checkout/payment boundary.
 
 ## What This Verifies
 
 - Donation buttons expose the expected campaign metadata.
-- Button metadata maps cleanly into the modeled checkout handoff.
+- Button metadata maps cleanly into the Foxy demo cart handoff.
+- Foxy demo cart links preserve safe metadata.
 - Simulated checkout event fixtures match the checkout event contract.
 - Sensitive payment details stay out of markup, docs, and fixture payloads.
 - Middleware, CRM, analytics, and dashboard work remain future milestones.
@@ -59,7 +60,7 @@ Current campaign IDs:
 - `loaves-campaign-01`
 - `fish-campaign-02`
 
-## 2. Review The Modeled Checkout Handoff
+## 2. Review The Foxy Demo Cart Handoff
 
 Open the handoff model in:
 
@@ -67,27 +68,47 @@ Open the handoff model in:
 docs/contracts.md
 ```
 
-Review the `Future Checkout Handoff Model` section.
+Review the `Foxy Demo Cart Handoff` section.
 
 The important mapping is:
 
-| Button Metadata | Internal Handoff Field | Modeled Checkout Field |
+| Button Metadata | Internal Handoff Field | Foxy Cart Field |
 | --- | --- | --- |
-| `data-campaign-id` | `campaign.id` | `code` or campaign option |
-| `data-campaign-name` | `campaign.name` | `name` or campaign option |
+| `data-campaign-id` | `campaign.id` | `code` |
+| `data-campaign-name` | `campaign.name` | `name` and `campaign_name` option |
 | `data-donation-amount` | `donation.amount` | `price` |
-| `data-donation-label` | `donation.label` | donation label option |
-| `data-donation-type` | `donation.type` | giving type option |
-| `data-source-page` | `source.page` | source page option |
-| `data-checkout-provider` | `checkout.provider` | internal adapter/config only |
+| `data-donation-label` | `donation.label` | `donation_label` option |
+| `data-donation-type` | `donation.type` | `donation_type` option |
+| `data-source-page` | `source.page` | `source_page` option |
+| `data-checkout-provider` | `checkout.provider` | `checkout_provider` option |
 
-The modeled checkout handoff should stay inactive for Milestone 2. It should not add:
+The demo cart handoff should remain limited to one-time donation buttons. It should not add:
 
-- Real checkout URLs.
-- Hosted cart calls.
-- Checkout session creation.
 - Production writes.
 - Secrets, tokens, or payment credentials.
+- Subscription or refund behavior.
+
+Useful source-inspection checks:
+
+```bash
+rg -c 'href="https://hungry-4-joy.foxycart.com/cart' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+rg -c 'class="h4j-donation-button foxycart"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+rg -n 'https://hungry-4-joy.foxycart.com/cart' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+```
+
+Expected result for the count checks:
+
+```text
+6
+6
+```
+
+Manual browser check:
+
+- Open the local campaign page.
+- Click each donation option.
+- Confirm Foxy's sidecart or full-page cart shows the selected campaign name, amount, campaign code, and safe custom options.
+- Do not enter real payment data.
 
 ## 3. Review Simulated Checkout Events
 
@@ -167,7 +188,7 @@ Review:
 docs/payment-safety-boundary.md
 ```
 
-The walkthrough should confirm that Milestone 2 stays metadata-only and simulated.
+The walkthrough should confirm that checkout event receiving stays future and simulated while issue #55 uses only the safe Foxy demo cart handoff.
 
 Use this scan before committing checkout-related changes:
 
@@ -180,7 +201,7 @@ Expected result:
 - No matches in JSON fixtures or page markup.
 - Matches in docs only when they appear in "do not include" safety language.
 
-Also confirm out-of-scope flows have not crept into Milestone 2:
+Also confirm out-of-scope flows have not crept into the event contract, fixtures, or donation buttons:
 
 ```bash
 rg -n 'subscription\.created|refund\.created|monthly|recurring_interval|refund_amount|refund_reason|subscription_created|refunded' docs/contracts.md examples/checkout-events wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
@@ -192,12 +213,13 @@ Expected result:
 
 ## 5. Confirm Current Boundaries
 
-Milestone 2 stops at reviewed contracts and local fixtures.
+The current demo connects one-time donation buttons to the Foxy demo cart. Checkout event receiving still stops at reviewed contracts and local fixtures.
 
 In scope:
 
 - Donation button metadata.
-- Modeled checkout handoff.
+- Foxy demo cart link handoff.
+- Foxy sidecart loader behavior.
 - Simulated checkout event examples.
 - Payment data boundary documentation.
 
@@ -208,8 +230,8 @@ Out of scope:
 - CRM sync.
 - Analytics events.
 - Dashboard views.
-- Live checkout wiring.
 - Production checkout writes.
+- Subscription or refund flows.
 
 ## Laravel Receiver Follow-Ups
 
@@ -227,15 +249,18 @@ Capture these for the next middleware/API milestone:
 
 ## Final Verification Commands
 
-Run these before marking the checkout event model reviewed:
+Run these before marking the checkout event model and demo cart handoff reviewed:
 
 ```bash
+php -l wordpress/wp-content/themes/hungry-4-joy/functions.php
 jq empty examples/checkout-events/*.json
 git diff --check
 rg -c 'class="h4j-donation-button"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+rg -c 'class="h4j-donation-button foxycart"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+rg -c 'href="https://hungry-4-joy.foxycart.com/cart' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'data-donation-type="one_time"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'data-checkout-provider="foxy"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -n 'subscription\.created|refund\.created|monthly|recurring_interval|refund_amount|refund_reason|subscription_created|refunded' docs/contracts.md examples/checkout-events wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 ```
 
-The first five commands should succeed. The final scope scan should return no active subscription or refund fields for Milestone 2.
+The syntax, JSON, and diff checks should succeed. The count checks should each return `6`. The final scope scan should return no active subscription or refund fields.
