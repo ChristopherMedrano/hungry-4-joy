@@ -178,10 +178,12 @@ Start the local Laravel server:
 php artisan serve
 ```
 
+Use the URL printed by Artisan. If another local service already uses port `8000`, Laravel may choose the next available port, such as `8001`.
+
 Verify the API health endpoint:
 
 ```bash
-curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:<printed-port>/api/health
 ```
 
 Run middleware/API tests:
