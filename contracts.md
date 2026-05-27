@@ -128,17 +128,13 @@ The Laravel receiver is responsible for validating the event, storing a safe cop
 | --- | --- |
 | `donation.created` | A one-time donation completed successfully. |
 | `payment.failed` | A checkout or payment attempt failed and should not create a confirmed donation record. |
-| `subscription.created` | A recurring gift setup completed successfully. |
-| `refund.created` | A refund was created against a previous transaction. |
 
 ### Transaction Status Values
 
 | Status | Meaning |
 | --- | --- |
-| `completed` | Checkout confirmed the donation or first recurring payment. |
+| `completed` | Checkout confirmed the one-time donation. |
 | `failed` | Checkout or payment did not complete. |
-| `subscription_created` | Recurring gift setup was accepted. |
-| `refunded` | A previous transaction was refunded. |
 | `pending` | Checkout has not produced a final result yet. |
 
 ### Required Envelope Fields
@@ -171,16 +167,7 @@ These fields should align with the WordPress campaign checkout metadata contract
 | `donation.amount` | `25` | Donation amount in the event currency. |
 | `donation.currency` | `USD` | Three-letter currency code. |
 | `donation.donation_label` | `3 loaves` | Human-readable option label selected by the donor. |
-| `donation.donation_type` | `one_time` | Giving type, such as `one_time` or `monthly`. |
-
-### Optional Donation Fields
-
-| Field | Example | Purpose |
-| --- | --- | --- |
-| `donation.recurring_interval` | `1m` | Recurring interval for monthly gifts. |
-| `donation.original_transaction_id` | `txn_demo_1042` | Original transaction for refund events. |
-| `donation.refund_amount` | `25` | Amount refunded when the event type is `refund.created`. |
-| `donation.refund_reason` | `donor_request` | Safe refund reason for support workflows. |
+| `donation.donation_type` | `one_time` | Giving type for the current MVP checkout flow. |
 
 ### Safe Donor / Contact Fields
 
@@ -276,13 +263,19 @@ Failed checkout events should include enough safe information to troubleshoot wi
 - `idempotency_key` must be present. For MVP 2, it can match `event_id`.
 - `event_created_at` must use ISO 8601 format.
 - `event_type` and `transaction_status` must use known contract values.
-- `donation.amount` must be numeric and greater than zero unless the provider explicitly sends a zero-amount refund adjustment.
+- `donation.amount` must be numeric and greater than zero.
 - `donation.currency` should use `USD` for this demo.
-- `donation.donation_type` should use a known value such as `one_time` or `monthly`.
+- `donation.donation_type` should use `one_time` for MVP 2.
 - `campaign.campaign_id` and `campaign.campaign_name` should match the campaign metadata that started checkout.
-- `transaction_id` is required for `donation.created`, `subscription.created`, and `refund.created`; it may be `null` for failed checkouts that never produced a transaction.
+- `transaction_id` is required for `donation.created`; it may be `null` for failed checkouts that never produced a transaction.
 - `failure` is required when `event_type` is `payment.failed`.
 - Duplicate events should be logged and ignored after the first successful processing attempt.
+
+### Out Of MVP 2 Scope
+
+The current WordPress campaign page only models one-time donation buttons. MVP 2 should not include subscription event payloads, recurring interval fields, refund event payloads, or refund amount fields.
+
+Those flows can become separate contracts later if the project adds recurring donation controls or refund reconciliation work.
 
 ### Explicitly Forbidden Fields
 
