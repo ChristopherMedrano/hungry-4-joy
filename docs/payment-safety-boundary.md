@@ -87,7 +87,7 @@ Simulated events are local reference payloads only.
 They should:
 
 - Use fictional donor data.
-- Match the checkout event contract in `contracts.md`.
+- Match the checkout event contract in `docs/contracts.md`.
 - Match campaign metadata used by `front-page.html`.
 - Use safe demo transaction, session, and event IDs.
 - Represent one-time donation success and failed payment states only.

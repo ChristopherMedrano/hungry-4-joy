@@ -130,7 +130,7 @@ Each donation button maps to a one-item checkout handoff:
 | `data-source-page` | Source page option for attribution. |
 | `data-checkout-provider` | Internal adapter selection, currently `foxy`. |
 
-For the current MVP, the modeled handoff stays metadata-only. The buttons keep
+For the current milestone, the modeled handoff stays metadata-only. The buttons keep
 local anchor `href` values and do not call a hosted cart, create a checkout
 session, collect payment details, or write production data.
 

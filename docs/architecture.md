@@ -76,7 +76,7 @@ MVP event examples:
 - `donation.created`
 - `payment.failed`
 
-Subscription and refund workflows are out of scope for the current MVP. They can be modeled later if the public site adds recurring donation controls or refund reconciliation work.
+Subscription and refund workflows are out of scope for the current milestone. They can be modeled later if the public site adds recurring donation controls or refund reconciliation work.
 
 What this demonstrates:
 

@@ -4,7 +4,7 @@ These local fixtures model safe checkout events for the Hungry-4-Joy Milestone 2
 
 They are reference payloads only. They do not call a hosted cart, create a checkout session, collect payment details, or write production data.
 
-The full checkout and payment safety boundary is documented in [`../../payment-safety-boundary.md`](../../payment-safety-boundary.md).
+The full checkout and payment safety boundary is documented in [`../../docs/payment-safety-boundary.md`](../../docs/payment-safety-boundary.md).
 
 ## Files
 
@@ -15,10 +15,10 @@ The full checkout and payment safety boundary is documented in [`../../payment-s
 
 ## Scope
 
-The current MVP only models one-time donation buttons. Recurring gift, subscription, and refund examples are intentionally deferred until the public site and checkout contract support those flows.
+The current milestone only models one-time donation buttons. Recurring gift, subscription, and refund examples are intentionally deferred until the public site and checkout contract support those flows.
 
 ## Safety Rules
 
 - Use fictional donor data.
-- Keep campaign attribution aligned with `contracts.md` and `front-page.html`.
+- Keep campaign attribution aligned with `docs/contracts.md` and `front-page.html`.
 - Do not include full card numbers, CVV or CVC values, raw payment credentials, checkout API keys, access tokens, client secrets, or unredacted provider payloads.
