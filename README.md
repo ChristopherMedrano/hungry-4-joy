@@ -68,7 +68,7 @@ Laravel middleware/API
 
 ## Project Progress
 
-The first implementation slice is the WordPress public site.
+The first implementation slices establish the WordPress public site and the Laravel middleware/API foundation.
 
 Current:
 
@@ -76,13 +76,15 @@ Current:
 - Twenty Twenty-Five child theme
 - Sass/SCSS source workflow for child theme styling
 - compiled child theme CSS enqueued by WordPress
+- root-level Laravel middleware/API app in `middleware-api/`
+- local Laravel API health endpoint at `/api/health`
 - architecture and workflow documentation
 
 Planned:
 
 - campaign page and donation buttons
 - Foxy.io checkout handoff
-- Laravel webhook receiver
+- Laravel webhook receiver implementation
 - HubSpot CRM sync
 - marketing analytics events
 - observability and retry visibility
@@ -148,6 +150,48 @@ Stop the local environment:
 ddev stop
 ```
 
+## Laravel Middleware/API
+
+The Laravel middleware/API app lives separately from WordPress files:
+
+```text
+middleware-api/
+```
+
+Install middleware/API dependencies:
+
+```bash
+cd middleware-api
+composer install
+```
+
+Create local middleware/API environment config:
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Start the local Laravel server:
+
+```bash
+php artisan serve
+```
+
+Verify the API health endpoint:
+
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+Run middleware/API tests:
+
+```bash
+php artisan test
+```
+
+The middleware/API foundation does not yet receive checkout events, store donations, sync CRM data, emit analytics, or power dashboard views.
+
 ## SCSS Workflow
 
 Install project dependencies:
@@ -192,6 +236,8 @@ Local dependencies and runtime files are ignored:
 
 ```text
 node_modules/
+middleware-api/.env
+middleware-api/vendor/
 wordpress/wp-config.php
 wordpress/wp-config-ddev.php
 wordpress/wp-content/uploads/
@@ -205,6 +251,7 @@ wordpress/wp-content/cache/
 - [Data Contracts](docs/contracts.md)
 - [Checkout And Payment Safety Boundary](docs/payment-safety-boundary.md)
 - [Checkout Event Verification Walkthrough](docs/checkout-event-verification.md)
+- [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
 
 ## Guiding Principle
