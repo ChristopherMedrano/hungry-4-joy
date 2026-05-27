@@ -200,11 +200,12 @@ wordpress/wp-content/cache/
 
 ## Documentation
 
-- [Architecture](architecture.md)
-- [Campaign Page Setup](campaign-page.md)
-- [Data Contracts](contracts.md)
-- [Checkout And Payment Safety Boundary](payment-safety-boundary.md)
-- [Workflow](workflow.md)
+- [Architecture](docs/architecture.md)
+- [Campaign Page Setup](docs/campaign-page.md)
+- [Data Contracts](docs/contracts.md)
+- [Checkout And Payment Safety Boundary](docs/payment-safety-boundary.md)
+- [Checkout Event Verification Walkthrough](docs/checkout-event-verification.md)
+- [Workflow](docs/workflow.md)
 
 ## Guiding Principle
 

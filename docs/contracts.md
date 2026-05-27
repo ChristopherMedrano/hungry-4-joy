@@ -102,7 +102,7 @@ This model is intentionally provider-light. It describes the project-owned shape
 | `data-campaign-name` | `campaign.name` | `name` or campaign option | Human-readable campaign label. |
 | `data-donation-amount` | `donation.amount` | `price` | Numeric amount, no currency symbol. |
 | `data-donation-label` | `donation.label` | donation label option | Keeps the selected public label visible later. |
-| `data-donation-type` | `donation.type` | giving type option | MVP value is `one_time`. |
+| `data-donation-type` | `donation.type` | giving type option | Milestone 2 value is `one_time`. |
 | `data-source-page` | `source.page` | source page option | Identifies where the donation started. |
 | `data-checkout-provider` | `checkout.provider` | internal config only | Selects the intended checkout adapter; not automatically sent externally. |
 
@@ -256,7 +256,7 @@ These fields should align with the WordPress campaign checkout metadata contract
 | `donation.amount` | `25` | Donation amount in the event currency. |
 | `donation.currency` | `USD` | Three-letter currency code. |
 | `donation.donation_label` | `3 loaves` | Human-readable option label selected by the donor. |
-| `donation.donation_type` | `one_time` | Giving type for the current MVP checkout flow. |
+| `donation.donation_type` | `one_time` | Giving type for the current Milestone 2 checkout flow. |
 
 ### Safe Donor / Contact Fields
 
@@ -283,8 +283,8 @@ Failed checkout events should include enough safe information to troubleshoot wi
 
 The standalone JSON fixtures are the source of truth for simulated checkout event examples:
 
-- [`donation-created.one-time.json`](examples/checkout-events/donation-created.one-time.json)
-- [`payment-failed.one-time.json`](examples/checkout-events/payment-failed.one-time.json)
+- [`donation-created.one-time.json`](../examples/checkout-events/donation-created.one-time.json)
+- [`payment-failed.one-time.json`](../examples/checkout-events/payment-failed.one-time.json)
 
 This contract defines the required fields, event types, statuses, and validation rules. The fixture files provide complete reusable payloads for future local middleware tests.
 
