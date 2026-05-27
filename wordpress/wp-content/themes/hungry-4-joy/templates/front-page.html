@@ -1,4 +1,5 @@
 <!-- wp:html -->
+<!-- Local anchor navigation keeps the MVP focused on a single campaign page. -->
 <header class="h4j-site-header">
 	<nav class="h4j-shell h4j-nav" aria-label="Primary">
 		<a class="h4j-brand" href="#top" aria-label="Hungry-4-Joy home">
@@ -62,10 +63,41 @@
 
 			<div class="h4j-card">
 				<p class="h4j-label">Pick a Loaf</p>
+				<!-- Donation buttons expose safe checkout metadata for Sprint 1; they do not call Foxy yet. -->
 				<div class="h4j-donation-options" aria-label="Suggested loaf donations">
-					<a class="h4j-donation-button" href="#campaign-one">$10 &middot; 1 loaf</a>
-					<a class="h4j-donation-button" href="#campaign-one">$25 &middot; 3 loaves</a>
-					<a class="h4j-donation-button" href="#campaign-one">$100 &middot; A basketful</a>
+					<a
+						class="h4j-donation-button"
+						href="#campaign-one"
+						data-campaign-id="loaves-campaign-01"
+						data-campaign-name="Loaves 4 Joy"
+						data-donation-amount="10"
+						data-donation-label="1 loaf"
+						data-donation-type="one_time"
+						data-source-page="home"
+						data-checkout-provider="foxy"
+					>$10 &middot; 1 loaf</a>
+					<a
+						class="h4j-donation-button"
+						href="#campaign-one"
+						data-campaign-id="loaves-campaign-01"
+						data-campaign-name="Loaves 4 Joy"
+						data-donation-amount="25"
+						data-donation-label="3 loaves"
+						data-donation-type="one_time"
+						data-source-page="home"
+						data-checkout-provider="foxy"
+					>$25 &middot; 3 loaves</a>
+					<a
+						class="h4j-donation-button"
+						href="#campaign-one"
+						data-campaign-id="loaves-campaign-01"
+						data-campaign-name="Loaves 4 Joy"
+						data-donation-amount="100"
+						data-donation-label="A basketful"
+						data-donation-type="one_time"
+						data-source-page="home"
+						data-checkout-provider="foxy"
+					>$100 &middot; A basketful</a>
 				</div>
 			</div>
 		</div>
@@ -84,10 +116,41 @@
 
 			<div class="h4j-card">
 				<p class="h4j-label">Pick a Catch</p>
+				<!-- Keep this metadata in sync with contracts.md until the checkout handoff is wired. -->
 				<div class="h4j-donation-options" aria-label="Suggested fish donations">
-					<a class="h4j-donation-button" href="#campaign-two">$10 &middot; 1 fish</a>
-					<a class="h4j-donation-button" href="#campaign-two">$25 &middot; 3 fish</a>
-					<a class="h4j-donation-button" href="#campaign-two">$100 &middot; A full net</a>
+					<a
+						class="h4j-donation-button"
+						href="#campaign-two"
+						data-campaign-id="fish-campaign-02"
+						data-campaign-name="Fish 4 Joy"
+						data-donation-amount="10"
+						data-donation-label="1 fish"
+						data-donation-type="one_time"
+						data-source-page="home"
+						data-checkout-provider="foxy"
+					>$10 &middot; 1 fish</a>
+					<a
+						class="h4j-donation-button"
+						href="#campaign-two"
+						data-campaign-id="fish-campaign-02"
+						data-campaign-name="Fish 4 Joy"
+						data-donation-amount="25"
+						data-donation-label="3 fish"
+						data-donation-type="one_time"
+						data-source-page="home"
+						data-checkout-provider="foxy"
+					>$25 &middot; 3 fish</a>
+					<a
+						class="h4j-donation-button"
+						href="#campaign-two"
+						data-campaign-id="fish-campaign-02"
+						data-campaign-name="Fish 4 Joy"
+						data-donation-amount="100"
+						data-donation-label="A full net"
+						data-donation-type="one_time"
+						data-source-page="home"
+						data-checkout-provider="foxy"
+					>$100 &middot; A full net</a>
 				</div>
 			</div>
 		</div>
@@ -102,6 +165,7 @@
 			</div>
 
 			<form class="h4j-panel" action="#email-list">
+				<!-- Placeholder signup form for the public-site slice; no backend submission yet. -->
 				<label>
 					<span class="h4j-label">Email Address</span>
 					<input type="email" name="email" placeholder="your@email.com">
