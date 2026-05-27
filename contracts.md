@@ -6,6 +6,8 @@ The goal is to keep each system boundary clear. WordPress prepares campaign and 
 
 These contracts should avoid sensitive payment data. Card numbers, CVV values, raw payment credentials, and payment method secrets do not belong in WordPress, Laravel, HubSpot, logs, or the dashboard.
 
+The project-wide checkout and payment safety boundary is documented in [`payment-safety-boundary.md`](payment-safety-boundary.md).
+
 ## 1. Campaign Checkout Metadata
 
 Status: Sprint 1 contract.
@@ -169,6 +171,8 @@ The checkout provider owns:
 
 For MVP 2, this section does not add a real checkout URL, hosted cart call, production write, secret, token, or payment credential.
 
+See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any checkout handoff behavior.
+
 ### Validation Rules
 
 - `campaign_id` should be lowercase, stable, and URL-safe.
@@ -320,6 +324,8 @@ The checkout event contract must not include:
 - client secrets
 - unredacted provider payloads
 - private donor notes
+
+See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the full checkout and payment safety checklist.
 
 ### MVP 2 Acceptance Criteria
 

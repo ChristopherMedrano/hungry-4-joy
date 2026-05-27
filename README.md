@@ -1,6 +1,6 @@
 # Hungry-4-Joy
 
-Hungry-4-Joy is a real-world demo of a lean nonprofit donation ecosystem.
+Hungry-4-Joy is a personal educational prototype of a lean nonprofit donation ecosystem.
 
 The goal is to show how a public campaign site, checkout events, middleware, CRM sync, analytics, observability, and a support dashboard can work together as one small system.
 
@@ -15,16 +15,16 @@ Donor / visitor
 WordPress campaign site
   - campaign pages
   - donation buttons
-  - monthly / one-time giving
+  - one-time giving options
   - forms and content
   - campaign metadata
   |
-  | donation amount / frequency / campaign selection
+  | donation amount / campaign selection
   v
 Cart / Checkout
   - cart session
   - hosted checkout
-  - recurring gift option
+  - modeled checkout handoff
   - campaign codes
   - transaction status
   |
@@ -203,6 +203,7 @@ wordpress/wp-content/cache/
 - [Architecture](architecture.md)
 - [Campaign Page Setup](campaign-page.md)
 - [Data Contracts](contracts.md)
+- [Checkout And Payment Safety Boundary](payment-safety-boundary.md)
 - [Workflow](workflow.md)
 
 ## Guiding Principle
