@@ -104,20 +104,208 @@ If a later checkout script reads the button dataset, the data should normalize i
 
 ## 2. Checkout Event Payload
 
-Status: planned.
+Status: MVP 2 contract draft.
 
-This future contract will define the event shape Laravel receives after checkout creates a donation or transaction event.
+This contract defines the safe event shape Laravel will receive after checkout activity.
 
-Expected future concerns:
+The purpose is to make checkout results explicit before the project adds a webhook receiver or real checkout integration. Local development can use simulated checkout events that follow this shape.
 
-- checkout event ID
-- transaction status
-- campaign metadata
-- donation amount
-- donor/contact fields allowed by the checkout event
-- timestamps
-- duplicate event handling
-- failed payment or failed checkout status
+### Source
+
+Cart / Checkout.
+
+For MVP 2, this may be a simulated event fixture. A later hosted checkout integration should preserve the same normalized fields even if the provider sends a larger raw event.
+
+### Destination
+
+Laravel middleware webhook receiver.
+
+The Laravel receiver is responsible for validating the event, storing a safe copy, preventing duplicate processing, and normalizing the donation into later CRM, analytics, observability, and dashboard workflows.
+
+### Event Types
+
+| Event Type | Meaning |
+| --- | --- |
+| `donation.created` | A one-time donation completed successfully. |
+| `payment.failed` | A checkout or payment attempt failed and should not create a confirmed donation record. |
+| `subscription.created` | A recurring gift setup completed successfully. |
+| `refund.created` | A refund was created against a previous transaction. |
+
+### Transaction Status Values
+
+| Status | Meaning |
+| --- | --- |
+| `completed` | Checkout confirmed the donation or first recurring payment. |
+| `failed` | Checkout or payment did not complete. |
+| `subscription_created` | Recurring gift setup was accepted. |
+| `refunded` | A previous transaction was refunded. |
+| `pending` | Checkout has not produced a final result yet. |
+
+### Required Envelope Fields
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `event_id` | `evt_h4j_20260527_0001` | Stable unique checkout event identifier. |
+| `event_type` | `donation.created` | Event category for routing and normalization. |
+| `event_created_at` | `2026-05-27T14:05:00Z` | ISO 8601 timestamp for when checkout created the event. |
+| `checkout_provider` | `foxy` | Checkout provider or simulator that produced the event. |
+| `checkout_session_id` | `sess_demo_9M4K2` | Safe session or cart identifier for support and reconciliation. |
+| `transaction_id` | `txn_demo_1042` | Safe provider transaction identifier when one exists; may be `null` for failed checkouts. |
+| `transaction_status` | `completed` | Final or current transaction state. |
+| `idempotency_key` | `evt_h4j_20260527_0001` | Key Laravel uses to avoid processing duplicate events. |
+| `source_page` | `home` | Page or placement where the donation started. |
+
+### Required Campaign Fields
+
+These fields should align with the WordPress campaign checkout metadata contract.
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `campaign.campaign_id` | `loaves-campaign-01` | Stable machine-readable campaign identifier. |
+| `campaign.campaign_name` | `Loaves 4 Joy` | Human-readable campaign name. |
+
+### Required Donation Fields
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `donation.amount` | `25` | Donation amount in the event currency. |
+| `donation.currency` | `USD` | Three-letter currency code. |
+| `donation.donation_label` | `3 loaves` | Human-readable option label selected by the donor. |
+| `donation.donation_type` | `one_time` | Giving type, such as `one_time` or `monthly`. |
+
+### Optional Donation Fields
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `donation.recurring_interval` | `1m` | Recurring interval for monthly gifts. |
+| `donation.original_transaction_id` | `txn_demo_1042` | Original transaction for refund events. |
+| `donation.refund_amount` | `25` | Amount refunded when the event type is `refund.created`. |
+| `donation.refund_reason` | `donor_request` | Safe refund reason for support workflows. |
+
+### Safe Donor / Contact Fields
+
+Checkout events may include donor/contact fields that Laravel can use for CRM sync and support workflows.
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `donor.email` | `jordan.helper@example.test` | Contact identity for follow-up and CRM sync. |
+| `donor.first_name` | `Jordan` | Donor first name. |
+| `donor.last_name` | `Helper` | Donor last name. |
+| `donor.phone` | `555-0104` | Optional support contact number if checkout provides it. |
+
+### Failure Fields
+
+Failed checkout events should include enough safe information to troubleshoot without storing sensitive payment data.
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `failure.failure_code` | `card_declined` | Safe normalized failure category. |
+| `failure.failure_message` | `Payment was declined by the test gateway.` | Redacted message safe for logs and dashboard views. |
+| `failure.provider_status` | `declined` | Safe provider status value. |
+
+### Successful Donation Example
+
+```json
+{
+  "event_id": "evt_h4j_20260527_0001",
+  "event_type": "donation.created",
+  "event_created_at": "2026-05-27T14:05:00Z",
+  "checkout_provider": "foxy",
+  "checkout_session_id": "sess_demo_9M4K2",
+  "transaction_id": "txn_demo_1042",
+  "transaction_status": "completed",
+  "idempotency_key": "evt_h4j_20260527_0001",
+  "source_page": "home",
+  "campaign": {
+    "campaign_id": "loaves-campaign-01",
+    "campaign_name": "Loaves 4 Joy"
+  },
+  "donation": {
+    "amount": 25,
+    "currency": "USD",
+    "donation_label": "3 loaves",
+    "donation_type": "one_time"
+  },
+  "donor": {
+    "email": "jordan.helper@example.test",
+    "first_name": "Jordan",
+    "last_name": "Helper"
+  }
+}
+```
+
+### Failed Payment Example
+
+```json
+{
+  "event_id": "evt_h4j_20260527_0002",
+  "event_type": "payment.failed",
+  "event_created_at": "2026-05-27T14:08:00Z",
+  "checkout_provider": "foxy",
+  "checkout_session_id": "sess_demo_8Q2L1",
+  "transaction_id": null,
+  "transaction_status": "failed",
+  "idempotency_key": "evt_h4j_20260527_0002",
+  "source_page": "home",
+  "campaign": {
+    "campaign_id": "fish-campaign-01",
+    "campaign_name": "Fish 4 Joy"
+  },
+  "donation": {
+    "amount": 40,
+    "currency": "USD",
+    "donation_label": "family meal kit",
+    "donation_type": "one_time"
+  },
+  "donor": {
+    "email": "casey.giver@example.test",
+    "first_name": "Casey",
+    "last_name": "Giver"
+  },
+  "failure": {
+    "failure_code": "card_declined",
+    "failure_message": "Payment was declined by the test gateway.",
+    "provider_status": "declined"
+  }
+}
+```
+
+### Validation Rules
+
+- `event_id` must be unique, stable, and safe to store.
+- `idempotency_key` must be present. For MVP 2, it can match `event_id`.
+- `event_created_at` must use ISO 8601 format.
+- `event_type` and `transaction_status` must use known contract values.
+- `donation.amount` must be numeric and greater than zero unless the provider explicitly sends a zero-amount refund adjustment.
+- `donation.currency` should use `USD` for this demo.
+- `donation.donation_type` should use a known value such as `one_time` or `monthly`.
+- `campaign.campaign_id` and `campaign.campaign_name` should match the campaign metadata that started checkout.
+- `transaction_id` is required for `donation.created`, `subscription.created`, and `refund.created`; it may be `null` for failed checkouts that never produced a transaction.
+- `failure` is required when `event_type` is `payment.failed`.
+- Duplicate events should be logged and ignored after the first successful processing attempt.
+
+### Explicitly Forbidden Fields
+
+The checkout event contract must not include:
+
+- full card number
+- CVV or CVC values
+- raw payment credentials
+- payment method secrets
+- checkout API keys
+- authorization headers
+- access tokens
+- client secrets
+- unredacted provider payloads
+- private donor notes
+
+### MVP 2 Acceptance Criteria
+
+- Successful checkout events include event, transaction, campaign, donation, donor, timestamp, and idempotency fields.
+- Failed checkout events include a failure object and do not imply a confirmed donation.
+- Campaign attribution fields align with the WordPress donation metadata contract.
+- Duplicate-event handling is represented through `idempotency_key`.
+- The contract remains safe for public documentation and does not include sensitive payment data.
 
 ## 3. CRM / Marketing Sync Payload
 
