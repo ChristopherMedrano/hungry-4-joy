@@ -237,7 +237,6 @@ Out of scope:
 
 Capture these for the next middleware/API milestone:
 
-- Add a Laravel route for checkout event receipt.
 - Validate request shape against the checkout event contract.
 - Add signature validation using a local demo signing value.
 - Store safe or redacted event payloads.
@@ -246,6 +245,12 @@ Capture these for the next middleware/API milestone:
 - Add tests using `examples/checkout-events/*.json`.
 - Log failed validation and duplicate-event handling.
 - Keep CRM, analytics, and dashboard updates behind later explicit issues.
+
+Current Laravel receiver status:
+
+- `POST /api/checkout/events` exists.
+- It acknowledges JSON requests with `202 Accepted`.
+- It does not validate, verify signatures, store events, enforce idempotency, sync CRM data, emit analytics, or power dashboard views yet.
 
 ## Final Verification Commands
 

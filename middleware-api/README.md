@@ -2,7 +2,7 @@
 
 This directory contains the Laravel middleware/API foundation for the Hungry-4-Joy integration layer.
 
-The middleware/API app is separate from the WordPress project-owned files under `wordpress/`. This slice only establishes the Laravel app, local setup commands, and a minimal API health endpoint for future checkout event receiver work.
+The middleware/API app is separate from the WordPress project-owned files under `wordpress/`. This slice establishes the Laravel app, local setup commands, a minimal API health endpoint, and the first checkout event receiver route.
 
 ## Local Setup
 
@@ -43,6 +43,23 @@ Expected response:
 }
 ```
 
+The checkout event receiver route is available at:
+
+```text
+POST http://127.0.0.1:<printed-port>/api/checkout/events
+```
+
+Current receiver response:
+
+```json
+{
+  "service": "hungry-4-joy-middleware-api",
+  "status": "accepted"
+}
+```
+
+The receiver route currently only acknowledges JSON requests with `202 Accepted`. It does not validate event shape, verify signatures, store events, enforce idempotency, sync CRM data, emit analytics, or power dashboard views yet.
+
 ## Verification
 
 Run the Laravel test suite:
@@ -59,7 +76,7 @@ php artisan route:list --path=api
 
 ## Current Boundary
 
-Issue #21 does not add checkout receiver behavior, event persistence, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
+Issue #22 adds the checkout event receiver route only. It does not add event validation, signature validation, event persistence, duplicate prevention, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
 
 Do not run migrations as part of this issue. Checkout event validation, persistence, and duplicate prevention are planned for later middleware/API issues.
 
