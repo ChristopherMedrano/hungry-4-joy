@@ -4,6 +4,8 @@ These local fixtures model safe checkout events for the Hungry-4-Joy MVP 2 check
 
 They are reference payloads only. They do not call a hosted cart, create a checkout session, collect payment details, or write production data.
 
+The full checkout and payment safety boundary is documented in [`../../payment-safety-boundary.md`](../../payment-safety-boundary.md).
+
 ## Files
 
 | File | Event Type | Purpose |

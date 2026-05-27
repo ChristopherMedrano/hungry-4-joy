@@ -1,6 +1,6 @@
 # Hungry-4-Joy Architecture
 
-Hungry-4-Joy is a lean nonprofit donation ecosystem built as a real-world integration demo for web development, integrations, and production-support workflows.
+Hungry-4-Joy is a lean nonprofit donation ecosystem built as a personal educational prototype for web development, integrations, and production-support workflows.
 
 The goal is not to build a full fundraising platform. The goal is to create a small, understandable system that demonstrates the boundaries a nonprofit web stack may need to support: WordPress pages, FoxyCart checkout events, middleware, CRM sync, analytics, and operational troubleshooting.
 
@@ -69,6 +69,7 @@ PCI boundary:
 - The project should not collect, transmit, or store raw card data.
 - WordPress and Laravel should only handle safe donation metadata, transaction IDs, statuses, timestamps, campaign codes, and donor/contact data.
 - Payment authorization, declines, and sensitive payment method handling belong to FoxyCart and the connected test payment setup or gateway.
+- The detailed payment safety boundary is documented in [`payment-safety-boundary.md`](payment-safety-boundary.md).
 
 MVP event examples:
 
@@ -93,8 +94,8 @@ Laravel is the integration layer between the public site, FoxyCart transaction/w
 MVP responsibilities:
 
 - receive FoxyCart transaction/webhook events
-- validate event signatures with a demo secret
-- store raw event payloads
+- validate event signatures with a local demo signing value, not a production secret
+- store safe or redacted event payloads
 - normalize donor and donation data
 - prevent duplicate processing
 - queue HubSpot CRM/marketing sync jobs

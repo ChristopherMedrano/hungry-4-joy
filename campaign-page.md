@@ -58,6 +58,9 @@ Donation options are currently plain links styled as buttons. They stay on the
 same page for Sprint 1 and do not call Foxy.io, submit a cart, or collect
 payment data.
 
+The checkout and payment safety boundary is documented in
+[`payment-safety-boundary.md`](payment-safety-boundary.md).
+
 Each donation link should include:
 
 - Human-readable button text.
