@@ -1,0 +1,27 @@
+{
+  "event_id": "evt_h4j_demo_20260527_0001",
+  "event_type": "donation.created",
+  "event_created_at": "2026-05-27T14:05:00Z",
+  "checkout_provider": "foxy",
+  "checkout_session_id": "sess_demo_loaves_0001",
+  "transaction_id": "txn_demo_loaves_1042",
+  "transaction_status": "completed",
+  "idempotency_key": "evt_h4j_demo_20260527_0001",
+  "source_page": "home",
+  "campaign": {
+    "campaign_id": "loaves-campaign-01",
+    "campaign_name": "Loaves 4 Joy"
+  },
+  "donation": {
+    "amount": 25,
+    "currency": "USD",
+    "donation_label": "3 loaves",
+    "donation_type": "one_time"
+  },
+  "donor": {
+    "email": "jordan.helper@example.test",
+    "first_name": "Jordan",
+    "last_name": "Helper",
+    "phone": "555-0104"
+  }
+}
