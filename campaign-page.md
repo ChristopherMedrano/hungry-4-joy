@@ -109,6 +109,28 @@ Required fields:
 This metadata is inspectable in browser developer tools. A future checkout
 slice can read the same fields and map them into the hosted checkout handoff.
 
+## Modeled Checkout Handoff
+
+The current page does not submit to checkout. The handoff is documented as a
+model so the next integration step can be designed without making a live cart
+request.
+
+Each donation button maps to a one-item checkout handoff:
+
+| Button Metadata | Handoff Use |
+| --- | --- |
+| `data-campaign-id` | Stable campaign code or campaign option. |
+| `data-campaign-name` | Checkout item name or campaign display option. |
+| `data-donation-amount` | Checkout item price. |
+| `data-donation-label` | Donation label option. |
+| `data-donation-type` | Giving type option, currently `one_time`. |
+| `data-source-page` | Source page option for attribution. |
+| `data-checkout-provider` | Internal adapter selection, currently `foxy`. |
+
+For the current MVP, the modeled handoff stays metadata-only. The buttons keep
+local anchor `href` values and do not call a hosted cart, create a checkout
+session, collect payment details, or write production data.
+
 ## Current Boundaries
 
 WordPress owns:
@@ -122,10 +144,11 @@ Future checkout work owns:
 
 - Hosted cart or checkout handoff.
 - Payment status handling.
+- Translating safe button metadata into a provider-specific cart request.
+- Transaction events.
 
 Later post-MVP checkout work may add recurring gift setup if the campaign page
 adds recurring donation controls.
-- Transaction events.
 
 Future Laravel middleware owns:
 

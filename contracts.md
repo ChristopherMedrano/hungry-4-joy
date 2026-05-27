@@ -84,6 +84,91 @@ If a later checkout script reads the button dataset, the data should normalize i
 }
 ```
 
+### Future Checkout Handoff Model
+
+Status: MVP 2 model only.
+
+The current page does not submit to checkout. A future checkout script or WordPress plugin can read the same `data-*` values and transform them into a hosted cart request.
+
+This model is intentionally provider-light. It describes the project-owned shape first, then shows how those fields may map into a hosted checkout item.
+
+#### WordPress Dataset To Handoff Mapping
+
+| WordPress Attribute | Internal Handoff Field | Checkout Item Field | Notes |
+| --- | --- | --- | --- |
+| `data-campaign-id` | `campaign.id` | `code` or campaign option | Stable attribution key. |
+| `data-campaign-name` | `campaign.name` | `name` or campaign option | Human-readable campaign label. |
+| `data-donation-amount` | `donation.amount` | `price` | Numeric amount, no currency symbol. |
+| `data-donation-label` | `donation.label` | donation label option | Keeps the selected public label visible later. |
+| `data-donation-type` | `donation.type` | giving type option | MVP value is `one_time`. |
+| `data-source-page` | `source.page` | source page option | Identifies where the donation started. |
+| `data-checkout-provider` | `checkout.provider` | internal config only | Selects the intended checkout adapter; not automatically sent externally. |
+
+#### Internal Handoff Shape
+
+```json
+{
+  "checkout": {
+    "provider": "foxy",
+    "mode": "modeled"
+  },
+  "campaign": {
+    "id": "loaves-campaign-01",
+    "name": "Loaves 4 Joy"
+  },
+  "donation": {
+    "amount": 25,
+    "currency": "USD",
+    "label": "3 loaves",
+    "type": "one_time"
+  },
+  "source": {
+    "page": "home"
+  }
+}
+```
+
+#### Modeled Checkout Item Shape
+
+```json
+{
+  "name": "Loaves 4 Joy",
+  "code": "loaves-campaign-01",
+  "price": 25,
+  "quantity": 1,
+  "options": {
+    "donation_label": "3 loaves",
+    "donation_type": "one_time",
+    "source_page": "home",
+    "campaign_name": "Loaves 4 Joy"
+  }
+}
+```
+
+#### Ownership Boundary
+
+WordPress owns:
+
+- Rendering donation buttons and readable campaign content.
+- Attaching safe metadata to each donation option.
+- Keeping visible labels, `aria-label` values, and metadata consistent.
+- Keeping the current `href` values as local anchors until checkout is explicitly wired.
+
+The future checkout handoff owns:
+
+- Reading selected button metadata.
+- Validating amount, campaign, and giving-type values before handoff.
+- Translating the internal handoff shape into the hosted checkout provider format.
+- Creating a checkout session or cart request only after a later issue explicitly adds that behavior.
+
+The checkout provider owns:
+
+- Hosted cart and payment collection.
+- Payment authorization, declines, and sensitive payment method handling.
+- Producing safe checkout events after checkout activity.
+
+For MVP 2, this section does not add a real checkout URL, hosted cart call, production write, secret, token, or payment credential.
+
 ### Validation Rules
 
 - `campaign_id` should be lowercase, stable, and URL-safe.
@@ -235,7 +320,7 @@ Failed checkout events should include enough safe information to troubleshoot wi
   "idempotency_key": "evt_h4j_20260527_0002",
   "source_page": "home",
   "campaign": {
-    "campaign_id": "fish-campaign-01",
+    "campaign_id": "fish-campaign-02",
     "campaign_name": "Fish 4 Joy"
   },
   "donation": {
