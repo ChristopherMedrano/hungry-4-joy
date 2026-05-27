@@ -88,7 +88,7 @@ If a later checkout script reads the button dataset, the data should normalize i
 
 ### Future Checkout Handoff Model
 
-Status: MVP 2 model only.
+Status: Milestone 2 model only.
 
 The current page does not submit to checkout. A future checkout script or WordPress plugin can read the same `data-*` values and transform them into a hosted cart request.
 
@@ -169,7 +169,7 @@ The checkout provider owns:
 - Payment authorization, declines, and sensitive payment method handling.
 - Producing safe checkout events after checkout activity.
 
-For MVP 2, this section does not add a real checkout URL, hosted cart call, production write, secret, token, or payment credential.
+For Milestone 2, this section does not add a real checkout URL, hosted cart call, production write, secret, token, or payment credential.
 
 See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any checkout handoff behavior.
 
@@ -193,7 +193,7 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any
 
 ## 2. Checkout Event Payload
 
-Status: MVP 2 contract draft.
+Status: Milestone 2 contract draft.
 
 This contract defines the safe event shape Laravel will receive after checkout activity.
 
@@ -203,7 +203,7 @@ The purpose is to make checkout results explicit before the project adds a webho
 
 Cart / Checkout.
 
-For MVP 2, this may be a simulated event fixture. A later hosted checkout integration should preserve the same normalized fields even if the provider sends a larger raw event.
+For Milestone 2, this may be a simulated event fixture. A later hosted checkout integration should preserve the same normalized fields even if the provider sends a larger raw event.
 
 ### Destination
 
@@ -293,20 +293,20 @@ Keep examples in the fixture files instead of duplicating full JSON payloads in 
 ### Validation Rules
 
 - `event_id` must be unique, stable, and safe to store.
-- `idempotency_key` must be present. For MVP 2, it can match `event_id`.
+- `idempotency_key` must be present. For Milestone 2, it can match `event_id`.
 - `event_created_at` must use ISO 8601 format.
 - `event_type` and `transaction_status` must use known contract values.
 - `donation.amount` must be numeric and greater than zero.
 - `donation.currency` should use `USD` for this demo.
-- `donation.donation_type` should use `one_time` for MVP 2.
+- `donation.donation_type` should use `one_time` for Milestone 2.
 - `campaign.campaign_id` and `campaign.campaign_name` should match the campaign metadata that started checkout.
 - `transaction_id` is required for `donation.created`; it may be `null` for failed checkouts that never produced a transaction.
 - `failure` is required when `event_type` is `payment.failed`.
 - Duplicate events should be logged and ignored after the first successful processing attempt.
 
-### Out Of MVP 2 Scope
+### Out Of Milestone 2 Scope
 
-The current WordPress campaign page only models one-time donation buttons. MVP 2 should not include subscription event payloads, recurring interval fields, refund event payloads, or refund amount fields.
+The current WordPress campaign page only models one-time donation buttons. Milestone 2 should not include subscription event payloads, recurring interval fields, refund event payloads, or refund amount fields.
 
 Those flows can become separate contracts later if the project adds recurring donation controls or refund reconciliation work.
 
@@ -327,7 +327,7 @@ The checkout event contract must not include:
 
 See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the full checkout and payment safety checklist.
 
-### MVP 2 Acceptance Criteria
+### Milestone 2 Acceptance Criteria
 
 - Successful checkout events include event, transaction, campaign, donation, donor, timestamp, and idempotency fields.
 - Failed checkout events include a failure object and do not imply a confirmed donation.

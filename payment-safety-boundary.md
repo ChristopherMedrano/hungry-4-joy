@@ -1,12 +1,12 @@
 # Checkout And Payment Safety Boundary
 
-This document defines the payment safety boundary for the Hungry-4-Joy educational prototype.
+This document keeps the Hungry-4-Joy demo clear about which layer owns donation metadata, checkout behavior, simulated event data, and PCI-aware payment handling.
 
-The goal is to keep the project useful for checkout, webhook, CRM, analytics, and support practice without turning the repo into a place that handles sensitive payment data or production checkout writes.
+It is not a full PCI compliance program. The practical goal is to keep raw payment details and production checkout writes out of this repo while still modeling the safe data a donation workflow needs.
 
-## Current MVP Scope
+## Current Milestone Scope
 
-MVP 2 models checkout metadata and checkout event payloads only.
+Milestone 2 models checkout metadata and checkout event payloads only.
 
 In scope:
 
@@ -56,7 +56,7 @@ Checkout-owned responsibilities:
 - Sensitive payment method handling.
 - Producing safe checkout result events.
 
-For MVP 2, the repo only models a future checkout handoff. It does not perform a hosted cart request or production checkout write.
+For Milestone 2, the repo only models a future checkout handoff. It does not perform a hosted cart request or production checkout write.
 
 ### Laravel May Receive Later
 
@@ -100,7 +100,7 @@ They should not:
 - Imply that checkout is connected.
 - Trigger any production write or hosted cart action.
 
-## Forbidden Data
+## Do Not Include
 
 The project must not include these values in markup, docs, JSON fixtures, logs, config, database records, commits, issues, or dashboards:
 
