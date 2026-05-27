@@ -29,7 +29,7 @@
 	</nav>
 </header>
 
-<main id="top">
+<main id="top" tabindex="-1">
 	<section class="h4j-section h4j-hero" aria-labelledby="h4j-hero-title">
 		<div class="h4j-shell h4j-split">
 			<div class="h4j-reveal">
@@ -68,6 +68,7 @@
 					<a
 						class="h4j-donation-button"
 						href="#campaign-one"
+						aria-label="Give $10 to Loaves 4 Joy for 1 loaf"
 						data-campaign-id="loaves-campaign-01"
 						data-campaign-name="Loaves 4 Joy"
 						data-donation-amount="10"
@@ -79,6 +80,7 @@
 					<a
 						class="h4j-donation-button"
 						href="#campaign-one"
+						aria-label="Give $25 to Loaves 4 Joy for 3 loaves"
 						data-campaign-id="loaves-campaign-01"
 						data-campaign-name="Loaves 4 Joy"
 						data-donation-amount="25"
@@ -90,6 +92,7 @@
 					<a
 						class="h4j-donation-button"
 						href="#campaign-one"
+						aria-label="Give $100 to Loaves 4 Joy for a basketful"
 						data-campaign-id="loaves-campaign-01"
 						data-campaign-name="Loaves 4 Joy"
 						data-donation-amount="100"
@@ -121,6 +124,7 @@
 					<a
 						class="h4j-donation-button"
 						href="#campaign-two"
+						aria-label="Give $10 to Fish 4 Joy for 1 fish"
 						data-campaign-id="fish-campaign-02"
 						data-campaign-name="Fish 4 Joy"
 						data-donation-amount="10"
@@ -132,6 +136,7 @@
 					<a
 						class="h4j-donation-button"
 						href="#campaign-two"
+						aria-label="Give $25 to Fish 4 Joy for 3 fish"
 						data-campaign-id="fish-campaign-02"
 						data-campaign-name="Fish 4 Joy"
 						data-donation-amount="25"
@@ -143,6 +148,7 @@
 					<a
 						class="h4j-donation-button"
 						href="#campaign-two"
+						aria-label="Give $100 to Fish 4 Joy for a full net"
 						data-campaign-id="fish-campaign-02"
 						data-campaign-name="Fish 4 Joy"
 						data-donation-amount="100"
@@ -168,12 +174,12 @@
 				<!-- Placeholder signup form for the public-site slice; no backend submission yet. -->
 				<label>
 					<span class="h4j-label">Email Address</span>
-					<input type="email" name="email" placeholder="your@email.com">
+					<input type="email" name="email" placeholder="your@email.com" autocomplete="email" aria-describedby="email-list-note" required>
 				</label>
 				<p>
 					<button class="h4j-button" type="submit">Sign Me Up</button>
 				</p>
-				<p class="h4j-spec">NO SPAM &middot; JUST JOY &middot; UNSUBSCRIBE ANYTIME</p>
+				<p id="email-list-note" class="h4j-spec">NO SPAM &middot; JUST JOY &middot; UNSUBSCRIBE ANYTIME</p>
 			</form>
 		</div>
 	</section>
@@ -200,8 +206,8 @@
 				<p class="h4j-eyebrow">Connect</p>
 				<ul>
 					<li><a href="mailto:hello@hungry4joy.org">hello@hungry4joy.org</a></li>
-					<li><a href="#">Volunteer</a></li>
-					<li><a href="#">Partner With Us</a></li>
+					<li><a href="mailto:hello@hungry4joy.org?subject=Volunteer%20With%20Hungry-4-Joy">Volunteer</a></li>
+					<li><a href="mailto:hello@hungry4joy.org?subject=Partner%20With%20Hungry-4-Joy">Partner With Us</a></li>
 				</ul>
 			</nav>
 
