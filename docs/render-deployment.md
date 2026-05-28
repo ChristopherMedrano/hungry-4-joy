@@ -61,6 +61,7 @@ Set these secrets during Blueprint creation:
 | --- | --- |
 | `APP_KEY` | Output of `cd middleware-api && php artisan key:generate --show` |
 | `APP_URL` | The Render service URL, such as `https://hungry-4-joy-middleware.onrender.com` |
+| `FOXY_WEBHOOK_ENCRYPTION_KEY` | Foxy JSON webhook encryption key |
 
 Render injects the Postgres connection string into `DB_URL` from the Blueprint database reference.
 
@@ -79,13 +80,19 @@ Expected response:
 }
 ```
 
-The future Foxy webhook target is:
+The Foxy JSON webhook target is:
 
 ```text
-https://<middleware-render-host>/api/checkout/events
+https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
 ```
 
-Do not configure Foxy production webhooks until signature verification is implemented.
+Use the fixture receiver only for project-owned demo replays:
+
+```text
+https://hungry-4-joy-middleware.onrender.com/api/checkout/events
+```
+
+Do not enable the Foxy webhook until `FOXY_WEBHOOK_ENCRYPTION_KEY` is set in Render.
 
 ## References
 
