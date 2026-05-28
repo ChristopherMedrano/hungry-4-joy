@@ -1,8 +1,8 @@
 # Checkout Event Verification Walkthrough
 
-This walkthrough reviews the Hungry-4-Joy checkout event model and Foxy demo cart handoff before Laravel receiver work begins.
+This walkthrough reviews the Hungry-4-Joy checkout event model, Foxy demo cart handoff, and fixture alignment with the local Laravel receiver.
 
-Use it when changing donation button metadata, checkout handoff docs, simulated checkout event fixtures, or the checkout/payment boundary.
+Use it when changing donation button metadata, checkout handoff docs, simulated checkout event fixtures, or the checkout/payment boundary. Use [`middleware-receiver-verification.md`](middleware-receiver-verification.md) when verifying the Laravel receiver route, storage, validation errors, duplicate replay behavior, or local logs.
 
 ## What This Verifies
 
@@ -197,7 +197,7 @@ Review:
 docs/payment-safety-boundary.md
 ```
 
-The walkthrough should confirm that checkout event receiving stays future and simulated while issue #55 uses only the safe Foxy demo cart handoff.
+The walkthrough should confirm that the public checkout handoff stays safe and simulated while the local Laravel receiver remains limited to reviewed fixture-based behavior.
 
 Use this scan before committing checkout-related changes:
 
@@ -234,7 +234,7 @@ In scope:
 
 Out of scope:
 
-- Laravel webhook receiver implementation.
+- Production webhook receiver behavior.
 - Database schema or persistence.
 - CRM sync.
 - Analytics events.

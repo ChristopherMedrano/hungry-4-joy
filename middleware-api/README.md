@@ -99,6 +99,12 @@ Run only the fixture-based receiver tests:
 php artisan test --filter=CheckoutEventFixtureReceiverTest
 ```
 
+For the full local receiver walkthrough, including manual fixture submission, validation-error checks, duplicate replay checks, storage inspection, and payment-safety scans, see:
+
+```text
+../docs/middleware-receiver-verification.md
+```
+
 Confirm the API route exists:
 
 ```bash
