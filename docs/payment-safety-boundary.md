@@ -6,7 +6,7 @@ It is not a full PCI compliance program. The practical goal is to keep raw payme
 
 ## Current Milestone Scope
 
-MVP 3 issue #55 connects one-time donation buttons to a Foxy demo cart handoff after Milestone 2 modeled checkout metadata and checkout event payloads.
+The current repo connects one-time donation buttons to a Foxy demo cart handoff and verifies local checkout event fixtures through the Laravel middleware receiver.
 
 In scope:
 
@@ -14,8 +14,9 @@ In scope:
 - Foxy demo cart links and sidecart loader behavior.
 - Safe cart fields such as name, price, code, quantity, and custom options.
 - Simulated checkout event fixtures.
+- Local Laravel receiver validation, normalized storage, and duplicate prevention for safe fixture payloads.
 - Safe transaction identifiers, statuses, timestamps, campaign codes, amounts, and donor/contact fields.
-- Local documentation and local reference payloads for future middleware work.
+- Local documentation and local reference payloads for receiver verification.
 
 Out of scope:
 
@@ -56,11 +57,11 @@ Checkout-owned responsibilities:
 - Sensitive payment method handling.
 - Producing safe checkout result events.
 
-For issue #55, the repo performs a safe demo cart request only. It does not perform a production checkout write, provider API write, webhook receiver action, or credentialed provider call.
+The WordPress demo cart handoff performs a safe demo cart request only. It does not perform a production checkout write, provider API write, webhook receiver action, or credentialed provider call.
 
-### Laravel May Receive Later
+### Laravel Receives Locally
 
-Future Laravel middleware may receive safe checkout event data after checkout activity.
+The local Laravel middleware receives safe checkout event fixture data after checkout activity is represented by a fixture payload.
 
 Allowed Laravel event data:
 
@@ -97,7 +98,7 @@ They should not:
 - Use real donor contact information.
 - Include real provider payloads.
 - Include secrets, tokens, authorization headers, or payment credentials.
-- Imply that a checkout event receiver is connected.
+- Trigger any provider API or production webhook action.
 - Trigger any production write or hosted cart action.
 
 ## Do Not Include
@@ -119,11 +120,11 @@ The project must not include these values in markup, docs, JSON fixtures, logs, 
 
 Before adding checkout-related code or docs, confirm:
 
-- The change is either safe demo cart handoff behavior, metadata-only modeling, or simulated event data.
-- The issue #55 demo cart handoff uses only safe cart fields and public store URLs.
+- The change is safe demo cart handoff behavior, metadata-only modeling, simulated event data, or local receiver verification.
+- The demo cart handoff uses only safe cart fields and public store URLs.
 - WordPress owns only public content and safe metadata.
 - Checkout owns payment collection and sensitive payment handling.
-- Laravel receives only safe event data.
+- Laravel receives only safe event data and stores only normalized safe fields.
 - Fixture data is fictional and local.
 - No production checkout write is introduced.
 - No forbidden data appears in files, examples, logs, or issue text.

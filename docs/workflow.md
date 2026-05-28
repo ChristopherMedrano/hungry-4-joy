@@ -97,7 +97,8 @@ Scope:
 - Webhook endpoint.
 - Mock or test FoxyCart event.
 - Event validation.
-- Raw event payload stored.
+- Safe normalized event fields stored.
+- Duplicate event sends ignored.
 
 Demo:
 
@@ -190,8 +191,8 @@ Acceptance criteria:
 - Donation starts from the campaign page.
 - FoxyCart or mock checkout event reports failure.
 - No false donation record is created.
-- `PaymentFailed` event is logged.
-- Dashboard shows the failed state.
+- Failed payment details are stored as safe normalized failure fields.
+- Dashboard shows the failed state after dashboard work exists.
 
 ### Missing HubSpot Gift
 
@@ -208,10 +209,10 @@ Acceptance criteria:
 Acceptance criteria:
 
 - Same event ID can be submitted twice.
-- First event creates or updates the donation.
-- Second event is logged as duplicate.
-- No duplicate HubSpot update occurs.
-- Dashboard shows duplicate status.
+- First event creates the local checkout event row.
+- Second event is ignored as a duplicate.
+- No duplicate HubSpot update occurs after CRM sync exists.
+- Dashboard shows duplicate status after dashboard work exists.
 
 ### Campaign Launch
 

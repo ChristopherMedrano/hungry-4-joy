@@ -11,7 +11,6 @@ The receiver is local middleware/API behavior only. It does not verify provider 
 - Validation errors for malformed, unsupported, or unsafe payloads.
 - Duplicate-event behavior for repeated `event_id` or `idempotency_key` values.
 - Safe normalized storage without raw payment details or provider secrets.
-- Public-safe follow-up notes for CRM, analytics, observability, and dashboard milestones.
 
 ## 1. Prepare The Local Middleware App
 

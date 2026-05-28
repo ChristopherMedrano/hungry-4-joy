@@ -91,13 +91,18 @@ What this demonstrates:
 
 Laravel is the integration layer between the public site, FoxyCart transaction/webhook events, HubSpot, the database, and the admin dashboard.
 
-MVP responsibilities:
+Current local receiver responsibilities:
 
-- receive FoxyCart transaction/webhook events
-- validate event signatures with a local demo signing value, not a production secret
-- store safe or redacted event payloads
-- normalize donor and donation data
-- prevent duplicate processing
+- receive safe checkout event fixture payloads
+- validate the checkout event contract
+- store safe normalized checkout event fields
+- normalize campaign, donation, donor/contact, transaction, and redacted failure data
+- prevent duplicate processing by `event_id` or `idempotency_key`
+
+Future middleware responsibilities:
+
+- receive production provider webhook events
+- validate event signatures with a local demo signing value before production secrets are introduced
 - queue HubSpot CRM/marketing sync jobs
 - update HubSpot contact/activity/deal or follow-up status with donation details
 - log success and failure states
@@ -305,7 +310,7 @@ What this demonstrates:
 
 ```text
 Visitor views WordPress campaign page
-  -> chooses donation amount/frequency
+  -> chooses one-time donation amount
   -> WordPress passes campaign metadata to FoxyCart
   -> FoxyCart creates transaction/webhook event
   -> Laravel receives, validates, and stores event
@@ -374,7 +379,7 @@ What this demonstrates:
 
 - checking the WordPress-to-FoxyCart metadata handoff
 - reviewing payment status and gateway-response concepts
-- recording a `PaymentFailed` event
+- recording safe failed-payment status and redacted failure details
 - avoiding false donation records
 
 ### Missing HubSpot Gift
@@ -400,7 +405,7 @@ What this demonstrates:
 
 - idempotency
 - duplicate event detection
-- preserving the raw event log
+- preserving safe normalized event records
 - preventing duplicate donation and HubSpot records
 
 ### HubSpot Field Mapping Error
@@ -486,9 +491,9 @@ What this demonstrates:
 
 ## Deployment Direction
 
-Local development will use DDEV.
+Local WordPress development uses DDEV.
 
-In local development, DDEV should run the WordPress site and, if practical, the Laravel middleware/database pieces needed to test the full donation flow. This keeps the MVP reproducible and avoids depending on hosted infrastructure while the system is still changing quickly.
+In local development, DDEV runs the WordPress site, while the Laravel middleware/API can run separately with `php artisan serve` and local sqlite storage. This keeps the MVP reproducible and avoids depending on hosted infrastructure while the system is still changing quickly.
 
 Render is the preferred deployment target for the Laravel side of the MVP.
 

@@ -2,7 +2,7 @@
 
 This document defines the small data contracts used between parts of the Hungry-4-Joy demo ecosystem.
 
-The goal is to keep each system boundary clear. WordPress prepares campaign and donation context. Checkout receives safe metadata. Later, Laravel will receive checkout events, normalize them, and expose data to CRM, analytics, observability, and dashboard workflows.
+The goal is to keep each system boundary clear. WordPress prepares campaign and donation context. Checkout receives safe metadata. The local Laravel receiver validates checkout event fixtures, stores normalized safe fields, and prevents duplicate processing. Future CRM, analytics, observability, and dashboard workflows build on that receiver data.
 
 These contracts should avoid sensitive payment data. Card numbers, CVV values, raw payment credentials, and payment method secrets do not belong in WordPress, Laravel, HubSpot, logs, or the dashboard.
 
@@ -10,7 +10,7 @@ The project-wide checkout and payment safety boundary is documented in [`payment
 
 ## 1. Campaign Checkout Metadata
 
-Status: Sprint 1 metadata contract, extended by the MVP 3 Foxy demo cart handoff.
+Status: Implemented metadata contract, extended by the Foxy demo cart handoff.
 
 This contract defines the safe metadata attached to donation options on the WordPress campaign page and preserved through the demo cart handoff.
 
@@ -28,7 +28,7 @@ WordPress campaign page.
 
 Foxy demo cart.
 
-`checkout_provider` is internal handoff context for this demo. Issue #55 also sends it to Foxy as a safe custom option so the selected provider context survives manual cart inspection.
+`checkout_provider` is internal handoff context for this demo. The Foxy demo cart link also sends it as a safe custom option so the selected provider context survives manual cart inspection.
 
 ### Required Fields
 
@@ -86,7 +86,7 @@ If a later checkout script reads the button dataset, the data should normalize i
 
 ### Foxy Demo Cart Handoff
 
-Status: MVP 3 demo cart handoff.
+Status: Implemented demo cart handoff.
 
 The current page maps each donation button into a Foxy demo cart request at `https://hungry-4-joy.foxycart.com/cart`. The same links work as full-page cart redirects and are also compatible with Foxy's sidecart loader when the loader script is available.
 
@@ -175,7 +175,7 @@ The checkout provider owns:
 - Payment authorization, declines, and sensitive payment method handling.
 - Producing safe checkout events after checkout activity.
 
-For MVP 3 issue #55, this section adds a demo cart URL and sidecart loader only. It does not add production checkout writes, webhook receiver behavior, provider API calls, secrets, tokens, authorization headers, raw payment data, subscription behavior, or refund behavior.
+This section documents the demo cart URL and sidecart loader only. It does not add production checkout writes, provider API calls, secrets, tokens, authorization headers, raw payment data, subscription behavior, or refund behavior.
 
 See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any checkout handoff behavior.
 
@@ -199,21 +199,21 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any
 
 ## 2. Checkout Event Payload
 
-Status: Milestone 2 contract draft.
+Status: Implemented local receiver contract.
 
-This contract defines the safe event shape Laravel will receive after checkout activity.
+This contract defines the safe event shape the local Laravel receiver accepts after checkout activity is represented by a fixture or provider event.
 
-The purpose is to make checkout results explicit before the project adds a webhook receiver or real checkout integration. Local development can use simulated checkout events that follow this shape.
+The purpose is to make checkout results explicit without storing raw provider payloads or payment details. Local development uses tracked checkout event fixtures that follow this shape.
 
 ### Source
 
 Cart / Checkout.
 
-For Milestone 2, this may be a simulated event fixture. A later hosted checkout integration should preserve the same normalized fields even if the provider sends a larger raw event.
+Today, the source is a tracked checkout event fixture. A later hosted checkout integration should preserve the same normalized fields even if the provider sends a larger raw event.
 
 ### Destination
 
-Laravel middleware webhook receiver.
+Laravel middleware receiver at `POST /api/checkout/events`.
 
 The Laravel receiver is responsible for validating the event, storing a safe copy, preventing duplicate processing, and normalizing the donation into later CRM, analytics, observability, and dashboard workflows.
 
@@ -292,27 +292,27 @@ The standalone JSON fixtures are the source of truth for simulated checkout even
 - [`donation-created.one-time.json`](../examples/checkout-events/donation-created.one-time.json)
 - [`payment-failed.one-time.json`](../examples/checkout-events/payment-failed.one-time.json)
 
-This contract defines the required fields, event types, statuses, and validation rules. The fixture files provide complete reusable payloads for future local middleware tests.
+This contract defines the required fields, event types, statuses, and validation rules. The fixture files provide complete reusable payloads for local middleware receiver tests.
 
 Keep examples in the fixture files instead of duplicating full JSON payloads in this document.
 
 ### Validation Rules
 
 - `event_id` must be unique, stable, and safe to store.
-- `idempotency_key` must be present. For Milestone 2, it can match `event_id`.
+- `idempotency_key` must be present. In the current fixtures, it can match `event_id`.
 - `event_created_at` must use ISO 8601 format.
 - `event_type` and `transaction_status` must use known contract values.
 - `donation.amount` must be numeric and greater than zero.
 - `donation.currency` should use `USD` for this demo.
-- `donation.donation_type` should use `one_time` for Milestone 2.
+- `donation.donation_type` should use `one_time` for the current fixture set.
 - `campaign.campaign_id` and `campaign.campaign_name` should match the campaign metadata that started checkout.
 - `transaction_id` is required for `donation.created`; it may be `null` for failed checkouts that never produced a transaction.
 - `failure` is required when `event_type` is `payment.failed`.
-- Duplicate events should be logged and ignored after the first successful processing attempt.
+- Duplicate events should be ignored after the first successful processing attempt.
 
-### Out Of Milestone 2 Scope
+### Out Of Current Checkout Event Scope
 
-The current WordPress campaign page only models one-time donation buttons. Milestone 2 should not include subscription event payloads, recurring interval fields, refund event payloads, or refund amount fields.
+The current WordPress campaign page only models one-time donation buttons. The current checkout event contract should not include subscription event payloads, recurring interval fields, refund event payloads, or refund amount fields.
 
 Those flows can become separate contracts later if the project adds recurring donation controls or refund reconciliation work.
 
@@ -333,7 +333,7 @@ The checkout event contract must not include:
 
 See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the full checkout and payment safety checklist.
 
-### Milestone 2 Acceptance Criteria
+### Checkout Event Acceptance Criteria
 
 - Successful checkout events include event, transaction, campaign, donation, donor, timestamp, and idempotency fields.
 - Failed checkout events include a failure object and do not imply a confirmed donation.

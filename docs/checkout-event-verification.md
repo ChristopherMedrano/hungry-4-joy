@@ -11,7 +11,7 @@ Use it when changing donation button metadata, checkout handoff docs, simulated 
 - Foxy demo cart links preserve safe metadata.
 - Simulated checkout event fixtures match the checkout event contract.
 - Sensitive payment details stay out of markup, docs, and fixture payloads.
-- Middleware, CRM, analytics, and dashboard work remain future milestones.
+- Local middleware receiver behavior is verified separately; CRM, analytics, and dashboard work remain future milestones.
 
 ## 1. Start With Campaign Page Metadata
 
@@ -36,7 +36,7 @@ data-checkout-provider
 Useful source-inspection checks:
 
 ```bash
-rg -c 'class="h4j-donation-button"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+rg -c 'h4j-donation-button' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'data-donation-type="one_time"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'data-checkout-provider="foxy"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 ```
@@ -222,7 +222,7 @@ Expected result:
 
 ## 5. Confirm Current Boundaries
 
-The current demo connects one-time donation buttons to the Foxy demo cart. Checkout event receiving still stops at reviewed contracts and local fixtures.
+The current demo connects one-time donation buttons to the Foxy demo cart. Checkout event receiving is local and fixture-backed; production webhook receiving remains out of scope.
 
 In scope:
 
@@ -230,30 +230,20 @@ In scope:
 - Foxy demo cart link handoff.
 - Foxy sidecart loader behavior.
 - Simulated checkout event examples.
+- Local receiver validation and normalized fixture storage.
 - Payment data boundary documentation.
 
 Out of scope:
 
 - Production webhook receiver behavior.
-- Database schema or persistence.
+- CRM or dashboard persistence beyond local `checkout_events` storage.
 - CRM sync.
 - Analytics events.
 - Dashboard views.
 - Production checkout writes.
 - Subscription or refund flows.
 
-## Laravel Receiver Follow-Ups
-
-Capture these for the next middleware/API milestone:
-
-- Validate request shape against the checkout event contract.
-- Add signature validation using a local demo signing value.
-- Store safe or redacted event payloads.
-- Enforce idempotency with `event_id` or `idempotency_key`.
-- Normalize campaign, donation, donor, and failure fields.
-- Add tests using `examples/checkout-events/*.json`.
-- Log failed validation and duplicate-event handling.
-- Keep CRM, analytics, and dashboard updates behind later explicit issues.
+## Laravel Receiver Boundary
 
 Current Laravel receiver status:
 
@@ -274,7 +264,7 @@ php -l wordpress/wp-content/themes/hungry-4-joy/functions.php
 jq empty examples/checkout-events/*.json
 cd middleware-api && php artisan test --filter=CheckoutEventFixtureReceiverTest && cd ..
 git diff --check
-rg -c 'class="h4j-donation-button"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
+rg -c 'h4j-donation-button' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'class="h4j-donation-button foxycart"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'href="https://hungry-4-joy.foxycart.com/cart' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'data-donation-type="one_time"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
