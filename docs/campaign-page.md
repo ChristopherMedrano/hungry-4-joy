@@ -63,7 +63,7 @@ Each donation link should include:
 
 - Human-readable button text.
 - A descriptive `aria-label`.
-- Safe `data-*` metadata for the demo cart handoff and future checkout event attribution.
+- Safe `data-*` metadata for the demo cart handoff and checkout event attribution.
 
 Example:
 
@@ -93,7 +93,7 @@ When adding or editing a donation option:
 
 ## Campaign Metadata
 
-The Sprint 1 metadata contract is documented in `contracts.md`.
+The implemented metadata contract is documented in `contracts.md`.
 
 Required fields:
 
@@ -125,7 +125,7 @@ Each donation button maps to a one-item checkout handoff:
 | `data-source-page` | Foxy `source_page` option for attribution. |
 | `data-checkout-provider` | Foxy `checkout_provider` option, currently `foxy`. |
 
-For issue #55, the handoff calls a hosted demo cart and may open Foxy's sidecart. It does not collect payment details on WordPress, call provider APIs, commit provider secrets, create checkout webhooks, or write production data.
+The handoff calls a hosted demo cart and may open Foxy's sidecart. It does not collect payment details on WordPress, call provider APIs, commit provider secrets, create checkout webhooks, or write production data.
 
 ## Current Boundaries
 
@@ -145,11 +145,14 @@ Checkout owns:
 Later post-MVP checkout work may add recurring gift setup if the campaign page
 adds recurring donation controls.
 
+Laravel middleware currently owns:
+
+- Local receiver validation.
+- Safe normalized event storage and idempotency.
+- Donor and donation normalization.
+
 Future Laravel middleware owns:
 
-- Webhook receipt and validation.
-- Event storage and idempotency.
-- Donor and donation normalization.
 - CRM sync jobs and retry status.
 
 Future analytics and dashboard work owns:

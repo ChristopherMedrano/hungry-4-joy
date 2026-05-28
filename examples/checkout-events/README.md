@@ -1,8 +1,8 @@
 # Simulated Checkout Event Examples
 
-These local fixtures model safe checkout events for the Hungry-4-Joy Milestone 2 checkout contract.
+These local fixtures model safe checkout events for the Hungry-4-Joy checkout contract.
 
-They are reference payloads only. They do not call a hosted cart, create a checkout session, collect payment details, or write production data.
+They are local reference and test payloads. They can be posted to the local Laravel receiver, but they do not call a hosted cart, create a checkout session, collect payment details, or write production data.
 
 The full checkout and payment safety boundary is documented in [`../../docs/payment-safety-boundary.md`](../../docs/payment-safety-boundary.md).
 
@@ -15,7 +15,7 @@ The full checkout and payment safety boundary is documented in [`../../docs/paym
 
 ## Scope
 
-The current milestone only models one-time donation buttons. Recurring gift, subscription, and refund examples are intentionally deferred until the public site and checkout contract support those flows.
+The current fixture set only models one-time donation buttons. Recurring gift, subscription, and refund examples are intentionally deferred until the public site and checkout contract support those flows.
 
 ## Safety Rules
 

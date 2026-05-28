@@ -13,11 +13,19 @@ cd middleware-api
 composer install
 ```
 
-Create local environment config:
+Create local environment config if `.env` is missing:
 
 ```bash
-cp .env.example .env
-php artisan key:generate
+if [ ! -f .env ]; then
+  cp .env.example .env
+  php artisan key:generate
+fi
+```
+
+Run local middleware migrations:
+
+```bash
+php artisan migrate
 ```
 
 Start the local Laravel server:
@@ -113,7 +121,7 @@ php artisan route:list --path=api
 
 ## Current Boundary
 
-Issue #24 adds safe event storage and duplicate prevention. It does not add signature validation, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
+Current receiver work adds safe event storage and duplicate prevention. It does not add signature validation, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
 
 Run migrations when setting up local middleware storage. CRM sync, analytics, and dashboard behavior are planned for later middleware/API issues.
 

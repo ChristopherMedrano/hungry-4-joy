@@ -76,6 +76,8 @@ Current:
 - Twenty Twenty-Five child theme
 - Sass/SCSS source workflow for child theme styling
 - compiled child theme CSS enqueued by WordPress
+- campaign page with one-time donation buttons
+- safe Foxy demo cart handoff
 - root-level Laravel middleware/API app in `middleware-api/`
 - local Laravel API health endpoint at `/api/health`
 - checkout event receiver at `/api/checkout/events`
@@ -84,8 +86,6 @@ Current:
 
 Planned:
 
-- campaign page and donation buttons
-- Foxy.io checkout handoff
 - provider signature verification for production webhook receiving
 - HubSpot CRM sync
 - marketing analytics events
@@ -167,11 +167,19 @@ cd middleware-api
 composer install
 ```
 
-Create local middleware/API environment config:
+Create local middleware/API environment config if `.env` is missing:
 
 ```bash
-cp .env.example .env
-php artisan key:generate
+if [ ! -f .env ]; then
+  cp .env.example .env
+  php artisan key:generate
+fi
+```
+
+Run local middleware/API migrations:
+
+```bash
+php artisan migrate
 ```
 
 Start the local Laravel server:
