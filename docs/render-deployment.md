@@ -3,9 +3,45 @@
 This project should deploy to Render as separate services:
 
 - Laravel middleware/API as a Render Web Service.
-- WordPress as a separate Render WordPress service with MySQL and persistent storage.
+- WordPress as a separate demo Render Web Service using SQLite.
 
 Keeping them separate preserves the project boundary: WordPress owns campaign content and demo cart links, while Laravel owns checkout event receipt and integration state.
+
+## WordPress Demo Site
+
+The WordPress demo service is defined in the root [`render.yaml`](../render.yaml) Blueprint.
+
+Render resources:
+
+- Web service: `hungry-4-joy-wordpress`
+- Runtime: Docker
+- Docker root: `wordpress/`
+- Container port: `80`
+- Health check: `/`
+- Public URL: `https://hungry-4-joy-wordpress.onrender.com`
+
+This service uses the WordPress.org SQLite Database Integration plugin instead of MySQL. It is intended only for a disposable demo. Render free web services use an ephemeral filesystem, so WordPress admin edits, uploads, plugin installs, and SQLite data can be lost on redeploy, restart, or spin-down. The container seeds the demo site on startup so the campaign page can come back without a paid MySQL/private service.
+
+Set these secrets during Blueprint sync:
+
+| Key | Value |
+| --- | --- |
+| `WP_ADMIN_PASSWORD` | A generated demo admin password |
+| `WP_ADMIN_EMAIL` | The demo admin email address |
+
+After deploy, verify:
+
+```bash
+curl https://hungry-4-joy-wordpress.onrender.com
+```
+
+Then open:
+
+```text
+https://hungry-4-joy-wordpress.onrender.com/wp-admin
+```
+
+Use the configured `WP_ADMIN_USER` and `WP_ADMIN_PASSWORD` values. Do not store real donor data, production content, or irreplaceable media uploads in this demo service.
 
 ## Middleware/API
 
@@ -51,29 +87,10 @@ https://<middleware-render-host>/api/checkout/events
 
 Do not configure Foxy production webhooks until signature verification is implemented.
 
-## WordPress
-
-Render's WordPress deployment path is separate from this middleware Blueprint. Render's guide uses:
-
-- A Docker WordPress web service.
-- MySQL 8.
-- A Render disk mounted for persistent WordPress files.
-
-Use the project-owned child theme files under:
-
-```text
-wordpress/wp-content/themes/hungry-4-joy/
-```
-
-The recommended next step is a dedicated WordPress deployment slice that decides whether to:
-
-- Use Render's WordPress template and manually install or upload the child theme.
-- Build a small WordPress Docker image from this repo that copies the child theme into the WordPress image.
-
-For the first hosted webhook demo, deploy the middleware service first. WordPress can remain local or be deployed separately after the public middleware URL is stable.
-
 ## References
 
 - Render Laravel Docker guide: https://render.com/docs/deploy-php-laravel-docker
+- Render free service limitations: https://render.com/docs/free
 - Render WordPress guide: https://render.com/docs/deploy-wordpress
 - Render Blueprint reference: https://render.com/docs/blueprint-spec
+- WordPress SQLite Database Integration plugin: https://wordpress.org/plugins/sqlite-database-integration/

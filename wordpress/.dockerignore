@@ -1,0 +1,11 @@
+*
+!Dockerfile
+!wp-config-render.php
+!bin/
+!bin/render-wordpress-start.sh
+!wp-content/
+wp-content/*
+!wp-content/themes/
+wp-content/themes/*
+!wp-content/themes/hungry-4-joy/
+!wp-content/themes/hungry-4-joy/**
