@@ -87,6 +87,26 @@ The repo-level middleware test command is:
 npm run test:middleware
 ```
 
+Replay the tracked Foxy-shaped fixtures through the local receiver route:
+
+```bash
+npm run connect:foxy-demo
+```
+
+Expected first replay output with fresh local storage:
+
+```text
+donation-created.one-time.json: accepted
+payment-failed.one-time.json: accepted
+```
+
+Expected repeated replay output when events already exist locally:
+
+```text
+donation-created.one-time.json: duplicate_ignored
+payment-failed.one-time.json: duplicate_ignored
+```
+
 ## 3. Submit The Tracked Fixtures Manually
 
 Start the local Laravel server:

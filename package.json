@@ -5,6 +5,7 @@
     "build:wp-css": "sass wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css",
     "check:fixtures": "jq empty examples/checkout-events/*.json",
     "check:diff": "git diff --check",
+    "connect:foxy-demo": "cd middleware-api && php artisan checkout:replay-fixtures",
     "test": "npm run build:wp-css && npm run check:fixtures && npm run test:middleware && npm run check:diff",
     "test:fixtures": "cd middleware-api && php artisan test --filter=CheckoutEventFixtureReceiverTest",
     "test:middleware": "cd middleware-api && composer test",
