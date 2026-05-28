@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CheckoutEvent;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -14,7 +15,7 @@ Route::get('/health', function () {
 
 Route::post('/checkout/events', function (Request $request) {
     // Validate the safe event contract here; storage and idempotency come in later issues.
-    $request->validate([
+    $validated = $request->validate([
         'event_id' => ['required', 'string', 'max:128'],
         'event_type' => ['required', 'string', 'in:donation.created,payment.failed'],
         'event_created_at' => ['required', 'date'],
@@ -55,6 +56,40 @@ Route::post('/checkout/events', function (Request $request) {
         'payment_credential' => ['prohibited'],
         'payment_method_secret' => ['prohibited'],
         'raw_payment' => ['prohibited'],
+    ]);
+
+    if (CheckoutEvent::where('event_id', $validated['event_id'])
+        ->orWhere('idempotency_key', $validated['idempotency_key'])
+        ->exists()) {
+        return response()->json([
+            'service' => 'hungry-4-joy-middleware-api',
+            'status' => 'duplicate_ignored',
+        ]);
+    }
+
+    CheckoutEvent::create([
+        'event_id' => $validated['event_id'],
+        'event_type' => $validated['event_type'],
+        'event_created_at' => $validated['event_created_at'],
+        'checkout_provider' => $validated['checkout_provider'],
+        'checkout_session_id' => $validated['checkout_session_id'],
+        'transaction_id' => $validated['transaction_id'] ?? null,
+        'transaction_status' => $validated['transaction_status'],
+        'idempotency_key' => $validated['idempotency_key'],
+        'source_page' => $validated['source_page'],
+        'campaign_id' => $validated['campaign']['campaign_id'],
+        'campaign_name' => $validated['campaign']['campaign_name'],
+        'donation_amount' => $validated['donation']['amount'],
+        'donation_currency' => $validated['donation']['currency'],
+        'donation_label' => $validated['donation']['donation_label'],
+        'donation_type' => $validated['donation']['donation_type'],
+        'donor_email' => $validated['donor']['email'],
+        'donor_first_name' => $validated['donor']['first_name'],
+        'donor_last_name' => $validated['donor']['last_name'],
+        'donor_phone' => $validated['donor']['phone'] ?? null,
+        'failure_code' => $validated['failure']['failure_code'] ?? null,
+        'failure_message' => $validated['failure']['failure_message'] ?? null,
+        'failure_provider_status' => $validated['failure']['provider_status'] ?? null,
     ]);
 
     return response()->json([
