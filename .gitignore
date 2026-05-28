@@ -22,6 +22,11 @@ wordpress/wp-config-ddev.php
 
 # WordPress core downloaded by DDEV/WP-CLI
 wordpress/*
+!wordpress/.dockerignore
+!wordpress/Dockerfile
+!wordpress/bin/
+!wordpress/bin/**
+!wordpress/wp-config-render.php
 !wordpress/wp-content/
 
 # Project-owned WordPress code
