@@ -136,7 +136,13 @@ cd middleware-api
 php artisan test --filter=CheckoutEventFixtureReceiverTest
 ```
 
-This fixture test is the primary verification that each JSON fixture posts successfully to Laravel, stores a safe normalized row, and is ignored on duplicate retry. The summary command below is still useful when a human wants to quickly read what each fixture represents.
+This fixture test is the primary verification that each JSON fixture posts successfully to Laravel, stores a safe normalized row, and is ignored on duplicate retry. To exercise the same local connection as a command, run:
+
+```bash
+npm run connect:foxy-demo
+```
+
+The summary command below is still useful when a human wants to quickly read what each fixture represents.
 
 Print a readable summary of each fixture:
 
@@ -263,6 +269,7 @@ Run these before marking the checkout event model and demo cart handoff reviewed
 php -l wordpress/wp-content/themes/hungry-4-joy/functions.php
 jq empty examples/checkout-events/*.json
 cd middleware-api && php artisan test --filter=CheckoutEventFixtureReceiverTest && cd ..
+npm run connect:foxy-demo
 git diff --check
 rg -c 'h4j-donation-button' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'class="h4j-donation-button foxycart"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html

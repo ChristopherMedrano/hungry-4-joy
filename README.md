@@ -202,6 +202,12 @@ Run middleware/API tests:
 npm run test:middleware
 ```
 
+Replay the tracked Foxy-shaped checkout event fixtures through the local middleware receiver:
+
+```bash
+npm run connect:foxy-demo
+```
+
 Run the current local stack checks from the repo root:
 
 ```bash
@@ -270,6 +276,7 @@ wordpress/wp-content/cache/
 - [Checkout And Payment Safety Boundary](docs/payment-safety-boundary.md)
 - [Checkout Event Verification Walkthrough](docs/checkout-event-verification.md)
 - [Middleware Receiver Verification](docs/middleware-receiver-verification.md)
+- [Foxy To Middleware Connection Plan](docs/foxy-middleware-connection-plan.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
 

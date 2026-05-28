@@ -107,6 +107,12 @@ Run only the fixture-based receiver tests:
 php artisan test --filter=CheckoutEventFixtureReceiverTest
 ```
 
+Replay the tracked Foxy-shaped checkout event fixtures through the receiver route:
+
+```bash
+php artisan checkout:replay-fixtures
+```
+
 For the full local receiver walkthrough, including manual fixture submission, validation-error checks, duplicate replay checks, storage inspection, and payment-safety scans, see:
 
 ```text

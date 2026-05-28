@@ -68,6 +68,36 @@ class CheckoutEventFixtureReceiverTest extends TestCase
         );
     }
 
+    public function test_checkout_fixture_replay_command_posts_tracked_fixtures_to_receiver(): void
+    {
+        $this->artisan('checkout:replay-fixtures')
+            ->expectsOutputToContain('donation-created.one-time.json: accepted')
+            ->expectsOutputToContain('payment-failed.one-time.json: accepted')
+            ->assertExitCode(0);
+
+        $this->assertSame(2, DB::table('checkout_events')->count());
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'evt_h4j_demo_20260527_0001',
+            'event_type' => 'donation.created',
+        ]);
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'evt_h4j_demo_20260527_0002',
+            'event_type' => 'payment.failed',
+        ]);
+    }
+
+    public function test_checkout_fixture_replay_command_can_be_repeated_without_duplicate_rows(): void
+    {
+        $this->artisan('checkout:replay-fixtures')->assertExitCode(0);
+
+        $this->artisan('checkout:replay-fixtures')
+            ->expectsOutputToContain('donation-created.one-time.json: duplicate_ignored')
+            ->expectsOutputToContain('payment-failed.one-time.json: duplicate_ignored')
+            ->assertExitCode(0);
+
+        $this->assertSame(2, DB::table('checkout_events')->count());
+    }
+
     /**
      * @return array<string, array{string, array<string, mixed>}>
      */
