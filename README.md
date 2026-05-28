@@ -78,13 +78,15 @@ Current:
 - compiled child theme CSS enqueued by WordPress
 - root-level Laravel middleware/API app in `middleware-api/`
 - local Laravel API health endpoint at `/api/health`
+- checkout event receiver at `/api/checkout/events`
+- safe normalized checkout event storage and duplicate prevention
 - architecture and workflow documentation
 
 Planned:
 
 - campaign page and donation buttons
 - Foxy.io checkout handoff
-- Laravel webhook receiver implementation
+- provider signature verification for production webhook receiving
 - HubSpot CRM sync
 - marketing analytics events
 - observability and retry visibility
@@ -259,6 +261,7 @@ wordpress/wp-content/cache/
 - [Data Contracts](docs/contracts.md)
 - [Checkout And Payment Safety Boundary](docs/payment-safety-boundary.md)
 - [Checkout Event Verification Walkthrough](docs/checkout-event-verification.md)
+- [Middleware Receiver Verification](docs/middleware-receiver-verification.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
 
