@@ -129,6 +129,15 @@ Validate the JSON:
 jq empty examples/checkout-events/*.json
 ```
 
+Automated receiver coverage:
+
+```bash
+cd middleware-api
+php artisan test --filter=CheckoutEventFixtureReceiverTest
+```
+
+This fixture test is the primary verification that each JSON fixture posts successfully to Laravel, stores a safe normalized row, and is ignored on duplicate retry. The summary command below is still useful when a human wants to quickly read what each fixture represents.
+
 Print a readable summary of each fixture:
 
 ```bash
@@ -263,6 +272,7 @@ Run these before marking the checkout event model and demo cart handoff reviewed
 ```bash
 php -l wordpress/wp-content/themes/hungry-4-joy/functions.php
 jq empty examples/checkout-events/*.json
+cd middleware-api && php artisan test --filter=CheckoutEventFixtureReceiverTest && cd ..
 git diff --check
 rg -c 'class="h4j-donation-button"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -c 'class="h4j-donation-button foxycart"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html

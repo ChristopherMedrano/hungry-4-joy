@@ -189,10 +189,16 @@ curl http://127.0.0.1:<printed-port>/api/health
 Run middleware/API tests:
 
 ```bash
-php artisan test
+npm run test:middleware
 ```
 
-The middleware/API foundation does not yet receive checkout events, store donations, sync CRM data, emit analytics, or power dashboard views.
+Run the current local stack checks from the repo root:
+
+```bash
+npm test
+```
+
+The middleware/API now receives validated checkout event fixtures and stores safe normalized checkout event rows. It does not yet verify provider signatures, sync CRM data, emit analytics, or power dashboard views.
 
 ## SCSS Workflow
 
