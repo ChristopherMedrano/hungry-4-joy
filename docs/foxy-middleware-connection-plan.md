@@ -120,10 +120,10 @@ Query: zoom=items,items:options
 Encryption key: generated in Foxy and copied to FOXY_WEBHOOK_ENCRYPTION_KEY
 ```
 
-The existing fixture endpoint remains available for project-owned demos:
+The existing fixture endpoint remains available for local/test project-owned demos and intentionally returns `404` in production:
 
 ```text
-POST https://hungry-4-joy-middleware.onrender.com/api/checkout/events
+POST /api/checkout/events
 ```
 
 Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation and should return `duplicate_ignored` when the transaction was already stored.

@@ -86,10 +86,10 @@ The Foxy JSON webhook target is:
 https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
 ```
 
-Use the fixture receiver only for project-owned demo replays:
+The fixture receiver is local/test-only and intentionally returns `404` in production:
 
 ```text
-https://hungry-4-joy-middleware.onrender.com/api/checkout/events
+POST /api/checkout/events
 ```
 
 Do not enable the Foxy webhook until `FOXY_WEBHOOK_ENCRYPTION_KEY` is set in Render.
