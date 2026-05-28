@@ -12,7 +12,7 @@ class FoxyWebhookAdapter
      */
     public function toCheckoutEvent(array $payload, string $event): array
     {
-        if ($event !== 'transaction/created') {
+        if (! in_array($event, ['transaction/created', 'transaction/refeed'], true)) {
             throw new InvalidArgumentException('unsupported_foxy_event');
         }
 
@@ -23,7 +23,7 @@ class FoxyWebhookAdapter
 
         $item = $this->firstItem($payload);
         $options = $this->optionsByName($item);
-        $eventSlug = str_replace('/', '_', $event);
+        $eventSlug = 'transaction_created';
 
         return [
             'event_id' => "foxy_transaction_{$transactionId}_{$eventSlug}",

@@ -126,6 +126,8 @@ The existing fixture endpoint remains available for project-owned demos:
 POST https://hungry-4-joy-middleware.onrender.com/api/checkout/events
 ```
 
+Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation and should return `duplicate_ignored` when the transaction was already stored.
+
 ## Safety Boundary
 
 Do not add or document real card values, CVV/CVC values, checkout credentials, API keys, access tokens, client secrets, raw provider payloads, or private donor notes.
