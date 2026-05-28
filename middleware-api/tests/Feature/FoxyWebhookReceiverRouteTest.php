@@ -115,6 +115,32 @@ class FoxyWebhookReceiverRouteTest extends TestCase
         $this->assertSame(1, DB::table('checkout_events')->where('event_id', 'foxy_transaction_1042_transaction_created')->count());
     }
 
+    public function test_foxy_webhook_receiver_treats_signed_refeed_as_duplicate_transaction_replay(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        )->assertAccepted();
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/refeed')
+        )
+            ->assertOk()
+            ->assertExactJson([
+                'service' => 'hungry-4-joy-middleware-api',
+                'status' => 'duplicate_ignored',
+            ]);
+
+        $this->assertSame(1, DB::table('checkout_events')->where('transaction_id', '1042')->count());
+    }
+
     /**
      * @return array<string, mixed>
      */
