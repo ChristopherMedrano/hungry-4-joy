@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\CheckoutEvent;
+use App\Services\CheckoutEventIngestor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -21,6 +25,16 @@ class CheckoutEventReceiverRouteTest extends TestCase
                 'service' => 'hungry-4-joy-middleware-api',
                 'status' => 'accepted',
             ]);
+    }
+
+    public function test_checkout_event_receiver_route_is_not_publicly_available_in_production(): void
+    {
+        app()->detectEnvironment(fn () => 'production');
+
+        $response = $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'));
+
+        $response->assertNotFound();
+        $this->assertDatabaseCount('checkout_events', 0);
     }
 
     public function test_checkout_event_receiver_route_accepts_valid_failed_payment_payload(): void
@@ -168,6 +182,45 @@ class CheckoutEventReceiverRouteTest extends TestCase
             ]);
 
         $this->assertSame(1, DB::table('checkout_events')->where('idempotency_key', $payload['idempotency_key'])->count());
+    }
+
+    public function test_checkout_event_ingestor_treats_unique_constraint_collision_as_duplicate_retry(): void
+    {
+        $payload = $this->fixture('donation-created.one-time.json');
+
+        CheckoutEvent::creating(function () use ($payload) {
+            CheckoutEvent::withoutEvents(function () use ($payload) {
+                CheckoutEvent::create([
+                    'event_id' => $payload['event_id'],
+                    'event_type' => $payload['event_type'],
+                    'event_created_at' => Carbon::parse($payload['event_created_at']),
+                    'checkout_provider' => $payload['checkout_provider'],
+                    'checkout_session_id' => $payload['checkout_session_id'],
+                    'transaction_id' => $payload['transaction_id'],
+                    'transaction_status' => $payload['transaction_status'],
+                    'idempotency_key' => $payload['idempotency_key'],
+                    'source_page' => $payload['source_page'],
+                    'campaign_id' => $payload['campaign']['campaign_id'],
+                    'campaign_name' => $payload['campaign']['campaign_name'],
+                    'donation_amount' => $payload['donation']['amount'],
+                    'donation_currency' => $payload['donation']['currency'],
+                    'donation_label' => $payload['donation']['donation_label'],
+                    'donation_type' => $payload['donation']['donation_type'],
+                    'donor_email' => $payload['donor']['email'],
+                    'donor_first_name' => $payload['donor']['first_name'],
+                    'donor_last_name' => $payload['donor']['last_name'],
+                    'donor_phone' => $payload['donor']['phone'],
+                ]);
+            });
+        });
+
+        $result = app(CheckoutEventIngestor::class)->ingest($payload);
+
+        $this->assertSame([
+            'status' => 'duplicate_ignored',
+            'code' => Response::HTTP_OK,
+        ], $result);
+        $this->assertDatabaseCount('checkout_events', 1);
     }
 
     /**

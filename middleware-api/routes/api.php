@@ -21,6 +21,8 @@ $checkoutEventResponse = fn (string $status, int $code = Response::HTTP_OK) => r
 ], $code);
 
 Route::post('/checkout/events', function (Request $request, CheckoutEventIngestor $ingestor) use ($checkoutEventResponse) {
+    abort_if(app()->isProduction(), Response::HTTP_NOT_FOUND);
+
     $result = $ingestor->ingest($request->all());
 
     return $checkoutEventResponse($result['status'], $result['code']);

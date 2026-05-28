@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CheckoutEvent;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -31,35 +32,51 @@ class CheckoutEventIngestor
             ];
         }
 
-        CheckoutEvent::create([
-            'event_id' => $validated['event_id'],
-            'event_type' => $validated['event_type'],
-            'event_created_at' => $validated['event_created_at'],
-            'checkout_provider' => $validated['checkout_provider'],
-            'checkout_session_id' => $validated['checkout_session_id'],
-            'transaction_id' => $validated['transaction_id'] ?? null,
-            'transaction_status' => $validated['transaction_status'],
-            'idempotency_key' => $validated['idempotency_key'],
-            'source_page' => $validated['source_page'],
-            'campaign_id' => $validated['campaign']['campaign_id'],
-            'campaign_name' => $validated['campaign']['campaign_name'],
-            'donation_amount' => $validated['donation']['amount'],
-            'donation_currency' => $validated['donation']['currency'],
-            'donation_label' => $validated['donation']['donation_label'],
-            'donation_type' => $validated['donation']['donation_type'],
-            'donor_email' => $validated['donor']['email'],
-            'donor_first_name' => $validated['donor']['first_name'],
-            'donor_last_name' => $validated['donor']['last_name'],
-            'donor_phone' => $validated['donor']['phone'] ?? null,
-            'failure_code' => $validated['failure']['failure_code'] ?? null,
-            'failure_message' => $validated['failure']['failure_message'] ?? null,
-            'failure_provider_status' => $validated['failure']['provider_status'] ?? null,
-        ]);
+        try {
+            CheckoutEvent::create([
+                'event_id' => $validated['event_id'],
+                'event_type' => $validated['event_type'],
+                'event_created_at' => $validated['event_created_at'],
+                'checkout_provider' => $validated['checkout_provider'],
+                'checkout_session_id' => $validated['checkout_session_id'],
+                'transaction_id' => $validated['transaction_id'] ?? null,
+                'transaction_status' => $validated['transaction_status'],
+                'idempotency_key' => $validated['idempotency_key'],
+                'source_page' => $validated['source_page'],
+                'campaign_id' => $validated['campaign']['campaign_id'],
+                'campaign_name' => $validated['campaign']['campaign_name'],
+                'donation_amount' => $validated['donation']['amount'],
+                'donation_currency' => $validated['donation']['currency'],
+                'donation_label' => $validated['donation']['donation_label'],
+                'donation_type' => $validated['donation']['donation_type'],
+                'donor_email' => $validated['donor']['email'],
+                'donor_first_name' => $validated['donor']['first_name'],
+                'donor_last_name' => $validated['donor']['last_name'],
+                'donor_phone' => $validated['donor']['phone'] ?? null,
+                'failure_code' => $validated['failure']['failure_code'] ?? null,
+                'failure_message' => $validated['failure']['failure_message'] ?? null,
+                'failure_provider_status' => $validated['failure']['provider_status'] ?? null,
+            ]);
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
+
+            return [
+                'status' => 'duplicate_ignored',
+                'code' => Response::HTTP_OK,
+            ];
+        }
 
         return [
             'status' => 'accepted',
             'code' => Response::HTTP_ACCEPTED,
         ];
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return in_array($exception->getCode(), ['23000', '23505'], true);
     }
 
     /**
