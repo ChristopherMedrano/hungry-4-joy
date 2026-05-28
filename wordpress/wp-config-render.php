@@ -18,11 +18,17 @@ define( 'DB_ENGINE', 'sqlite' );
 define( 'DB_DIR', getenv( 'WP_SQLITE_DIR' ) ?: '/tmp/hungry-4-joy-wordpress' );
 define( 'DB_FILE', getenv( 'WP_SQLITE_FILE' ) ?: 'demo.sqlite' );
 
+if ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && str_contains( $_SERVER['HTTP_X_FORWARDED_PROTO'], 'https' ) ) {
+	$_SERVER['HTTPS'] = 'on';
+}
+
 $site_url = getenv( 'WP_SITE_URL' );
 if ( $site_url ) {
 	define( 'WP_HOME', $site_url );
 	define( 'WP_SITEURL', $site_url );
 }
+
+define( 'FORCE_SSL_ADMIN', true );
 
 define( 'WP_DEBUG', filter_var( getenv( 'WP_DEBUG' ) ?: false, FILTER_VALIDATE_BOOLEAN ) );
 
