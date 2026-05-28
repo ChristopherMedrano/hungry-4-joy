@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: hungry-4-joy-middleware
+    runtime: docker
+    plan: free
+    rootDir: middleware-api
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_NAME
+        value: Hungry 4 Joy Middleware API
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: hungry-4-joy-middleware-db
+          property: connectionString
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: file
+      - key: MAIL_MAILER
+        value: log
+
+databases:
+  - name: hungry-4-joy-middleware-db
+    plan: free
+    databaseName: hungry_4_joy_middleware
+    user: hungry_4_joy
+    ipAllowList: []

@@ -6,6 +6,8 @@ The middleware/API app is separate from the WordPress project-owned files under 
 
 ## Local Setup
 
+Use PHP 8.4 or newer for local middleware work. The lockfile currently includes Laravel/Symfony packages that require PHP 8.4.
+
 Install dependencies:
 
 ```bash

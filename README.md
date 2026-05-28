@@ -216,6 +216,12 @@ npm test
 
 The middleware/API now receives validated checkout event fixtures and stores safe normalized checkout event rows. It does not yet verify provider signatures, sync CRM data, emit analytics, or power dashboard views.
 
+Middleware deployment planning for Render is documented in:
+
+```text
+docs/render-deployment.md
+```
+
 ## SCSS Workflow
 
 Install project dependencies:
@@ -277,6 +283,7 @@ wordpress/wp-content/cache/
 - [Checkout Event Verification Walkthrough](docs/checkout-event-verification.md)
 - [Middleware Receiver Verification](docs/middleware-receiver-verification.md)
 - [Foxy To Middleware Connection Plan](docs/foxy-middleware-connection-plan.md)
+- [Render Deployment](docs/render-deployment.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
 
