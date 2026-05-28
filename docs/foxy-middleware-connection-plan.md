@@ -10,7 +10,20 @@ The WordPress campaign page sends one-time donation selections to the Foxy demo 
 POST /api/checkout/events
 ```
 
-Those two pieces are contract-compatible, but Foxy is not yet configured to call Laravel directly.
+The hosted demo services are live:
+
+```text
+WordPress: https://hungry-4-joy-wordpress.onrender.com
+Middleware: https://hungry-4-joy-middleware.onrender.com
+```
+
+The fixture receiver and the Foxy cart links are contract-compatible. A dedicated Foxy webhook receiver is now planned at:
+
+```text
+POST /api/foxy/webhooks
+```
+
+That route verifies Foxy's webhook signature before adapting safe transaction fields into the existing normalized checkout event contract.
 
 ## Phase 1: Local Demo Event Replay
 
@@ -66,6 +79,15 @@ payment-failed.one-time.json: duplicate_ignored
 
 Foxy's webhook API supports JSON webhooks that push data to an endpoint. The Foxy webhook resource includes fields such as `format`, `url`, `query`, `encryption_key`, `event_resource`, and `is_active`. Foxy's docs note that JSON webhook configuration requires an `encryption_key`, and that key is also used for payload signature integrity.
 
+Foxy sends JSON webhook metadata in request headers, including:
+
+```text
+Foxy-Webhook-Event
+Foxy-Webhook-Signature
+```
+
+The signature is an HMAC-SHA256 hex digest of the raw request body using the webhook encryption key.
+
 Official references:
 
 - [Foxy webhooks API relation](https://api.foxy.io/rels/webhooks)
@@ -73,21 +95,39 @@ Official references:
 
 Before turning on an actual Foxy webhook, add these pieces:
 
-- Public HTTPS URL for the Laravel receiver, such as a deployed app URL or a temporary local tunnel.
+- Public HTTPS URL for the Laravel receiver.
 - Foxy JSON webhook configured for transaction events.
-- Signature verification using a local demo signing value first, then environment-managed provider secrets.
-- A payload adapter if Foxy's native JSON payload differs from the normalized receiver contract.
+- `FOXY_WEBHOOK_ENCRYPTION_KEY` stored as an environment-managed secret.
+- Signature verification using Foxy's `Foxy-Webhook-Signature` header.
+- Payload adapter for safe transaction fields from Foxy's native JSON payload.
 - Tests for signature success, signature failure, payload adaptation, duplicate retry, and safe storage.
 - Logging that records event IDs and statuses without storing raw provider payment payloads.
 
-The planned webhook target remains:
+The planned webhook target is:
 
 ```text
-POST https://<public-middleware-host>/api/checkout/events
+POST https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
+```
+
+Recommended Foxy setup:
+
+```text
+URL: https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
+Format: JSON
+Resource: transaction
+Event: created
+Query: zoom=items,items:options
+Encryption key: generated in Foxy and copied to FOXY_WEBHOOK_ENCRYPTION_KEY
+```
+
+The existing fixture endpoint remains available for project-owned demos:
+
+```text
+POST https://hungry-4-joy-middleware.onrender.com/api/checkout/events
 ```
 
 ## Safety Boundary
 
 Do not add or document real card values, CVV/CVC values, checkout credentials, API keys, access tokens, client secrets, raw provider payloads, or private donor notes.
 
-Production webhook activation is blocked until signature verification and raw-payload handling are explicitly implemented and tested.
+Production webhook activation is blocked until signature verification is configured in Render and a real Foxy test event has confirmed the payload adapter receives the expected item options.

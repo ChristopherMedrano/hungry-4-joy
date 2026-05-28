@@ -115,6 +115,14 @@ Replay the tracked Foxy-shaped checkout event fixtures through the receiver rout
 php artisan checkout:replay-fixtures
 ```
 
+The dedicated Foxy JSON webhook receiver is:
+
+```text
+POST /api/foxy/webhooks
+```
+
+Set `FOXY_WEBHOOK_ENCRYPTION_KEY` before enabling the Foxy webhook. The route verifies `Foxy-Webhook-Signature` before adapting safe transaction fields into the normalized checkout event table.
+
 For the full local receiver walkthrough, including manual fixture submission, validation-error checks, duplicate replay checks, storage inspection, and payment-safety scans, see:
 
 ```text
@@ -129,7 +137,7 @@ php artisan route:list --path=api
 
 ## Current Boundary
 
-Current receiver work adds safe event storage and duplicate prevention. It does not add signature validation, CRM sync, analytics, dashboard views, hosted checkout writes, or production deployment configuration.
+Current receiver work adds safe event storage, duplicate prevention, and signed Foxy JSON webhook intake. It does not add CRM sync, analytics, dashboard views, or hosted checkout writes.
 
 Run migrations when setting up local middleware storage. CRM sync, analytics, and dashboard behavior are planned for later middleware/API issues.
 
