@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
+    // Health endpoint is a simple JSON response.
     return response()->json([
         'service' => 'hungry-4-joy-middleware-api',
         'status' => 'ok',
@@ -12,6 +13,7 @@ Route::get('/health', function () {
 });
 
 Route::post('/checkout/events', function (Request $request) {
+    // Validate the safe event contract here; storage and idempotency come in later issues.
     $request->validate([
         'event_id' => ['required', 'string', 'max:128'],
         'event_type' => ['required', 'string', 'in:donation.created,payment.failed'],
@@ -35,10 +37,14 @@ Route::post('/checkout/events', function (Request $request) {
         'donor.first_name' => ['required', 'string', 'max:100'],
         'donor.last_name' => ['required', 'string', 'max:100'],
         'donor.phone' => ['nullable', 'string', 'max:50'],
+
+        // Failed payments need safe troubleshooting details, but successful events do not.
         'failure' => ['required_if:event_type,payment.failed', 'array'],
         'failure.failure_code' => ['required_if:event_type,payment.failed', 'string', 'max:100'],
         'failure.failure_message' => ['required_if:event_type,payment.failed', 'string', 'max:500'],
         'failure.provider_status' => ['required_if:event_type,payment.failed', 'string', 'max:100'],
+
+        // Keep raw payment data and provider secrets out of this middleware boundary.
         'card_number' => ['prohibited'],
         'cvv' => ['prohibited'],
         'cvc' => ['prohibited'],
