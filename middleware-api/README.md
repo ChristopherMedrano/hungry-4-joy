@@ -93,6 +93,12 @@ Run the Laravel test suite:
 php artisan test
 ```
 
+Run only the fixture-based receiver tests:
+
+```bash
+php artisan test --filter=CheckoutEventFixtureReceiverTest
+```
+
 Confirm the API route exists:
 
 ```bash
