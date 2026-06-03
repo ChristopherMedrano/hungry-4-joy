@@ -2,7 +2,12 @@
 
 Use this walkthrough to verify the local Laravel checkout event receiver after changing receiver validation, storage, duplicate handling, fixtures, or payment-safety docs.
 
-The receiver is local middleware/API behavior only. It does not verify provider signatures, call Foxy, sync CRM data, emit analytics, create observability events, or power dashboard views yet.
+This walkthrough covers two middleware/API routes:
+
+- `/api/checkout/events` is the local fixture receiver for project-owned checkout event JSON.
+- `/api/foxy/webhooks` is the signed Foxy webhook route, implemented for local/signed webhook verification and adaptation into the same normalized checkout event contract.
+
+Production Foxy webhook activation is still gated by environment configuration and hosted provider setup. The middleware does not call Foxy, sync CRM data, emit analytics, create observability events, or power dashboard views yet.
 
 ## What This Verifies
 
@@ -47,6 +52,7 @@ Expected routes include:
 ```text
 GET|HEAD  api/health
 POST      api/checkout/events
+POST      api/foxy/webhooks
 ```
 
 ## 2. Run Receiver Tests

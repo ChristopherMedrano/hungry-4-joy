@@ -38,6 +38,7 @@ class FoxyWebhookReceiverRouteTest extends TestCase
             'checkout_session_id' => 'foxy-cart-abc123',
             'transaction_id' => '1042',
             'transaction_status' => 'completed',
+            'donation_attempt_id' => 'h4j_attempt_foxy_cart_1042',
             'idempotency_key' => 'foxy_transaction_1042_transaction_created',
             'source_page' => 'home',
             'campaign_id' => 'loaves-campaign-01',
@@ -51,6 +52,52 @@ class FoxyWebhookReceiverRouteTest extends TestCase
             'donor_last_name' => 'Helper',
             'donor_phone' => '555-0104',
         ]);
+    }
+
+    public function test_foxy_webhook_receiver_falls_back_to_transaction_based_attempt_id(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        $payload['_embedded']['fx:items'][0]['options'] = array_values(array_filter(
+            $payload['_embedded']['fx:items'][0]['options'],
+            fn (array $option): bool => $option['name'] !== 'donation_attempt_id'
+        ));
+
+        $response = $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        );
+
+        $response->assertAccepted();
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'foxy_transaction_1042_transaction_created',
+            'donation_attempt_id' => 'h4j_attempt_foxy_transaction_1042',
+        ]);
+    }
+
+    public function test_foxy_webhook_receiver_rejects_malformed_donation_attempt_id_option(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        foreach ($payload['_embedded']['fx:items'][0]['options'] as &$option) {
+            if ($option['name'] === 'donation_attempt_id') {
+                $option['value'] = 'jordan.helper@example.test';
+            }
+        }
+        unset($option);
+
+        $response = $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        );
+
+        $response->assertUnprocessable();
+        $this->assertDatabaseCount('checkout_events', 0);
     }
 
     public function test_foxy_webhook_receiver_rejects_invalid_signature(): void
@@ -168,6 +215,7 @@ class FoxyWebhookReceiverRouteTest extends TestCase
                             ['name' => 'donation_label', 'value' => '3 loaves'],
                             ['name' => 'donation_type', 'value' => 'one_time'],
                             ['name' => 'source_page', 'value' => 'home'],
+                            ['name' => 'donation_attempt_id', 'value' => 'h4j_attempt_foxy_cart_1042'],
                             ['name' => 'campaign_name', 'value' => 'Loaves 4 Joy'],
                             ['name' => 'checkout_provider', 'value' => 'foxy'],
                         ],

@@ -29,6 +29,7 @@ class FoxyWebhookAdapter
             'event_id' => "foxy_transaction_{$transactionId}_{$eventSlug}",
             'event_type' => 'donation.created',
             'event_created_at' => $payload['date_created'] ?? $payload['date_modified'] ?? now()->toIso8601String(),
+            'donation_attempt_id' => $this->donationAttemptId($options, $transactionId),
             'checkout_provider' => 'foxy',
             'checkout_session_id' => (string) ($payload['cart'] ?? $payload['cart_id'] ?? "foxy_transaction_{$transactionId}"),
             'transaction_id' => $transactionId,
@@ -109,6 +110,20 @@ class FoxyWebhookAdapter
         }
 
         return $mapped;
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function donationAttemptId(array $options, string $transactionId): string
+    {
+        $donationAttemptId = (string) ($options['donation_attempt_id'] ?? '');
+
+        if ($donationAttemptId !== '') {
+            return $donationAttemptId;
+        }
+
+        return "h4j_attempt_foxy_transaction_{$transactionId}";
     }
 
     /**
