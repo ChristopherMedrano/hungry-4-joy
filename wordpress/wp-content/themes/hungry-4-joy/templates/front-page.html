@@ -63,7 +63,7 @@
 
 			<div class="h4j-card">
 				<p class="h4j-label">Pick a Loaf</p>
-				<!-- Demo cart links pass safe donation metadata to Foxy without provider secrets or payment data. -->
+				<!-- Demo cart links pass safe donation metadata to Foxy. A small theme script adds donation_attempt_id at click time. -->
 				<div class="h4j-donation-options" aria-label="Suggested loaf donations">
 					<a
 						class="h4j-donation-button foxycart"
@@ -119,7 +119,7 @@
 
 			<div class="h4j-card">
 				<p class="h4j-label">Pick a Catch</p>
-				<!-- Keep this metadata in sync with contracts.md and the Foxy demo cart handoff. -->
+				<!-- Keep this metadata in sync with contracts.md; donation_attempt_id is generated per click. -->
 				<div class="h4j-donation-options" aria-label="Suggested fish donations">
 					<a
 						class="h4j-donation-button foxycart"
