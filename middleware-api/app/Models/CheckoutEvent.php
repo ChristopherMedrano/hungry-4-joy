@@ -10,6 +10,7 @@ class CheckoutEvent extends Model
         'event_id',
         'event_type',
         'event_created_at',
+        'donation_attempt_id',
         'checkout_provider',
         'checkout_session_id',
         'transaction_id',

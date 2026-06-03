@@ -17,8 +17,17 @@ The full checkout and payment safety boundary is documented in [`../../docs/paym
 
 The current fixture set only models one-time donation buttons. Recurring gift, subscription, and refund examples are intentionally deferred until the public site and checkout contract support those flows.
 
+## Required Safe Fields
+
+Each fixture should include the safe checkout envelope, campaign, donation, donor/contact, and status fields defined in [`../../docs/contracts.md`](../../docs/contracts.md).
+
+Required attempt identity:
+
+- `donation_attempt_id`: opaque project-owned checkout attempt identifier.
+
 ## Safety Rules
 
 - Use fictional donor data.
-- Keep campaign attribution aligned with `docs/contracts.md` and `front-page.html`.
+- Keep campaign attribution aligned with [`../../docs/contracts.md`](../../docs/contracts.md) and `front-page.html`.
+- Keep `donation_attempt_id` opaque; do not encode donor identity, private notes, card data, provider credentials, or authorization data.
 - Do not include full card numbers, CVV or CVC values, raw payment credentials, checkout API keys, access tokens, client secrets, or unredacted provider payloads.

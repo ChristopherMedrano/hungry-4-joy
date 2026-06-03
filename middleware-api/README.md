@@ -82,6 +82,7 @@ Duplicate receiver response:
 Current validation covers:
 
 - Required event envelope fields.
+- Required opaque `donation_attempt_id`.
 - Supported event types: `donation.created` and `payment.failed`.
 - Supported provider: `foxy`.
 - Campaign and donation fields.
@@ -93,6 +94,7 @@ Current storage covers:
 
 - One safe normalized `checkout_events` row per new event.
 - Unique `event_id` and `idempotency_key` checks to ignore duplicate sends.
+- Canonical `donation_attempt_id` for attempt-level reconciliation.
 - Safe campaign, donation, donor/contact, transaction, and redacted failure fields.
 
 ## Verification
@@ -122,6 +124,8 @@ POST /api/foxy/webhooks
 ```
 
 Set `FOXY_WEBHOOK_ENCRYPTION_KEY` before enabling the Foxy webhook. The route verifies `Foxy-Webhook-Signature` before adapting safe transaction fields into the normalized checkout event table.
+
+Foxy item options should include `donation_attempt_id`. The webhook adapter preserves that option first and only falls back to `h4j_attempt_foxy_transaction_<transaction-id>` for older or manual payloads that lack the option.
 
 For the full local receiver walkthrough, including manual fixture submission, validation-error checks, duplicate replay checks, storage inspection, and payment-safety scans, see:
 
