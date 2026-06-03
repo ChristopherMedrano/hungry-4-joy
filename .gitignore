@@ -2,6 +2,7 @@
 .cursor/
 .claude/
 ai/
+docs/superpowers/
 
 # Node / Sass tooling
 node_modules/

@@ -2,6 +2,7 @@
   "event_id": "evt_h4j_demo_20260527_0002",
   "event_type": "payment.failed",
   "event_created_at": "2026-05-27T14:08:00Z",
+  "donation_attempt_id": "h4j_attempt_demo_fish_0002",
   "checkout_provider": "foxy",
   "checkout_session_id": "sess_demo_fish_0002",
   "transaction_id": null,

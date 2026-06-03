@@ -20,7 +20,7 @@ Render resources:
 - Health check: `/`
 - Public URL: `https://hungry-4-joy-wordpress.onrender.com`
 
-This service uses the WordPress.org SQLite Database Integration plugin instead of MySQL. It is intended only for a disposable demo. Render free web services use an ephemeral filesystem, so WordPress admin edits, uploads, plugin installs, and SQLite data can be lost on redeploy, restart, or spin-down. The container seeds the demo site on startup so the campaign page can come back without a paid MySQL/private service.
+This service uses the WordPress.org SQLite Database Integration plugin instead of MySQL. This is intentional for the hosted demo: persistence is not required, and using temporary SQLite avoids paying for a private Render service or separate database just to show the campaign page and Foxy handoff. Render free web services use an ephemeral filesystem, so WordPress admin edits, uploads, plugin installs, and SQLite data can be lost on redeploy, restart, or spin-down. The container seeds the demo site on startup so the campaign page can come back without paid database infrastructure.
 
 Set these secrets during Blueprint sync:
 

@@ -55,7 +55,12 @@ class CheckoutEventReceiverRouteTest extends TestCase
         // Required top-level and nested fields should fail fast before later processing work.
         $payload = $this->fixture('donation-created.one-time.json');
 
-        unset($payload['event_id'], $payload['campaign']['campaign_id'], $payload['donation']['amount']);
+        unset(
+            $payload['event_id'],
+            $payload['donation_attempt_id'],
+            $payload['campaign']['campaign_id'],
+            $payload['donation']['amount']
+        );
 
         $response = $this->postJson('/api/checkout/events', $payload);
 
@@ -63,9 +68,24 @@ class CheckoutEventReceiverRouteTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors([
                 'event_id',
+                'donation_attempt_id',
                 'campaign.campaign_id',
                 'donation.amount',
             ]);
+    }
+
+    public function test_checkout_event_receiver_route_rejects_malformed_donation_attempt_id(): void
+    {
+        $payload = $this->fixture('donation-created.one-time.json');
+        $payload['donation_attempt_id'] = 'jordan.helper@example.test';
+
+        $response = $this->postJson('/api/checkout/events', $payload);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['donation_attempt_id']);
+
+        $this->assertDatabaseCount('checkout_events', 0);
     }
 
     public function test_checkout_event_receiver_route_rejects_unknown_event_types(): void
@@ -129,6 +149,7 @@ class CheckoutEventReceiverRouteTest extends TestCase
         $this->assertDatabaseHas('checkout_events', [
             'event_id' => 'evt_h4j_demo_20260527_0001',
             'event_type' => 'donation.created',
+            'donation_attempt_id' => 'h4j_attempt_demo_loaves_0001',
             'checkout_provider' => 'foxy',
             'checkout_session_id' => 'sess_demo_loaves_0001',
             'transaction_id' => 'txn_demo_loaves_1042',
@@ -194,6 +215,7 @@ class CheckoutEventReceiverRouteTest extends TestCase
                     'event_id' => $payload['event_id'],
                     'event_type' => $payload['event_type'],
                     'event_created_at' => Carbon::parse($payload['event_created_at']),
+                    'donation_attempt_id' => $payload['donation_attempt_id'],
                     'checkout_provider' => $payload['checkout_provider'],
                     'checkout_session_id' => $payload['checkout_session_id'],
                     'transaction_id' => $payload['transaction_id'],

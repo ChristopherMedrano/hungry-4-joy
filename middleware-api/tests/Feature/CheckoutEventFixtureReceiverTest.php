@@ -23,6 +23,7 @@ class CheckoutEventFixtureReceiverTest extends TestCase
         $this->assertDatabaseHas('checkout_events', [
             'event_id' => $payload['event_id'],
             'event_type' => $payload['event_type'],
+            'donation_attempt_id' => $payload['donation_attempt_id'],
             'checkout_provider' => $payload['checkout_provider'],
             'checkout_session_id' => $payload['checkout_session_id'],
             'transaction_id' => $payload['transaction_id'],
@@ -79,10 +80,12 @@ class CheckoutEventFixtureReceiverTest extends TestCase
         $this->assertDatabaseHas('checkout_events', [
             'event_id' => 'evt_h4j_demo_20260527_0001',
             'event_type' => 'donation.created',
+            'donation_attempt_id' => 'h4j_attempt_demo_loaves_0001',
         ]);
         $this->assertDatabaseHas('checkout_events', [
             'event_id' => 'evt_h4j_demo_20260527_0002',
             'event_type' => 'payment.failed',
+            'donation_attempt_id' => 'h4j_attempt_demo_fish_0002',
         ]);
     }
 
