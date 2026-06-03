@@ -4,7 +4,7 @@ This plan explains how the current Foxy demo cart handoff connects to the Larave
 
 ## Current State
 
-The WordPress campaign page sends one-time donation selections to the Foxy demo cart with safe metadata in the cart URL. The Laravel middleware accepts matching checkout event JSON at:
+The WordPress campaign page sends one-time donation selections to the Foxy demo cart with safe metadata in the cart URL. At click time, the theme script appends an opaque `donation_attempt_id` item option so the browser click can be reconciled with later checkout events. The Laravel middleware accepts matching checkout event JSON at:
 
 ```text
 POST /api/checkout/events
@@ -17,13 +17,13 @@ WordPress: https://hungry-4-joy-wordpress.onrender.com
 Middleware: https://hungry-4-joy-middleware.onrender.com
 ```
 
-The fixture receiver and the Foxy cart links are contract-compatible. A dedicated Foxy webhook receiver is now planned at:
+The fixture receiver and the Foxy cart links are contract-compatible. A dedicated Foxy webhook receiver is implemented for local and signed webhook handling at:
 
 ```text
 POST /api/foxy/webhooks
 ```
 
-That route verifies Foxy's webhook signature before adapting safe transaction fields into the existing normalized checkout event contract.
+That route verifies Foxy's webhook signature before adapting safe transaction fields into the existing normalized checkout event contract. Production activation remains gated by hosted webhook configuration and secret management.
 
 ## Phase 1: Local Demo Event Replay
 
@@ -58,7 +58,7 @@ This command keeps the connection project-owned and public-safe:
 Use this phase to prove the end-to-end local path:
 
 ```text
-Foxy-shaped fixture event -> Laravel receiver route -> validation -> checkout_events storage -> duplicate handling
+Foxy-shaped fixture event with donation_attempt_id -> Laravel receiver route -> validation -> checkout_events storage -> duplicate handling
 ```
 
 Expected output shape with fresh local storage:
@@ -93,14 +93,15 @@ Official references:
 - [Foxy webhooks API relation](https://api.foxy.io/rels/webhooks)
 - [Foxy JSON webhook announcement](https://foxy.io/blog/new-feature-json-webhook/)
 
-Before turning on an actual Foxy webhook, add these pieces:
+Before activating the hosted Foxy webhook in production, confirm these configuration and provider-test checks:
 
 - Public HTTPS URL for the Laravel receiver.
 - Foxy JSON webhook configured for transaction events.
-- `FOXY_WEBHOOK_ENCRYPTION_KEY` stored as an environment-managed secret.
-- Signature verification using Foxy's `Foxy-Webhook-Signature` header.
-- Payload adapter for safe transaction fields from Foxy's native JSON payload.
-- Tests for signature success, signature failure, payload adaptation, duplicate retry, and safe storage.
+- Local/test signature verification using Foxy's `Foxy-Webhook-Signature` header passes with a non-production test webhook encryption key.
+- Hosted Render configuration stores `FOXY_WEBHOOK_ENCRYPTION_KEY` as an environment-managed secret.
+- Hosted provider-test signature verification passes against the Render environment without copying production secrets into local files or docs.
+- The implemented payload adapter receives the expected safe transaction fields and item options from a real Foxy JSON payload.
+- Existing tests for signature success, signature failure, payload adaptation, duplicate retry, and safe storage pass locally with test configuration and in hosted verification with Render-managed environment configuration.
 - Logging that records event IDs and statuses without storing raw provider payment payloads.
 
 The planned webhook target is:
@@ -116,9 +117,11 @@ URL: https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
 Format: JSON
 Resource: transaction
 Event: created
-Query: zoom=items,items:options
-Encryption key: generated in Foxy and copied to FOXY_WEBHOOK_ENCRYPTION_KEY
+Query: zoom=items,items:item_options
+Encryption key: generated in Foxy and stored in Render as FOXY_WEBHOOK_ENCRYPTION_KEY
 ```
+
+Foxy item options should include `donation_attempt_id`, so the webhook query must use `zoom=items,items:item_options` to include item options for the adapter. The Laravel `FoxyWebhookAdapter` preserves that option as the canonical attempt identity. For older or manual payloads that do not include the item option, the adapter falls back to `h4j_attempt_foxy_transaction_<transaction-id>`.
 
 The existing fixture endpoint remains available for local/test project-owned demos and intentionally returns `404` in production:
 
@@ -126,10 +129,10 @@ The existing fixture endpoint remains available for local/test project-owned dem
 POST /api/checkout/events
 ```
 
-Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation and should return `duplicate_ignored` when the transaction was already stored.
+Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation, preserves the same `donation_attempt_id`, and should return `duplicate_ignored` when the transaction was already stored.
 
 ## Safety Boundary
 
-Do not add or document real card values, CVV/CVC values, checkout credentials, API keys, access tokens, client secrets, raw provider payloads, or private donor notes.
+Do not add or document real card values, CVV/CVC values, checkout credentials, API keys, access tokens, client secrets, raw provider payloads, or private donor notes. `donation_attempt_id` is safe only while opaque and must not encode donor identity, authorization data, or provider credentials.
 
-Production webhook activation is blocked until signature verification is configured in Render and a real Foxy test event has confirmed the payload adapter receives the expected item options.
+Production webhook activation is blocked until the Render environment has the webhook encryption key configured and a real Foxy test event confirms the implemented signature verification and payload adapter receive the expected item options.
