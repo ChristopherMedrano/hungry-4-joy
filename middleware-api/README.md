@@ -144,6 +144,8 @@ HUBSPOT_NEWSLETTER_LIST_ID=9
 
 With the default config, tests and local development do not make HubSpot network calls. The fake client records calls in memory and returns deterministic fake contact/deal IDs so later sync work can be tested without credentials.
 
+Issue #30 models HubSpot sync as a Laravel job, but the MVP can run it on `QUEUE_CONNECTION=sync` so Render free-tier deployments do not need a separate always-on worker. The job is dispatched only for newly accepted completed donation events. Durable sync status, retries, and duplicate-safe replay after partial failures are deferred to #32.
+
 Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal currently expects Contacts and Deals to be writable, and the static list "Newsletter subscribers" to use id `9`.
 
 Before live Deal sync, create these custom Deal properties in HubSpot:
