@@ -4,6 +4,13 @@
 ai/
 docs/superpowers/
 
+# Local secrets (never commit)
+.env
+.env.local
+.env.*.local
+!.env.local.example
+.hubspot-mcp-oauth.json
+
 # Node / Sass tooling
 node_modules/
 npm-debug.log*
