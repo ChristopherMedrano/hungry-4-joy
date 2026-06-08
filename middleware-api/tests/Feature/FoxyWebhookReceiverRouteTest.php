@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SyncDonationToHubSpot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -186,6 +188,22 @@ class FoxyWebhookReceiverRouteTest extends TestCase
             ]);
 
         $this->assertSame(1, DB::table('checkout_events')->where('transaction_id', '1042')->count());
+    }
+
+    public function test_foxy_webhook_dispatches_hubspot_sync_for_signed_completed_donation(): void
+    {
+        Bus::fake();
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        )->assertAccepted();
+
+        Bus::assertDispatched(SyncDonationToHubSpot::class);
     }
 
     /**
