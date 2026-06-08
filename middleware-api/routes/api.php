@@ -1,5 +1,7 @@
 <?php
 
+use App\Jobs\SyncDonationToHubSpot;
+use App\Models\CheckoutEvent;
 use App\Services\CheckoutEventIngestor;
 use App\Services\FoxyWebhookAdapter;
 use App\Services\FoxyWebhookVerifier;
@@ -20,10 +22,22 @@ $checkoutEventResponse = fn (string $status, int $code = Response::HTTP_OK) => r
     'status' => $status,
 ], $code);
 
-Route::post('/checkout/events', function (Request $request, CheckoutEventIngestor $ingestor) use ($checkoutEventResponse) {
+$dispatchHubSpotSync = function (array $result): void {
+    $checkoutEvent = $result['checkout_event'] ?? null;
+
+    if ($checkoutEvent instanceof CheckoutEvent && $checkoutEvent->hubSpotSyncEligible()) {
+        SyncDonationToHubSpot::dispatch($checkoutEvent->id);
+    }
+};
+
+Route::post('/checkout/events', function (
+    Request $request,
+    CheckoutEventIngestor $ingestor
+) use ($checkoutEventResponse, $dispatchHubSpotSync) {
     abort_if(app()->isProduction(), Response::HTTP_NOT_FOUND);
 
     $result = $ingestor->ingest($request->all());
+    $dispatchHubSpotSync($result);
 
     return $checkoutEventResponse($result['status'], $result['code']);
 })->name('checkout.events.store');
@@ -33,7 +47,7 @@ Route::post('/foxy/webhooks', function (
     FoxyWebhookVerifier $verifier,
     FoxyWebhookAdapter $adapter,
     CheckoutEventIngestor $ingestor
-) use ($checkoutEventResponse) {
+) use ($checkoutEventResponse, $dispatchHubSpotSync) {
     if (! $verifier->configured()) {
         return $checkoutEventResponse('webhook_not_configured', Response::HTTP_SERVICE_UNAVAILABLE);
     }
@@ -55,6 +69,7 @@ Route::post('/foxy/webhooks', function (
     }
 
     $result = $ingestor->ingest($normalized);
+    $dispatchHubSpotSync($result);
 
     return $checkoutEventResponse($result['status'], $result['code']);
 })->name('foxy.webhooks.store');
