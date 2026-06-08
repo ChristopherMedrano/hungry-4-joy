@@ -77,7 +77,7 @@ class HubSpotClientTest extends TestCase
 
     public function test_fake_client_can_represent_disabled_state(): void
     {
-        $client = new FakeHubSpotClient();
+        $client = new FakeHubSpotClient;
 
         $this->assertFalse($client->enabled());
     }

@@ -19,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
             $accessToken = config('services.hubspot.access_token');
 
             if (! $enabled || ! filled($accessToken)) {
-                return new FakeHubSpotClient();
+                return new FakeHubSpotClient;
             }
 
             return new HttpHubSpotClient($accessToken);
