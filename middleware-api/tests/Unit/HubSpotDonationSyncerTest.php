@@ -5,9 +5,11 @@ namespace Tests\Unit;
 use App\Contracts\HubSpotClient;
 use App\Jobs\SyncDonationToHubSpot;
 use App\Models\CheckoutEvent;
+use App\Models\CrmSyncAttempt;
 use App\Services\HubSpot\FakeHubSpotClient;
 use App\Services\HubSpot\HubSpotDonationSyncer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 class HubSpotDonationSyncerTest extends TestCase
@@ -65,6 +67,127 @@ class HubSpotDonationSyncerTest extends TestCase
                 'listId' => '9',
             ],
         ], $fake->calls());
+    }
+
+    public function test_successful_sync_stores_succeeded_attempt_with_hubspot_references(): void
+    {
+        $fake = new FakeHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+
+        $event = $this->checkoutEvent();
+
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+        $this->assertSame('synced', $result['status']);
+        $this->assertSame('succeeded', $attempt->status);
+        $this->assertSame('fake_contact_jordan_helper_example_test', $attempt->hubspot_contact_id);
+        $this->assertSame('fake_deal_1', $attempt->hubspot_deal_id);
+        $this->assertNull($attempt->error_code);
+        $this->assertNull($attempt->error_message);
+        $this->assertSame(0, $attempt->retry_count);
+        $this->assertNotNull($attempt->last_attempted_at);
+        $this->assertNull($attempt->next_retry_at);
+    }
+
+    public function test_successfully_synced_event_is_not_processed_again(): void
+    {
+        $fake = new FakeHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+        $event = $this->checkoutEvent();
+
+        CrmSyncAttempt::create([
+            'checkout_event_id' => $event->id,
+            'status' => 'succeeded',
+            'hubspot_contact_id' => 'contact_existing_123',
+            'hubspot_deal_id' => 'deal_existing_456',
+            'last_attempted_at' => now(),
+        ]);
+
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+
+        $this->assertSame([
+            'status' => 'already_synced',
+            'contact_id' => 'contact_existing_123',
+            'deal_id' => 'deal_existing_456',
+        ], $result);
+        $this->assertSame([], $fake->calls());
+    }
+
+    public function test_retryable_hubspot_failure_is_stored_safely_without_throwing(): void
+    {
+        $fake = new FailingHubSpotClient('HubSpot deal creation failed with status 429.');
+        $this->app->instance(HubSpotClient::class, $fake);
+        $event = $this->checkoutEvent();
+
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+        $this->assertSame('retryable', $result['status']);
+        $this->assertSame('retryable', $attempt->status);
+        $this->assertSame('hubspot_retryable_error', $attempt->error_code);
+        $this->assertSame('HubSpot deal creation failed with status 429.', $attempt->error_message);
+        $this->assertSame(1, $attempt->retry_count);
+        $this->assertNotNull($attempt->last_attempted_at);
+        $this->assertNotNull($attempt->next_retry_at);
+        $this->assertNull($attempt->hubspot_contact_id);
+        $this->assertNull($attempt->hubspot_deal_id);
+    }
+
+    public function test_repeated_retryable_failures_increment_retry_count_and_redact_token_like_values(): void
+    {
+        $fake = new FailingHubSpotClient(
+            'HubSpot deal creation failed with status 503. Bearer super-secret-token pat-demo-secret'
+        );
+        $this->app->instance(HubSpotClient::class, $fake);
+        $event = $this->checkoutEvent();
+
+        app(HubSpotDonationSyncer::class)->sync($event);
+        app(HubSpotDonationSyncer::class)->sync($event);
+
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+        $this->assertSame('retryable', $attempt->status);
+        $this->assertSame(2, $attempt->retry_count);
+        $this->assertStringContainsString('Bearer [redacted]', $attempt->error_message);
+        $this->assertStringContainsString('pat-[redacted]', $attempt->error_message);
+        $this->assertStringNotContainsString('super-secret-token', $attempt->error_message);
+        $this->assertStringNotContainsString('pat-demo-secret', $attempt->error_message);
+    }
+
+    public function test_terminal_hubspot_failure_is_stored_safely_without_retry_time(): void
+    {
+        $fake = new FailingHubSpotClient('HubSpot contact upsert did not return an id.');
+        $this->app->instance(HubSpotClient::class, $fake);
+        $event = $this->checkoutEvent();
+
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+        $this->assertSame('failed', $result['status']);
+        $this->assertSame('failed', $attempt->status);
+        $this->assertSame('hubspot_terminal_error', $attempt->error_code);
+        $this->assertSame('HubSpot contact upsert did not return an id.', $attempt->error_message);
+        $this->assertSame(1, $attempt->retry_count);
+        $this->assertNotNull($attempt->last_attempted_at);
+        $this->assertNull($attempt->next_retry_at);
+    }
+
+    public function test_list_enrollment_failure_stores_safe_warning_on_succeeded_attempt(): void
+    {
+        $fake = new ListFailingHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+        $event = $this->checkoutEvent();
+
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+        $this->assertSame('synced', $result['status']);
+        $this->assertSame('succeeded', $attempt->status);
+        $this->assertSame('hubspot_list_warning', $attempt->error_code);
+        $this->assertSame('HubSpot list enrollment failed with status 403.', $attempt->error_message);
+        $this->assertSame('fake_contact_jordan_helper_example_test', $attempt->hubspot_contact_id);
+        $this->assertSame('fake_deal_1', $attempt->hubspot_deal_id);
+        $this->assertSame(0, $attempt->retry_count);
     }
 
     public function test_syncer_delegates_contact_matching_to_email_upsert_once(): void
@@ -186,5 +309,31 @@ class HubSpotDonationSyncerTest extends TestCase
             'donor_last_name' => 'Helper',
             'donor_phone' => '555-0104',
         ], $overrides));
+    }
+}
+
+class FailingHubSpotClient extends FakeHubSpotClient
+{
+    public function __construct(private readonly string $message)
+    {
+        parent::__construct(enabled: true);
+    }
+
+    public function createDeal(array $properties): string
+    {
+        throw new RuntimeException($this->message);
+    }
+}
+
+class ListFailingHubSpotClient extends FakeHubSpotClient
+{
+    public function addContactToList(string $contactId, string $listId): array
+    {
+        parent::addContactToList($contactId, $listId);
+
+        return [
+            'ok' => false,
+            'error' => 'HubSpot list enrollment failed with status 403.',
+        ];
     }
 }

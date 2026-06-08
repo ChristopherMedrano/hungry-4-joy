@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\HubSpotClient;
 use App\Jobs\SyncDonationToHubSpot;
 use App\Models\CheckoutEvent;
+use App\Services\HubSpot\FakeHubSpotClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use RuntimeException;
 use Tests\TestCase;
 
 class HubSpotSyncDispatchTest extends TestCase
@@ -47,6 +50,24 @@ class HubSpotSyncDispatchTest extends TestCase
         Bus::assertNotDispatched(SyncDonationToHubSpot::class);
     }
 
+    public function test_sync_queue_hubspot_failure_is_recorded_without_rejecting_checkout_event(): void
+    {
+        $this->app->instance(HubSpotClient::class, new FailingDispatchHubSpotClient);
+
+        $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
+            ->assertAccepted();
+
+        $event = CheckoutEvent::firstOrFail();
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+
+        $this->assertSame('retryable', $attempt->status);
+        $this->assertSame('hubspot_retryable_error', $attempt->error_code);
+        $this->assertSame('HubSpot deal creation failed with status 503.', $attempt->error_message);
+        $this->assertSame(1, $attempt->retry_count);
+        $this->assertNotNull($attempt->last_attempted_at);
+        $this->assertNotNull($attempt->next_retry_at);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -58,5 +79,18 @@ class HubSpotSyncDispatchTest extends TestCase
             512,
             JSON_THROW_ON_ERROR,
         );
+    }
+}
+
+class FailingDispatchHubSpotClient extends FakeHubSpotClient
+{
+    public function __construct()
+    {
+        parent::__construct(enabled: true);
+    }
+
+    public function createDeal(array $properties): string
+    {
+        throw new RuntimeException('HubSpot deal creation failed with status 503.');
     }
 }

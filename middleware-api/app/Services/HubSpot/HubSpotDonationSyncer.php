@@ -4,6 +4,8 @@ namespace App\Services\HubSpot;
 
 use App\Contracts\HubSpotClient;
 use App\Models\CheckoutEvent;
+use App\Models\CrmSyncAttempt;
+use Throwable;
 
 class HubSpotDonationSyncer
 {
@@ -18,21 +20,57 @@ class HubSpotDonationSyncer
             return ['status' => 'skipped_ineligible'];
         }
 
-        $contactId = $this->hubSpot->upsertContact(
-            $event->donor_email,
-            $event->donor_first_name,
-            $event->donor_last_name,
-            $event->donor_phone,
+        $attempt = CrmSyncAttempt::firstOrCreate(
+            ['checkout_event_id' => $event->id],
+            ['status' => 'pending']
         );
 
-        $dealId = $this->hubSpot->createDeal($this->dealProperties($event));
+        if ($attempt->status === 'succeeded') {
+            return [
+                'status' => 'already_synced',
+                'contact_id' => $attempt->hubspot_contact_id,
+                'deal_id' => $attempt->hubspot_deal_id,
+            ];
+        }
 
-        $this->hubSpot->associateDealToContact($dealId, $contactId);
+        $attempt->forceFill([
+            'status' => 'pending',
+            'error_code' => null,
+            'error_message' => null,
+            'last_attempted_at' => now(),
+            'next_retry_at' => null,
+        ])->save();
 
-        $listResult = $this->hubSpot->addContactToList(
-            $contactId,
-            (string) config('services.hubspot.newsletter_list_id', '9'),
-        );
+        try {
+            $contactId = $this->hubSpot->upsertContact(
+                $event->donor_email,
+                $event->donor_first_name,
+                $event->donor_last_name,
+                $event->donor_phone,
+            );
+
+            $dealId = $this->hubSpot->createDeal($this->dealProperties($event));
+
+            $this->hubSpot->associateDealToContact($dealId, $contactId);
+
+            $listResult = $this->hubSpot->addContactToList(
+                $contactId,
+                (string) config('services.hubspot.newsletter_list_id', '9'),
+            );
+        } catch (Throwable $exception) {
+            return $this->recordFailure($attempt, $exception);
+        }
+
+        $warning = $this->listWarning($listResult);
+        $attempt->forceFill([
+            'status' => 'succeeded',
+            'hubspot_contact_id' => $contactId,
+            'hubspot_deal_id' => $dealId,
+            'error_code' => $warning === null ? null : 'hubspot_list_warning',
+            'error_message' => $warning,
+            'last_attempted_at' => now(),
+            'next_retry_at' => null,
+        ])->save();
 
         return [
             'status' => 'synced',
@@ -40,6 +78,60 @@ class HubSpotDonationSyncer
             'deal_id' => $dealId,
             'list_result' => $listResult,
         ];
+    }
+
+    private function recordFailure(CrmSyncAttempt $attempt, Throwable $exception): array
+    {
+        $retryable = $this->retryable($exception);
+        $status = $retryable ? 'retryable' : 'failed';
+
+        $attempt->forceFill([
+            'status' => $status,
+            'error_code' => $retryable ? 'hubspot_retryable_error' : 'hubspot_terminal_error',
+            'error_message' => $this->safeErrorMessage($exception),
+            'retry_count' => $attempt->retry_count + 1,
+            'last_attempted_at' => now(),
+            'next_retry_at' => $retryable ? now()->addMinutes(15) : null,
+        ])->save();
+
+        return [
+            'status' => $status,
+            'error_code' => $attempt->error_code,
+            'error_message' => $attempt->error_message,
+        ];
+    }
+
+    private function retryable(Throwable $exception): bool
+    {
+        return str_contains($exception->getMessage(), 'status 429')
+            || str_contains($exception->getMessage(), 'status 408')
+            || str_contains($exception->getMessage(), 'status 500')
+            || str_contains($exception->getMessage(), 'status 502')
+            || str_contains($exception->getMessage(), 'status 503')
+            || str_contains($exception->getMessage(), 'status 504')
+            || str_contains(strtolower($exception->getMessage()), 'timeout');
+    }
+
+    private function safeErrorMessage(Throwable $exception): string
+    {
+        $message = preg_replace('/Bearer\s+[A-Za-z0-9._~+\-\/]+=*/', 'Bearer [redacted]', $exception->getMessage()) ?? 'HubSpot sync failed.';
+        $message = preg_replace('/pat-[A-Za-z0-9._~+\-]+/', 'pat-[redacted]', $message) ?? $message;
+
+        return mb_substr($message, 0, 500);
+    }
+
+    /**
+     * @param  array{ok: bool, error: string|null}  $listResult
+     */
+    private function listWarning(array $listResult): ?string
+    {
+        if ($listResult['ok']) {
+            return null;
+        }
+
+        return $listResult['error'] === null
+            ? 'HubSpot list enrollment failed.'
+            : mb_substr($listResult['error'], 0, 500);
     }
 
     /**

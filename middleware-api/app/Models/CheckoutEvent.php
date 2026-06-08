@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CheckoutEvent extends Model
 {
@@ -46,5 +47,13 @@ class CheckoutEvent extends Model
             && $this->transaction_status === 'completed'
             && filled($this->donation_attempt_id)
             && filled($this->donor_email);
+    }
+
+    /**
+     * @return HasOne<CrmSyncAttempt, $this>
+     */
+    public function crmSyncAttempt(): HasOne
+    {
+        return $this->hasOne(CrmSyncAttempt::class);
     }
 }

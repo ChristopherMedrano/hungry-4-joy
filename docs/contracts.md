@@ -530,6 +530,9 @@ Later issues persist CRM outcomes on `crm_sync_attempts` linked to `checkout_eve
 | `error_message` | `Deal property h4j_campaign_id is invalid.` | Redacted summary |
 | `retry_count` | `1` | Retry attempts |
 | `last_attempted_at` | `2026-06-08T12:00:00Z` | Last sync attempt time |
+| `next_retry_at` | `2026-06-08T12:15:00Z` | Next time a retry is eligible |
+
+Issue #32 records retry eligibility only. It does not add automatic retry scheduling, a manual retry command, or a retry API. Already-succeeded attempts are skipped so repeated jobs do not create duplicate HubSpot records.
 
 ### Validation And Safety Rules
 
@@ -538,7 +541,7 @@ Later issues persist CRM outcomes on `crm_sync_attempts` linked to `checkout_eve
 - Middleware controls HubSpot sync deduplication through ingest checks and `crm_sync_attempts` per `checkout_event_id`.
 - `HUBSPOT_ENABLED=false` by default; live CRM writes require explicit configuration and a private app token.
 - Local development and tests use a mock HubSpot client.
-- Sync may run inline on the current `sync` queue driver; manual retry is supported for demo verification.
+- Sync may run inline on the current `sync` queue driver; HubSpot failures are recorded safely so accepted checkout event ingestion is not rejected by CRM errors.
 - CRM payloads must not include card data, CVV, raw payment credentials, payment method secrets, API keys, tokens, or private donor notes.
 
 ### Explicitly Forbidden CRM Fields
