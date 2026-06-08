@@ -238,11 +238,36 @@ class CheckoutEventReceiverRouteTest extends TestCase
 
         $result = app(CheckoutEventIngestor::class)->ingest($payload);
 
-        $this->assertSame([
-            'status' => 'duplicate_ignored',
-            'code' => Response::HTTP_OK,
-        ], $result);
+        $this->assertSame('duplicate_ignored', $result['status']);
+        $this->assertSame(Response::HTTP_OK, $result['code']);
+        $this->assertNull($result['checkout_event']);
         $this->assertDatabaseCount('checkout_events', 1);
+    }
+
+    public function test_checkout_event_model_reports_hubspot_sync_eligibility(): void
+    {
+        $payload = $this->fixture('donation-created.one-time.json');
+        app(CheckoutEventIngestor::class)->ingest($payload);
+
+        $event = CheckoutEvent::firstOrFail();
+
+        $this->assertTrue($event->hubSpotSyncEligible());
+
+        $event->forceFill(['transaction_status' => 'failed']);
+        $this->assertFalse($event->hubSpotSyncEligible());
+    }
+
+    public function test_checkout_event_ingestor_returns_created_event_for_new_rows_and_null_for_duplicates(): void
+    {
+        $payload = $this->fixture('donation-created.one-time.json');
+
+        $first = app(CheckoutEventIngestor::class)->ingest($payload);
+        $second = app(CheckoutEventIngestor::class)->ingest($payload);
+
+        $this->assertSame('accepted', $first['status']);
+        $this->assertInstanceOf(CheckoutEvent::class, $first['checkout_event']);
+        $this->assertSame('duplicate_ignored', $second['status']);
+        $this->assertNull($second['checkout_event']);
     }
 
     /**

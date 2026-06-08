@@ -39,4 +39,12 @@ class CheckoutEvent extends Model
             'donation_amount' => 'decimal:2',
         ];
     }
+
+    public function hubSpotSyncEligible(): bool
+    {
+        return $this->event_type === 'donation.created'
+            && $this->transaction_status === 'completed'
+            && filled($this->donation_attempt_id)
+            && filled($this->donor_email);
+    }
 }

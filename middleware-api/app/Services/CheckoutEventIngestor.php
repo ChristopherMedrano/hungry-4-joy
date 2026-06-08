@@ -15,7 +15,7 @@ class CheckoutEventIngestor
 {
     /**
      * @param  array<string, mixed>  $payload
-     * @return array{status: string, code: int}
+     * @return array{status: string, code: int, checkout_event: CheckoutEvent|null}
      *
      * @throws ValidationException
      */
@@ -29,11 +29,12 @@ class CheckoutEventIngestor
             return [
                 'status' => 'duplicate_ignored',
                 'code' => Response::HTTP_OK,
+                'checkout_event' => null,
             ];
         }
 
         try {
-            CheckoutEvent::create([
+            $checkoutEvent = CheckoutEvent::create([
                 'event_id' => $validated['event_id'],
                 'event_type' => $validated['event_type'],
                 'event_created_at' => $validated['event_created_at'],
@@ -66,12 +67,14 @@ class CheckoutEventIngestor
             return [
                 'status' => 'duplicate_ignored',
                 'code' => Response::HTTP_OK,
+                'checkout_event' => null,
             ];
         }
 
         return [
             'status' => 'accepted',
             'code' => Response::HTTP_ACCEPTED,
+            'checkout_event' => $checkoutEvent,
         ];
     }
 
