@@ -475,6 +475,8 @@ Laravel maps one eligible `checkout_events` row into this internal shape before 
 
 ### HubSpot Contact Mapping
 
+The MVP donor matching policy is email-only. Laravel does not search by name, phone, date, amount, or campaign. A stored event without `donor.email` is not eligible for HubSpot sync, and incoming checkout payloads are rejected by validation when required donor identity fields are missing.
+
 | Source field | HubSpot property | Rule |
 | --- | --- | --- |
 | `donor.email` | `email` | Search key; create or update |
@@ -482,7 +484,7 @@ Laravel maps one eligible `checkout_events` row into this internal shape before 
 | `donor.last_name` | `lastname` | Update on match |
 | `donor.phone` | `phone` | Update when present |
 
-Do not create a second contact when email already exists.
+Do not create a second contact when email already exists. Existing-contact versus new-contact detection stays inside HubSpot contact upsert for the MVP; Laravel records durable sync status and returned HubSpot ids in later issue #32.
 
 ### HubSpot Deal Mapping
 

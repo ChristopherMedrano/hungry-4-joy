@@ -75,6 +75,26 @@ class HubSpotClientTest extends TestCase
         ], $client->calls());
     }
 
+    public function test_fake_client_returns_same_contact_id_for_same_email_upserts(): void
+    {
+        $client = new FakeHubSpotClient(enabled: true);
+
+        $firstContactId = $client->upsertContact(
+            email: 'Jordan.Helper+Demo@example.test',
+            firstname: 'Jordan',
+            lastname: 'Helper',
+            phone: '555-0104',
+        );
+        $secondContactId = $client->upsertContact(
+            email: 'jordan.helper+demo@example.test',
+            firstname: 'Jordyn',
+            lastname: 'Helper',
+        );
+
+        $this->assertSame($firstContactId, $secondContactId);
+        $this->assertSame('fake_contact_jordan_helper_demo_example_test', $firstContactId);
+    }
+
     public function test_fake_client_can_represent_disabled_state(): void
     {
         $client = new FakeHubSpotClient;
