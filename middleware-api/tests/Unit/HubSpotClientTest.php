@@ -120,4 +120,158 @@ class HubSpotClientTest extends TestCase
         $this->assertInstanceOf(HttpHubSpotClient::class, $client);
         $this->assertTrue($client->enabled());
     }
+
+    public function test_http_client_upserts_contact_without_real_network(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert' => Http::response([
+                'results' => [
+                    ['id' => '12345'],
+                ],
+            ]),
+        ]);
+
+        $client = new HttpHubSpotClient('pat-test-token');
+
+        $contactId = $client->upsertContact(
+            email: 'jordan.helper@example.test',
+            firstname: 'Jordan',
+            lastname: 'Helper',
+            phone: '555-0104',
+        );
+
+        $this->assertSame('12345', $contactId);
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'POST'
+                && $request->url() === 'https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert'
+                && $request->hasHeader('Authorization', 'Bearer pat-test-token')
+                && $request['inputs'][0]['idProperty'] === 'email'
+                && $request['inputs'][0]['id'] === 'jordan.helper@example.test'
+                && $request['inputs'][0]['properties'] === [
+                    'email' => 'jordan.helper@example.test',
+                    'firstname' => 'Jordan',
+                    'lastname' => 'Helper',
+                    'phone' => '555-0104',
+                ];
+        });
+    }
+
+    public function test_http_client_omits_empty_phone_on_contact_upsert(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert' => Http::response([
+                'results' => [
+                    ['id' => '12345'],
+                ],
+            ]),
+        ]);
+
+        $client = new HttpHubSpotClient('pat-test-token');
+
+        $client->upsertContact('jordan.helper@example.test', 'Jordan', 'Helper');
+
+        Http::assertSent(function ($request): bool {
+            return ! array_key_exists('phone', $request['inputs'][0]['properties']);
+        });
+    }
+
+    public function test_http_client_creates_deal_without_real_network(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/deals' => Http::response([
+                'id' => '67890',
+            ], 201),
+        ]);
+
+        $client = new HttpHubSpotClient('pat-test-token');
+
+        $dealId = $client->createDeal([
+            'dealname' => 'Loaves 4 Joy - 3 loaves',
+            'amount' => 25,
+            'deal_currency_code' => 'USD',
+            'h4j_donation_attempt_id' => 'h4j_attempt_demo_test_0001',
+        ]);
+
+        $this->assertSame('67890', $dealId);
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'POST'
+                && $request->url() === 'https://api.hubapi.com/crm/v3/objects/deals'
+                && $request['properties']['h4j_donation_attempt_id'] === 'h4j_attempt_demo_test_0001';
+        });
+    }
+
+    public function test_http_client_associates_deal_to_contact_without_real_network(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/deals/67890/associations/contacts/12345/3' => Http::response(null, 204),
+        ]);
+
+        $client = new HttpHubSpotClient('pat-test-token');
+
+        $client->associateDealToContact('67890', '12345');
+
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'PUT'
+                && $request->url() === 'https://api.hubapi.com/crm/v3/objects/deals/67890/associations/contacts/12345/3';
+        });
+    }
+
+    public function test_http_client_adds_contact_to_list_without_real_network(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/lists/2026-03/9/memberships/add' => Http::response([
+                'recordIdsMissing' => [],
+                'recordIdsRemoved' => [],
+                'recordsIdsAdded' => ['12345'],
+            ]),
+        ]);
+
+        $client = new HttpHubSpotClient('pat-test-token');
+
+        $result = $client->addContactToList('12345', '9');
+
+        $this->assertSame(['ok' => true, 'error' => null], $result);
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'PUT'
+                && $request->url() === 'https://api.hubapi.com/crm/lists/2026-03/9/memberships/add'
+                && $request->data() === ['12345'];
+        });
+    }
+
+    public function test_http_client_returns_safe_error_when_list_enrollment_fails(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/lists/2026-03/9/memberships/add' => Http::response([
+                'message' => 'This app does not have permission to add records to this list.',
+            ], 403),
+        ]);
+
+        $client = new HttpHubSpotClient('pat-test-token');
+
+        $result = $client->addContactToList('12345', '9');
+
+        $this->assertSame([
+            'ok' => false,
+            'error' => 'HubSpot list enrollment failed with status 403.',
+        ], $result);
+    }
+
+    public function test_http_client_throws_safe_error_when_contact_response_has_no_id(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert' => Http::response(['results' => []]),
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('HubSpot contact upsert did not return an id.');
+
+        (new HttpHubSpotClient('pat-test-token'))->upsertContact('jordan.helper@example.test', 'Jordan', 'Helper');
+    }
 }
