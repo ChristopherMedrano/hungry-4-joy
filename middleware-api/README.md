@@ -146,7 +146,9 @@ With the default config, tests and local development do not make HubSpot network
 
 Donor matching for the MVP is email-only. The syncer calls `HubSpotClient::upsertContact()` with donor email, first name, last name, and optional phone; HubSpot handles whether that upsert updates an existing contact or creates a new one. The middleware does not do fuzzy matching or store HubSpot contact ids locally until durable sync status work in #32.
 
-Issue #30 models HubSpot sync as a Laravel job, but the MVP can run it on `QUEUE_CONNECTION=sync` so Render free-tier deployments do not need a separate always-on worker. The job is dispatched only for newly accepted completed donation events. Durable sync status, retries, and duplicate-safe replay after partial failures are deferred to #32.
+Issue #30 models HubSpot sync as a Laravel job, but the MVP can run it on `QUEUE_CONNECTION=sync` so Render free-tier deployments do not need a separate always-on worker. The job is dispatched only for newly accepted completed donation events.
+
+Issue #32 stores one `crm_sync_attempts` row for each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Retry eligibility is recorded for future tooling, but this MVP does not add an automatic retry scheduler, manual retry command, or retry API.
 
 Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal currently expects Contacts and Deals to be writable, and the static list "Newsletter subscribers" to use id `9`.
 
