@@ -67,6 +67,29 @@ class HubSpotDonationSyncerTest extends TestCase
         ], $fake->calls());
     }
 
+    public function test_syncer_delegates_contact_matching_to_email_upsert_once(): void
+    {
+        $fake = new FakeHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+
+        app(HubSpotDonationSyncer::class)->sync($this->checkoutEvent());
+
+        $upsertCalls = array_values(array_filter(
+            $fake->calls(),
+            fn (array $call): bool => $call['method'] === 'upsertContact'
+        ));
+
+        $this->assertSame([
+            [
+                'method' => 'upsertContact',
+                'email' => 'jordan.helper@example.test',
+                'firstname' => 'Jordan',
+                'lastname' => 'Helper',
+                'phone' => '555-0104',
+            ],
+        ], $upsertCalls);
+    }
+
     public function test_syncer_skips_ineligible_events(): void
     {
         $fake = new FakeHubSpotClient(enabled: true);
@@ -80,17 +103,48 @@ class HubSpotDonationSyncerTest extends TestCase
         $this->assertSame([], $fake->calls());
     }
 
-    public function test_deal_properties_exclude_idempotency_key(): void
+    public function test_syncer_skips_stored_event_without_donor_email(): void
     {
         $fake = new FakeHubSpotClient(enabled: true);
         $this->app->instance(HubSpotClient::class, $fake);
 
-        app(HubSpotDonationSyncer::class)->sync($this->checkoutEvent());
+        $event = CheckoutEvent::make([
+            'event_type' => 'donation.created',
+            'transaction_status' => 'completed',
+            'donation_attempt_id' => 'h4j_attempt_demo_loaves_0001',
+            'donor_email' => null,
+        ]);
 
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+
+        $this->assertSame(['status' => 'skipped_ineligible'], $result);
+        $this->assertSame([], $fake->calls());
+    }
+
+    public function test_crm_payloads_exclude_sensitive_and_ingest_only_fields(): void
+    {
+        $fake = new FakeHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+
+        app(HubSpotDonationSyncer::class)->sync($this->checkoutEvent([
+            'idempotency_key' => 'evt_h4j_demo_20260527_0001',
+            'failure_code' => 'card_declined',
+            'failure_message' => 'Do not send this failure detail',
+            'failure_provider_status' => '402',
+        ]));
+
+        $contactCall = $fake->calls()[0];
         $dealCall = $fake->calls()[1];
+
+        $this->assertSame('upsertContact', $contactCall['method']);
+        $this->assertArrayNotHasKey('idempotency_key', $contactCall);
+        $this->assertArrayNotHasKey('failure_message', $contactCall);
 
         $this->assertSame('createDeal', $dealCall['method']);
         $this->assertArrayNotHasKey('idempotency_key', $dealCall['properties']);
+        $this->assertArrayNotHasKey('failure_code', $dealCall['properties']);
+        $this->assertArrayNotHasKey('failure_message', $dealCall['properties']);
+        $this->assertArrayNotHasKey('failure_provider_status', $dealCall['properties']);
     }
 
     public function test_sync_job_executes_syncer_for_stored_checkout_event(): void
