@@ -26,6 +26,12 @@ return [
         'webhook_encryption_key' => env('FOXY_WEBHOOK_ENCRYPTION_KEY'),
     ],
 
+    'hubspot' => [
+        'enabled' => env('HUBSPOT_ENABLED', false),
+        'access_token' => env('HUBSPOT_ACCESS_TOKEN'),
+        'newsletter_list_id' => env('HUBSPOT_NEWSLETTER_LIST_ID', '9'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
