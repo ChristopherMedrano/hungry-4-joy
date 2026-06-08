@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Contracts\HubSpotClient;
+use App\Jobs\SyncDonationToHubSpot;
 use App\Models\CheckoutEvent;
 use App\Services\HubSpot\FakeHubSpotClient;
 use App\Services\HubSpot\HubSpotDonationSyncer;
@@ -90,6 +91,18 @@ class HubSpotDonationSyncerTest extends TestCase
 
         $this->assertSame('createDeal', $dealCall['method']);
         $this->assertArrayNotHasKey('idempotency_key', $dealCall['properties']);
+    }
+
+    public function test_sync_job_executes_syncer_for_stored_checkout_event(): void
+    {
+        $fake = new FakeHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+
+        $event = $this->checkoutEvent();
+
+        (new SyncDonationToHubSpot($event->id))->handle(app(HubSpotDonationSyncer::class));
+
+        $this->assertCount(4, $fake->calls());
     }
 
     /**
