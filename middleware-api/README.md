@@ -127,6 +127,49 @@ Set `FOXY_WEBHOOK_ENCRYPTION_KEY` before enabling the Foxy webhook. The route ve
 
 Foxy item options should include `donation_attempt_id`. The webhook adapter preserves that option first and only falls back to `h4j_attempt_foxy_transaction_<transaction-id>` for older or manual payloads that lack the option.
 
+## HubSpot CRM Boundary
+
+HubSpot is disabled by default. The Laravel container binds `App\Contracts\HubSpotClient` to the fake client unless both of these are true:
+
+- `HUBSPOT_ENABLED=true`
+- `HUBSPOT_ACCESS_TOKEN` is set
+
+Safe local defaults:
+
+```dotenv
+HUBSPOT_ENABLED=false
+HUBSPOT_ACCESS_TOKEN=
+HUBSPOT_NEWSLETTER_LIST_ID=9
+```
+
+With the default config, tests and local development do not make HubSpot network calls. The fake client records calls in memory and returns deterministic fake contact/deal IDs so later sync work can be tested without credentials.
+
+Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal currently expects Contacts and Deals to be writable, and the static list "Newsletter subscribers" to use id `9`.
+
+Before live Deal sync, create these custom Deal properties in HubSpot:
+
+- `h4j_donation_attempt_id`
+- `h4j_campaign_id`
+- `h4j_campaign_name`
+- `h4j_donation_label`
+- `h4j_donation_type`
+- `h4j_checkout_provider`
+- `h4j_transaction_id`
+- `h4j_checkout_session_id`
+- `h4j_source_page`
+- `h4j_checkout_event_id`
+
+This middleware does not create HubSpot custom properties for the MVP. If list enrollment fails because the portal or free tier blocks API membership writes, the client returns a safe error message instead of silently ignoring the failure.
+
+Optional manual smoke test, with a real local token only:
+
+```bash
+HUBSPOT_ENABLED=true
+HUBSPOT_ACCESS_TOKEN=pat-local-only php artisan tinker
+```
+
+Then resolve `App\Contracts\HubSpotClient`, upsert an `@example.test` contact, create one Deal with `h4j_donation_attempt_id=h4j_attempt_demo_test_0001`, associate the Deal to the Contact, and try adding the Contact to `HUBSPOT_NEWSLETTER_LIST_ID`.
+
 For the full local receiver walkthrough, including manual fixture submission, validation-error checks, duplicate replay checks, storage inspection, and payment-safety scans, see:
 
 ```text
