@@ -81,4 +81,43 @@ class HubSpotClientTest extends TestCase
 
         $this->assertFalse($client->enabled());
     }
+
+    public function test_container_binds_fake_client_when_hubspot_is_disabled(): void
+    {
+        config([
+            'services.hubspot.enabled' => false,
+            'services.hubspot.access_token' => 'pat-test-token',
+        ]);
+
+        $client = app(HubSpotClient::class);
+
+        $this->assertInstanceOf(FakeHubSpotClient::class, $client);
+        $this->assertFalse($client->enabled());
+    }
+
+    public function test_container_binds_fake_client_when_token_is_missing(): void
+    {
+        config([
+            'services.hubspot.enabled' => true,
+            'services.hubspot.access_token' => '',
+        ]);
+
+        $client = app(HubSpotClient::class);
+
+        $this->assertInstanceOf(FakeHubSpotClient::class, $client);
+        $this->assertFalse($client->enabled());
+    }
+
+    public function test_container_binds_http_client_only_when_enabled_with_token(): void
+    {
+        config([
+            'services.hubspot.enabled' => true,
+            'services.hubspot.access_token' => 'pat-test-token',
+        ]);
+
+        $client = app(HubSpotClient::class);
+
+        $this->assertInstanceOf(HttpHubSpotClient::class, $client);
+        $this->assertTrue($client->enabled());
+    }
 }
