@@ -1,5 +1,6 @@
 import type { CheckoutEventSummary } from '../types/dashboard'
-import { StatusBadge } from './StatusBadge'
+import { CrmStatusBadge } from './CrmStatusBadge'
+import { FoxyStatusBadge } from './FoxyStatusBadge'
 
 interface EventTableProps {
   events: CheckoutEventSummary[]
@@ -24,7 +25,10 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
           <thead className="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-400">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">
-                Status
+                Foxy status
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
+                CRM status
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Campaign
@@ -64,7 +68,10 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <StatusBadge summary={event.status_summary} />
+                    <FoxyStatusBadge summary={event.foxy_status_summary} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <CrmStatusBadge summary={event.crm_status_summary} />
                   </td>
                   <td className="px-4 py-3 text-slate-200">{event.campaign.campaign_name}</td>
                   <td className="px-4 py-3">

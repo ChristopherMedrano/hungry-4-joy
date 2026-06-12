@@ -5,15 +5,15 @@ export type CrmSyncStatus =
   | 'failed'
   | 'retryable'
 
-export type StatusSummary =
-  | 'donation_completed_crm_synced'
-  | 'donation_completed_crm_synced_with_warning'
-  | 'donation_completed_crm_pending'
-  | 'donation_completed_crm_failed'
-  | 'donation_completed_crm_retryable'
-  | 'donation_completed_crm_not_applicable'
-  | 'payment_failed'
-  | 'checkout_pending'
+export type CrmStatusSummary =
+  | 'synced'
+  | 'warning'
+  | 'pending'
+  | 'failed'
+  | 'retryable'
+  | 'not_applicable'
+
+export type FoxyStatusSummary = 'webhook' | 'fixture' | 'pending' | 'failed'
 
 export type IngestChannel = 'fixture_receiver' | 'foxy_webhook'
 
@@ -66,7 +66,8 @@ export interface CheckoutEventSummary {
     channel: IngestChannel
   }
   crm_sync: CrmSyncSummary
-  status_summary: StatusSummary
+  crm_status_summary: CrmStatusSummary
+  foxy_status_summary: FoxyStatusSummary
 }
 
 export interface CheckoutEventDetail extends CheckoutEventSummary {

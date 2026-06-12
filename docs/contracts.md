@@ -664,7 +664,8 @@ Each list row represents one stored `checkout_events` record plus a derived CRM 
 | `crm_sync.last_attempted_at` | `2026-05-27T14:05:13Z` | Last CRM sync attempt time; `null` when not applicable |
 | `crm_sync.next_retry_at` | `null` | Next retry eligibility time for retryable rows; otherwise `null` |
 | `crm_sync.error_code` | `null` | Safe failure category when failed or retryable; may be present on succeeded rows with list-enrollment warnings |
-| `status_summary` | `donation_completed_crm_synced` | Derived support label for list badges |
+| `crm_status_summary` | `synced` | CRM badge key for the CRM status column |
+| `foxy_status_summary` | `fixture` | Foxy/checkout badge key for the Foxy status column |
 
 ### Checkout Event Detail Object
 
@@ -746,18 +747,27 @@ Section 2 defines cross-cutting producer vocabulary such as `crm_sync_pending` a
 
 ### Derived Status Summary Labels
 
-`status_summary` gives the dashboard a stable badge key without exposing provider internals.
+List rows expose two derived badge keys so checkout ingest and CRM sync can be read independently.
 
-| `status_summary` | Typical conditions |
+**`crm_status_summary`** — HubSpot sync only:
+
+| `crm_status_summary` | Typical conditions |
 | --- | --- |
-| `donation_completed_crm_synced` | Completed donation with `crm_sync.status = succeeded` and no `hubspot_list_warning` |
-| `donation_completed_crm_synced_with_warning` | Completed donation with `crm_sync.status = succeeded` and `error_code = hubspot_list_warning` |
-| `donation_completed_crm_pending` | Completed eligible donation with `crm_sync.status = pending` |
-| `donation_completed_crm_failed` | Completed eligible donation with `crm_sync.status = failed` |
-| `donation_completed_crm_retryable` | Completed eligible donation with `crm_sync.status = retryable` |
-| `donation_completed_crm_not_applicable` | Rare today: completed donation that fails current eligibility rules, such as legacy rows missing `donation_attempt_id` |
-| `payment_failed` | `event_type = payment.failed` |
-| `checkout_pending` | `transaction_status = pending` |
+| `synced` | Eligible donation with `crm_sync.status = succeeded` and no `hubspot_list_warning` |
+| `warning` | Eligible donation with `crm_sync.status = succeeded` and `error_code = hubspot_list_warning` |
+| `pending` | Eligible donation with `crm_sync.status = pending` |
+| `failed` | Eligible donation with `crm_sync.status = failed` |
+| `retryable` | Eligible donation with `crm_sync.status = retryable` |
+| `not_applicable` | Donation not eligible for CRM sync |
+
+**`foxy_status_summary`** — checkout ingest and transaction state:
+
+| `foxy_status_summary` | Typical conditions |
+| --- | --- |
+| `webhook` | `ingest.channel = foxy_webhook` and transaction is not pending/failed |
+| `fixture` | `ingest.channel = fixture_receiver` and transaction is not pending/failed |
+| `pending` | `transaction_status = pending` |
+| `failed` | `event_type = payment.failed` or `transaction_status = failed` |
 
 Duplicate ingest attempts are not list rows. Support users infer duplicate protection from receiver responses and verification docs, not from dashboard list entries.
 
@@ -838,7 +848,8 @@ Lookup by `donation_attempt_id` returns the same detail object or `404` when no 
     "next_retry_at": null,
     "error_code": null
   },
-  "status_summary": "donation_completed_crm_synced"
+  "crm_status_summary": "synced",
+  "foxy_status_summary": "fixture"
 }
 ```
 

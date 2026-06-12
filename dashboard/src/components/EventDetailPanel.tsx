@@ -1,5 +1,6 @@
 import type { CheckoutEventDetail } from '../types/dashboard'
-import { StatusBadge } from './StatusBadge'
+import { CrmStatusBadge } from './CrmStatusBadge'
+import { FoxyStatusBadge } from './FoxyStatusBadge'
 
 interface EventDetailPanelProps {
   event: CheckoutEventDetail | null
@@ -28,7 +29,8 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
     <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h2 className="text-base font-semibold text-white">Event detail</h2>
-        <StatusBadge summary={event.status_summary} />
+        <FoxyStatusBadge summary={event.foxy_status_summary} />
+        <CrmStatusBadge summary={event.crm_status_summary} />
       </div>
 
       <dl>

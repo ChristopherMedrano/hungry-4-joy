@@ -1,3 +1,4 @@
+import { normalizeEventSummary } from '../lib/eventStatus'
 import type {
   CheckoutEventDetail,
   CheckoutEventSummary,
@@ -49,7 +50,12 @@ export async function fetchDashboardEvents(
 ): Promise<DashboardListResponse> {
   const response = await fetch(`/api/dashboard/events?${toQuery(filters, page)}`)
 
-  return parseJson<DashboardListResponse>(response)
+  const payload = await parseJson<DashboardListResponse>(response)
+
+  return {
+    ...payload,
+    data: payload.data.map((event) => normalizeEventSummary(event)),
+  }
 }
 
 export async function fetchDashboardEventDetail(
@@ -58,5 +64,5 @@ export async function fetchDashboardEventDetail(
   const response = await fetch(`/api/dashboard/events/${checkoutEventId}`)
   const payload = await parseJson<DashboardDetailResponse>(response)
 
-  return payload.data
+  return normalizeEventSummary(payload.data)
 }
