@@ -23,7 +23,7 @@ The fixture receiver and the Foxy cart links are contract-compatible. A dedicate
 POST /api/foxy/webhooks
 ```
 
-That route verifies Foxy's webhook signature before adapting safe transaction fields into the existing normalized checkout event contract. Production activation remains gated by hosted webhook configuration and secret management.
+That route verifies Foxy's webhook signature before adapting safe transaction fields into the existing normalized checkout event contract. The hosted Foxy JSON webhook is **active** on Render as of June 2026: signed `transaction/created` events store normalized rows with `ingest.channel = foxy_webhook` and appear in the dashboard API.
 
 ## Phase 1: Local Demo Event Replay
 
@@ -93,18 +93,20 @@ Official references:
 - [Foxy webhooks API relation](https://api.foxy.io/rels/webhooks)
 - [Foxy JSON webhook announcement](https://foxy.io/blog/new-feature-json-webhook/)
 
-Before activating the hosted Foxy webhook in production, confirm these configuration and provider-test checks:
+### Activation checklist
+
+Use this checklist when turning on or re-verifying the hosted webhook:
 
 - Public HTTPS URL for the Laravel receiver.
 - Foxy JSON webhook configured for transaction events.
 - Local/test signature verification using Foxy's `Foxy-Webhook-Signature` header passes with a non-production test webhook encryption key.
-- Hosted Render configuration stores `FOXY_WEBHOOK_ENCRYPTION_KEY` as an environment-managed secret.
+- Hosted Render configuration stores `FOXY_WEBHOOK_ENCRYPTION_KEY` as an environment-managed secret (never commit the key).
 - Hosted provider-test signature verification passes against the Render environment without copying production secrets into local files or docs.
 - The implemented payload adapter receives the expected safe transaction fields and item options from a real Foxy JSON payload.
 - Existing tests for signature success, signature failure, payload adaptation, duplicate retry, and safe storage pass locally with test configuration and in hosted verification with Render-managed environment configuration.
 - Logging that records event IDs and statuses without storing raw provider payment payloads.
 
-The planned webhook target is:
+The hosted webhook target is:
 
 ```text
 POST https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
@@ -131,8 +133,58 @@ POST /api/checkout/events
 
 Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation, preserves the same `donation_attempt_id`, and should return `duplicate_ignored` when the transaction was already stored.
 
+### Hosted verification (active)
+
+After activation, confirm the live path with these checks:
+
+```bash
+# Middleware health
+curl https://hungry-4-joy-middleware.onrender.com/api/health
+
+# Unsigned probe should be rejected (proves signature verification is enabled)
+curl -sS -X POST https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks \
+  -H 'Content-Type: application/json' \
+  -H 'Foxy-Webhook-Event: transaction/created' \
+  -d '{"id":1}'
+# Expected: {"status":"signature_invalid",...}
+
+# Fixture receiver stays disabled in production
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST \
+  https://hungry-4-joy-middleware.onrender.com/api/checkout/events
+# Expected: 404
+
+# Dashboard list should include foxy_webhook rows
+curl https://hungry-4-joy-middleware.onrender.com/api/dashboard/events
+```
+
+Complete a Foxy test transaction from the hosted WordPress demo cart (`https://hungry-4-joy-wordpress.onrender.com`). Then confirm:
+
+- One new `checkout_events` row with `event_id` prefixed `foxy_transaction_`.
+- `ingest.channel = foxy_webhook` in `/api/dashboard/events`.
+- `donation_attempt_id` present (opaque value from cart item options when `zoom=items,items:item_options` is configured, or fallback `h4j_attempt_foxy_transaction_<transaction-id>`).
+- Only normalized safe fields stored; no raw provider payload retention.
+
+Duplicate handling:
+
+- Re-post the same signed payload or use Foxy's webhook **refeed** for an existing transaction.
+- Expected response: `200 OK` with `{"status":"duplicate_ignored",...}`.
+- No extra `checkout_events` rows and no duplicate CRM sync dispatches for the same `event_id`.
+- Local coverage: `cd middleware-api && php artisan test --filter=FoxyWebhook`.
+
+### Rollback and disable
+
+To stop live Foxy ingest without redeploying code:
+
+1. In the Foxy practice portal, deactivate or delete the JSON webhook pointing at `https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks`.
+2. Optional: remove or rotate `FOXY_WEBHOOK_ENCRYPTION_KEY` in the Render middleware environment so any stray deliveries fail signature verification (`signature_invalid`).
+3. Redeploy or restart the middleware service after env changes so the new key state is loaded.
+4. Confirm new Foxy checkouts no longer create `foxy_webhook` rows in `/api/dashboard/events`.
+5. Re-enable later by generating a new Foxy encryption key, setting it in Render, updating the Foxy webhook URL/settings, and re-running the hosted verification steps above.
+
+The fixture receiver at `POST /api/checkout/events` remains available for local/test replay only.
+
 ## Safety Boundary
 
 Do not add or document real card values, CVV/CVC values, checkout credentials, API keys, access tokens, client secrets, raw provider payloads, or private donor notes. `donation_attempt_id` is safe only while opaque and must not encode donor identity, authorization data, or provider credentials.
 
-Production webhook activation is blocked until the Render environment has the webhook encryption key configured and a real Foxy test event confirms the implemented signature verification and payload adapter receive the expected item options.
+Do not store webhook encryption keys in committed source, docs, fixtures, or logs. Rotate the Foxy key and update Render if a secret is ever exposed.
