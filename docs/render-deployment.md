@@ -94,6 +94,46 @@ POST /api/checkout/events
 
 Do not enable the Foxy webhook until `FOXY_WEBHOOK_ENCRYPTION_KEY` is set in Render.
 
+### Foxy JSON webhook activation
+
+The hosted middleware accepts live Foxy checkout events at:
+
+```text
+POST https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks
+```
+
+**Activate** (one-time setup in Foxy practice portal + Render):
+
+| Setting | Value |
+| --- | --- |
+| URL | `https://hungry-4-joy-middleware.onrender.com/api/foxy/webhooks` |
+| Format | JSON |
+| Resource | transaction |
+| Event | created |
+| Query | `zoom=items,items:item_options` |
+| Encryption key | Generate in Foxy; paste into Render as `FOXY_WEBHOOK_ENCRYPTION_KEY` |
+
+Foxy sends `Foxy-Webhook-Event` and `Foxy-Webhook-Signature` (HMAC-SHA256 of the raw body). Laravel rejects unsigned or mismatched signatures before ingest.
+
+**Verify after activation:**
+
+```bash
+curl https://hungry-4-joy-middleware.onrender.com/api/health
+curl https://hungry-4-joy-middleware.onrender.com/api/dashboard/events
+cd middleware-api && php artisan test --filter=FoxyWebhook
+```
+
+Run a test donation from `https://hungry-4-joy-wordpress.onrender.com` through the Foxy demo cart. Confirm a new dashboard row with `ingest.channel = foxy_webhook` and `event_id` prefixed `foxy_transaction_`.
+
+**Rollback / disable:**
+
+1. Deactivate or delete the webhook in the Foxy portal.
+2. Optionally remove or rotate `FOXY_WEBHOOK_ENCRYPTION_KEY` in Render (stray posts then return `signature_invalid`).
+3. Restart or redeploy the middleware service after env changes.
+4. Confirm `/api/dashboard/events` stops receiving new `foxy_webhook` rows.
+
+See `docs/foxy-middleware-connection-plan.md` (Phase 2) for duplicate replay (`duplicate_ignored`) and `donation_attempt_id` behavior.
+
 ## References
 
 - Render Laravel Docker guide: https://render.com/docs/deploy-php-laravel-docker
