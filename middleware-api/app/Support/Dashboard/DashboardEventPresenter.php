@@ -44,7 +44,8 @@ class DashboardEventPresenter
                 'channel' => $this->ingestChannel($event),
             ],
             'crm_sync' => $crmSync,
-            'status_summary' => $this->statusSummary($event, $crmSync),
+            'crm_status_summary' => $this->crmStatusSummary($event, $crmSync),
+            'foxy_status_summary' => $this->foxyStatusSummary($event),
         ];
     }
 
@@ -138,29 +139,34 @@ class DashboardEventPresenter
     /**
      * @param  array<string, mixed>  $crmSync
      */
-    public function statusSummary(CheckoutEvent $event, array $crmSync): string
+    public function crmStatusSummary(CheckoutEvent $event, array $crmSync): string
     {
-        if ($event->event_type === 'payment.failed') {
-            return 'payment_failed';
-        }
-
-        if ($event->transaction_status === 'pending') {
-            return 'checkout_pending';
-        }
-
         if (! $crmSync['eligible']) {
-            return 'donation_completed_crm_not_applicable';
+            return 'not_applicable';
         }
 
         return match ($crmSync['status']) {
             'succeeded' => $crmSync['error_code'] === 'hubspot_list_warning'
-                ? 'donation_completed_crm_synced_with_warning'
-                : 'donation_completed_crm_synced',
-            'pending' => 'donation_completed_crm_pending',
-            'failed' => 'donation_completed_crm_failed',
-            'retryable' => 'donation_completed_crm_retryable',
-            default => 'donation_completed_crm_not_applicable',
+                ? 'warning'
+                : 'synced',
+            'pending' => 'pending',
+            'failed' => 'failed',
+            'retryable' => 'retryable',
+            default => 'not_applicable',
         };
+    }
+
+    public function foxyStatusSummary(CheckoutEvent $event): string
+    {
+        if ($event->event_type === 'payment.failed' || $event->transaction_status === 'failed') {
+            return 'failed';
+        }
+
+        if ($event->transaction_status === 'pending') {
+            return 'pending';
+        }
+
+        return $this->ingestChannel($event) === 'foxy_webhook' ? 'webhook' : 'fixture';
     }
 
     public function hubspotMode(): string
