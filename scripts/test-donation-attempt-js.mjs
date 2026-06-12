@@ -46,7 +46,7 @@ const updatedUrl = withDonationAttemptId(originalUrl, 'h4j_attempt_demo_123');
 
 assert.equal(
   updatedUrl,
-  'https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&donation_attempt_id=h4j_attempt_demo_123'
+  'https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&donation_attempt_id=h4j_attempt_demo_123&h%3Adonation_attempt_id=h4j_attempt_demo_123'
 );
 
 const replacedUrl = withDonationAttemptId(
@@ -56,7 +56,7 @@ const replacedUrl = withDonationAttemptId(
 
 assert.equal(
   replacedUrl,
-  'https://hungry-4-joy.foxycart.com/cart?donation_attempt_id=h4j_attempt_new&price=10'
+  'https://hungry-4-joy.foxycart.com/cart?donation_attempt_id=h4j_attempt_new&price=10&h%3Adonation_attempt_id=h4j_attempt_new'
 );
 
 const clickedLink = {
@@ -79,7 +79,7 @@ context.document.listeners[0].listener({
 
 assert.equal(
   clickedLink.href,
-  'https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&donation_attempt_id=h4j_attempt_listener-id'
+  'https://hungry-4-joy.foxycart.com/cart?name=Loaves+4+Joy&price=25&donation_attempt_id=h4j_attempt_listener-id&h%3Adonation_attempt_id=h4j_attempt_listener-id'
 );
 assert.equal(clickedLink.dataset.donationAttemptId, 'h4j_attempt_listener-id');
 

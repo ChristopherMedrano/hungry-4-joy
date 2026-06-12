@@ -8,6 +8,7 @@
     "check:diff": "git diff --check",
     "connect:foxy-demo": "cd middleware-api && php artisan checkout:replay-fixtures",
     "dev:dashboard": "cd dashboard && npm run dev",
+    "dev:dashboard:hosted": "cd dashboard && npm run dev:hosted",
     "test": "npm run build:wp-css && npm run check:fixtures && npm run test:donation-attempt-js && npm run test:middleware && npm run build:dashboard && npm run check:diff",
     "test:donation-attempt-js": "node scripts/test-donation-attempt-js.mjs",
     "test:fixtures": "cd middleware-api && php artisan test --filter=CheckoutEventFixtureReceiverTest",

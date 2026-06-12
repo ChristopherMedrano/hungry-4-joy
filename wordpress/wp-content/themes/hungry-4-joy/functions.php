@@ -26,22 +26,23 @@ function h4j_enqueue_child_theme_assets() {
 		$style_version
 	);
 
+	$donation_attempt_path = get_stylesheet_directory() . '/assets/js/donation-attempt.js';
+	$donation_attempt_version = file_exists( $donation_attempt_path ) ? filemtime( $donation_attempt_path ) : wp_get_theme()->get( 'Version' );
+
+	// Register before the Foxy loader so click-time attempt ids are on the href first.
+	wp_enqueue_script(
+		'h4j-donation-attempt',
+		get_stylesheet_directory_uri() . '/assets/js/donation-attempt.js',
+		array(),
+		$donation_attempt_version,
+		true
+	);
+
 	wp_enqueue_script(
 		'h4j-foxy-loader',
 		'https://cdn.foxycart.com/hungry-4-joy/loader.js',
 		array(),
 		null,
-		true
-	);
-
-	$donation_attempt_path = get_stylesheet_directory() . '/assets/js/donation-attempt.js';
-	$donation_attempt_version = file_exists( $donation_attempt_path ) ? filemtime( $donation_attempt_path ) : wp_get_theme()->get( 'Version' );
-
-	wp_enqueue_script(
-		'h4j-donation-attempt',
-		get_stylesheet_directory_uri() . '/assets/js/donation-attempt.js',
-		array( 'h4j-foxy-loader' ),
-		$donation_attempt_version,
 		true
 	);
 }
