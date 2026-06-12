@@ -1,4 +1,5 @@
 import type { CheckoutEventSummary } from '../types/dashboard'
+import { crmErrorCodeLabel } from '../lib/crmLabels'
 import { CrmStatusBadge } from './CrmStatusBadge'
 import { FoxyStatusBadge } from './FoxyStatusBadge'
 
@@ -71,7 +72,13 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
                     <FoxyStatusBadge summary={event.foxy_status_summary} />
                   </td>
                   <td className="px-4 py-3">
-                    <CrmStatusBadge summary={event.crm_status_summary} />
+                    <CrmStatusBadge
+                      summary={event.crm_status_summary}
+                      title={
+                        crmErrorCodeLabel(event.crm_sync.error_code) ??
+                        undefined
+                      }
+                    />
                   </td>
                   <td className="px-4 py-3 text-slate-200">{event.campaign.campaign_name}</td>
                   <td className="px-4 py-3">

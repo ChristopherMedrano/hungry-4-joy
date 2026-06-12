@@ -14,6 +14,14 @@ npm run dev
 
 Open the URL Vite prints (default `http://127.0.0.1:5173`).
 
+### Hosted API data
+
+```bash
+npm run dev:hosted
+```
+
+Proxies `/api` to the Render middleware service instead of local Laravel.
+
 ## Checks
 
 ```bash
@@ -36,6 +44,14 @@ Issue #37 checkout event views:
 - Filters are sent to the API as query parameters
 - Vite proxies `/api` to `http://127.0.0.1:8000` during local development
 
+Issue #38 HubSpot CRM sync views:
+
+- CRM status badges in the event list (Synced, Warning, Pending, Failed, Retryable, N/A)
+- Dedicated HubSpot CRM sync section in the detail panel
+- State callouts for pending, success, warning, failed, and retryable sync
+- Safe HubSpot contact/deal references, error codes, and redacted error messages
+- `last_attempted_at`, retry count, and next retry timestamps in detail
+
 Prerequisites for live data:
 
 ```bash
@@ -47,11 +63,31 @@ php artisan serve
 
 Then run the dashboard dev server in another terminal.
 
+### CRM sync verification checklist
+
+After replaying fixtures, inspect these rows in the dashboard:
+
+| Scenario | How to produce | Expected CRM badge | Detail callout |
+| --- | --- | --- | --- |
+| Synced | Replay `donation-created.one-time.json` | Synced | Green "Synced to HubSpot" with contact/deal ids |
+| Not applicable | Replay `payment-failed.one-time.json` | N/A | Gray "CRM sync not applicable" |
+| Pending checkout | Replay `checkout-pending.one-time.json` | N/A | Gray not-applicable callout |
+| Retryable | Mutate attempt to `retryable` (see API test) | Retryable | Orange retryable failure callout |
+| Failed | Mutate attempt to `failed` with `hubspot_terminal_error` | Failed | Red CRM sync failed callout |
+| Warning | Mutate attempt to `succeeded` + `hubspot_list_warning` | Warning | Amber synced-with-warning callout |
+
+Run the dashboard API tests:
+
+```bash
+cd middleware-api
+php artisan test --filter=DashboardEvent
+```
+
 Not included yet:
 
 - Authentication
 - Manual CRM retry actions (#39)
-- Deep HubSpot-specific views (#38)
+- Dashboard fixture walkthrough doc (#40)
 
 ## Stack
 

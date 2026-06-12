@@ -20,14 +20,16 @@ const styles: Record<CrmStatusSummary, string> = {
 
 interface CrmStatusBadgeProps {
   summary: CrmStatusSummary
+  title?: string
 }
 
-export function CrmStatusBadge({ summary }: CrmStatusBadgeProps) {
+export function CrmStatusBadge({ summary, title }: CrmStatusBadgeProps) {
   const style = styles[summary] ?? styles.not_applicable
   const label = labels[summary] ?? 'Unknown'
 
   return (
     <span
+      title={title}
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${style}`}
     >
       {label}

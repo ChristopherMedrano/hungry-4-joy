@@ -139,6 +139,66 @@ class DashboardEventApiTest extends TestCase
             ->assertJsonPath('data.0.crm_sync.eligible', false);
     }
 
+    public function test_dashboard_list_warning_summary_for_list_enrollment_failure(): void
+    {
+        $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
+            ->assertAccepted();
+
+        $event = CheckoutEvent::firstOrFail();
+        CrmSyncAttempt::query()->where('checkout_event_id', $event->id)->update([
+            'status' => 'succeeded',
+            'error_code' => 'hubspot_list_warning',
+            'error_message' => 'Newsletter list enrollment failed with status 403.',
+        ]);
+
+        $this->getJson('/api/dashboard/events')
+            ->assertOk()
+            ->assertJsonPath('data.0.crm_status_summary', 'warning')
+            ->assertJsonPath('data.0.crm_sync.status', 'succeeded')
+            ->assertJsonPath('data.0.crm_sync.error_code', 'hubspot_list_warning');
+    }
+
+    public function test_dashboard_detail_exposes_terminal_crm_failure_fields(): void
+    {
+        $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
+            ->assertAccepted();
+
+        $event = CheckoutEvent::firstOrFail();
+        CrmSyncAttempt::query()->where('checkout_event_id', $event->id)->update([
+            'status' => 'failed',
+            'error_code' => 'hubspot_terminal_error',
+            'error_message' => 'HubSpot contact upsert failed with status 400.',
+            'last_attempted_at' => now(),
+        ]);
+
+        $this->getJson('/api/dashboard/events/'.$event->id)
+            ->assertOk()
+            ->assertJsonPath('data.crm_status_summary', 'failed')
+            ->assertJsonPath('data.crm_sync.status', 'failed')
+            ->assertJsonPath('data.crm_sync.error_code', 'hubspot_terminal_error')
+            ->assertJsonPath('data.crm_sync.error_message', 'HubSpot contact upsert failed with status 400.')
+            ->assertJsonPath('data.crm_sync.last_attempted_at', fn ($value) => filled($value));
+    }
+
+    public function test_dashboard_detail_exposes_hubspot_ids_on_success(): void
+    {
+        $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
+            ->assertAccepted();
+
+        $event = CheckoutEvent::firstOrFail();
+        $attempt = CrmSyncAttempt::query()->where('checkout_event_id', $event->id)->firstOrFail();
+
+        $this->getJson('/api/dashboard/events/'.$event->id)
+            ->assertOk()
+            ->assertJsonPath('data.crm_status_summary', 'synced')
+            ->assertJsonPath('data.crm_sync.status', 'succeeded')
+            ->assertJsonPath('data.crm_sync.hubspot_mode', 'fake')
+            ->assertJsonPath('data.crm_sync.crm_sync_attempt_id', $attempt->id)
+            ->assertJsonPath('data.crm_sync.hubspot_contact_id', $attempt->hubspot_contact_id)
+            ->assertJsonPath('data.crm_sync.hubspot_deal_id', $attempt->hubspot_deal_id)
+            ->assertJsonPath('data.crm_sync.last_attempted_at', fn ($value) => filled($value));
+    }
+
     /**
      * @return array<string, mixed>
      */
