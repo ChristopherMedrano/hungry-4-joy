@@ -25,12 +25,16 @@ class HubSpotDonationSyncer
             ['status' => 'pending']
         );
 
-        if ($attempt->status === 'succeeded') {
+        if ($attempt->status === 'succeeded' && $attempt->error_code !== 'hubspot_list_warning') {
             return [
                 'status' => 'already_synced',
                 'contact_id' => $attempt->hubspot_contact_id,
                 'deal_id' => $attempt->hubspot_deal_id,
             ];
+        }
+
+        if ($attempt->status === 'succeeded' && $attempt->error_code === 'hubspot_list_warning') {
+            return $this->retryListEnrollment($attempt);
         }
 
         $attempt->forceFill([
@@ -55,7 +59,7 @@ class HubSpotDonationSyncer
 
             $listResult = $this->hubSpot->addContactToList(
                 $contactId,
-                (string) config('services.hubspot.newsletter_list_id', '9'),
+                (string) config('services.hubspot.newsletter_list_id', '12'),
             );
         } catch (Throwable $exception) {
             return $this->recordFailure($attempt, $exception);
@@ -76,6 +80,39 @@ class HubSpotDonationSyncer
             'status' => 'synced',
             'contact_id' => $contactId,
             'deal_id' => $dealId,
+            'list_result' => $listResult,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function retryListEnrollment(CrmSyncAttempt $attempt): array
+    {
+        if (! filled($attempt->hubspot_contact_id)) {
+            return [
+                'status' => 'already_synced',
+                'contact_id' => $attempt->hubspot_contact_id,
+                'deal_id' => $attempt->hubspot_deal_id,
+            ];
+        }
+
+        $listResult = $this->hubSpot->addContactToList(
+            (string) $attempt->hubspot_contact_id,
+            (string) config('services.hubspot.newsletter_list_id', '12'),
+        );
+
+        $warning = $this->listWarning($listResult);
+        $attempt->forceFill([
+            'error_code' => $warning === null ? null : 'hubspot_list_warning',
+            'error_message' => $warning,
+            'last_attempted_at' => now(),
+        ])->save();
+
+        return [
+            'status' => $warning === null ? 'list_enrolled' : 'already_synced',
+            'contact_id' => $attempt->hubspot_contact_id,
+            'deal_id' => $attempt->hubspot_deal_id,
             'list_result' => $listResult,
         ];
     }

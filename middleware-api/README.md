@@ -156,7 +156,17 @@ HubSpot sync runs as a Laravel job on `QUEUE_CONNECTION=sync` so Render free-tie
 
 One `crm_sync_attempts` row tracks each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Retry eligibility is recorded for future dashboard tooling; this MVP does not add an automatic retry scheduler, manual retry command, or retry API.
 
-Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal currently expects Contacts and Deals to be writable, and the static list "Newsletter subscribers" to use id `9`.
+Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal uses a **static** contact segment for API list enrollment. Set `HUBSPOT_NEWSLETTER_LIST_ID` to the segment's **ILS Segment ID** (not the Legacy V1 list ID). Active/dynamic segments reject membership API calls even when scopes are correct.
+
+The private app token must include these scopes for full sync (including list enrollment):
+
+| Scope | Purpose |
+| --- | --- |
+| `crm.objects.contacts.read` / `crm.objects.contacts.write` | Contact upsert |
+| `crm.objects.deals.read` / `crm.objects.deals.write` | Deal create + association |
+| `crm.lists.read` / `crm.lists.write` | Add contacts to a static segment |
+
+A 403 on list enrollment while contact/deal sync succeeds usually means the target segment is **active** (dynamic) rather than static, or the token is missing list scopes. Use a static segment and regenerate the private app token after scope changes. Rows that already synced with `hubspot_list_warning` retry list enrollment only on the next sync dispatch.
 
 Before live Deal sync, create these custom Deal properties in HubSpot:
 

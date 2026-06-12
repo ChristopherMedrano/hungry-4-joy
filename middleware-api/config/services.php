@@ -29,7 +29,7 @@ return [
     'hubspot' => [
         'enabled' => env('HUBSPOT_ENABLED', false),
         'access_token' => env('HUBSPOT_ACCESS_TOKEN'),
-        'newsletter_list_id' => env('HUBSPOT_NEWSLETTER_LIST_ID', '9'),
+        'newsletter_list_id' => env('HUBSPOT_NEWSLETTER_LIST_ID', '12'),
     ],
 
     'ses' => [

@@ -190,6 +190,30 @@ class HubSpotDonationSyncerTest extends TestCase
         $this->assertSame(0, $attempt->retry_count);
     }
 
+    public function test_syncer_retries_list_enrollment_after_prior_list_warning(): void
+    {
+        $fake = new ListFailingHubSpotClient(enabled: true);
+        $this->app->instance(HubSpotClient::class, $fake);
+        $event = $this->checkoutEvent();
+
+        app(HubSpotDonationSyncer::class)->sync($event);
+
+        $fake->setListEnrollmentResult(['ok' => true, 'error' => null]);
+
+        $result = app(HubSpotDonationSyncer::class)->sync($event);
+        $attempt = $event->crmSyncAttempt()->firstOrFail();
+        $attempt->refresh();
+
+        $this->assertSame('list_enrolled', $result['status']);
+        $this->assertSame('succeeded', $attempt->status);
+        $this->assertNull($attempt->error_code);
+        $this->assertNull($attempt->error_message);
+        $this->assertSame(2, count(array_filter(
+            $fake->calls(),
+            fn (array $call): bool => $call['method'] === 'addContactToList'
+        )));
+    }
+
     public function test_syncer_delegates_contact_matching_to_email_upsert_once(): void
     {
         $fake = new FakeHubSpotClient(enabled: true);
@@ -327,13 +351,26 @@ class FailingHubSpotClient extends FakeHubSpotClient
 
 class ListFailingHubSpotClient extends FakeHubSpotClient
 {
+    /**
+     * @var array{ok: bool, error: string|null}
+     */
+    private array $listResult = [
+        'ok' => false,
+        'error' => 'HubSpot list enrollment failed with status 403.',
+    ];
+
+    /**
+     * @param  array{ok: bool, error: string|null}  $listResult
+     */
+    public function setListEnrollmentResult(array $listResult): void
+    {
+        $this->listResult = $listResult;
+    }
+
     public function addContactToList(string $contactId, string $listId): array
     {
         parent::addContactToList($contactId, $listId);
 
-        return [
-            'ok' => false,
-            'error' => 'HubSpot list enrollment failed with status 403.',
-        ];
+        return $this->listResult;
     }
 }
