@@ -111,6 +111,12 @@ Run only the fixture-based receiver tests:
 php artisan test --filter=CheckoutEventFixtureReceiverTest
 ```
 
+Run only the HubSpot CRM sync tests:
+
+```bash
+php artisan test --filter=HubSpot
+```
+
 Replay the tracked Foxy-shaped checkout event fixtures through the receiver route:
 
 ```bash
@@ -144,11 +150,11 @@ HUBSPOT_NEWSLETTER_LIST_ID=9
 
 With the default config, tests and local development do not make HubSpot network calls. The fake client records calls in memory and returns deterministic fake contact/deal IDs so later sync work can be tested without credentials.
 
-Donor matching for the MVP is email-only. The syncer calls `HubSpotClient::upsertContact()` with donor email, first name, last name, and optional phone; HubSpot handles whether that upsert updates an existing contact or creates a new one. The middleware does not do fuzzy matching or store HubSpot contact ids locally until durable sync status work in #32.
+Donor matching for the MVP is email-only. The syncer calls `HubSpotClient::upsertContact()` with donor email, first name, last name, and optional phone; HubSpot handles whether that upsert updates an existing contact or creates a new one. The middleware does not do fuzzy matching. Successful syncs store returned HubSpot contact and Deal ids on `crm_sync_attempts`.
 
-Issue #30 models HubSpot sync as a Laravel job, but the MVP can run it on `QUEUE_CONNECTION=sync` so Render free-tier deployments do not need a separate always-on worker. The job is dispatched only for newly accepted completed donation events.
+HubSpot sync runs as a Laravel job on `QUEUE_CONNECTION=sync` so Render free-tier deployments do not need a separate always-on worker. The job is dispatched only for newly accepted completed donation events.
 
-Issue #32 stores one `crm_sync_attempts` row for each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Retry eligibility is recorded for future tooling, but this MVP does not add an automatic retry scheduler, manual retry command, or retry API.
+One `crm_sync_attempts` row tracks each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Retry eligibility is recorded for future dashboard tooling; this MVP does not add an automatic retry scheduler, manual retry command, or retry API.
 
 Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal currently expects Contacts and Deals to be writable, and the static list "Newsletter subscribers" to use id `9`.
 
@@ -190,8 +196,8 @@ php artisan route:list --path=api
 
 ## Current Boundary
 
-Current receiver work adds safe event storage, duplicate prevention, and signed Foxy JSON webhook intake. It does not add CRM sync, analytics, dashboard views, or hosted checkout writes.
+Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, and HubSpot CRM sync with local status tracking. It does not add admin dashboard views, analytics event emission, automatic CRM retry scheduling, or hosted checkout writes.
 
-Run migrations when setting up local middleware storage. CRM sync, analytics, and dashboard behavior are planned for later middleware/API issues.
+Run migrations when setting up local middleware storage. Dashboard API routes, frontend UI, analytics, and observability alerting remain planned for later milestones.
 
 Keep `.env` local and uncommitted. Use `.env.example` for safe local placeholders only.
