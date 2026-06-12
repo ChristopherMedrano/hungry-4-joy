@@ -86,9 +86,14 @@ class HttpHubSpotClient implements HubSpotClient
         );
 
         if ($response->failed()) {
+            $hubspotMessage = data_get($response->json(), 'message');
+            $detail = is_string($hubspotMessage) && $hubspotMessage !== ''
+                ? ' HubSpot message: '.mb_substr($hubspotMessage, 0, 200)
+                : '';
+
             return [
                 'ok' => false,
-                'error' => 'HubSpot list enrollment failed with status '.$response->status().'.',
+                'error' => 'HubSpot list enrollment failed with status '.$response->status().'.'.$detail,
             ];
         }
 

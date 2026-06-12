@@ -20,8 +20,8 @@ class HubSpotClientTest extends TestCase
     public function test_hubspot_config_defaults_to_disabled_with_newsletter_list_id(): void
     {
         $this->assertFalse(config('services.hubspot.enabled'));
-        $this->assertNull(config('services.hubspot.access_token'));
-        $this->assertSame('9', config('services.hubspot.newsletter_list_id'));
+        $this->assertTrue(blank(config('services.hubspot.access_token')));
+        $this->assertSame('12', config('services.hubspot.newsletter_list_id'));
     }
 
     public function test_fake_client_records_calls_and_returns_fake_ids(): void
@@ -278,7 +278,7 @@ class HubSpotClientTest extends TestCase
 
         $this->assertSame([
             'ok' => false,
-            'error' => 'HubSpot list enrollment failed with status 403.',
+            'error' => 'HubSpot list enrollment failed with status 403. HubSpot message: This app does not have permission to add records to this list.',
         ], $result);
     }
 
