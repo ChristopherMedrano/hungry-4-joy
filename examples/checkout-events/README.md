@@ -11,6 +11,7 @@ The full checkout and payment safety boundary is documented in [`../../docs/paym
 | File | Event Type | Purpose |
 | --- | --- | --- |
 | `donation-created.one-time.json` | `donation.created` | Successful one-time donation event. |
+| `checkout-pending.one-time.json` | `donation.created` | In-progress checkout with `transaction_status: pending`. |
 | `payment-failed.one-time.json` | `payment.failed` | Failed one-time checkout or payment event. |
 
 ## Scope

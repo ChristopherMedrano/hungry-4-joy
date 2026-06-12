@@ -73,10 +73,11 @@ class CheckoutEventFixtureReceiverTest extends TestCase
     {
         $this->artisan('checkout:replay-fixtures')
             ->expectsOutputToContain('donation-created.one-time.json: accepted')
+            ->expectsOutputToContain('checkout-pending.one-time.json: accepted')
             ->expectsOutputToContain('payment-failed.one-time.json: accepted')
             ->assertExitCode(0);
 
-        $this->assertSame(2, DB::table('checkout_events')->count());
+        $this->assertSame(3, DB::table('checkout_events')->count());
         $this->assertDatabaseHas('checkout_events', [
             'event_id' => 'evt_h4j_demo_20260527_0001',
             'event_type' => 'donation.created',
@@ -95,10 +96,11 @@ class CheckoutEventFixtureReceiverTest extends TestCase
 
         $this->artisan('checkout:replay-fixtures')
             ->expectsOutputToContain('donation-created.one-time.json: duplicate_ignored')
+            ->expectsOutputToContain('checkout-pending.one-time.json: duplicate_ignored')
             ->expectsOutputToContain('payment-failed.one-time.json: duplicate_ignored')
             ->assertExitCode(0);
 
-        $this->assertSame(2, DB::table('checkout_events')->count());
+        $this->assertSame(3, DB::table('checkout_events')->count());
     }
 
     /**
