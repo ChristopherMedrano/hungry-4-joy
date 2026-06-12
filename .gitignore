@@ -13,6 +13,7 @@ docs/superpowers/
 
 # Node / Sass tooling
 node_modules/
+dashboard/dist/
 npm-debug.log*
 test-results/
 

@@ -115,8 +115,8 @@ Backend and data:
 
 Dashboard:
 
-- Front end: React or Next.js, status UI.
-- Style framework: Tailwind CSS, dashboard components.
+- Front end: Vite + React + Tailwind CSS status UI in `dashboard/`.
+- API backend: Laravel JSON routes (planned under `/api/dashboard`).
 
 Development and deployment:
 
@@ -214,7 +214,15 @@ Run the current local stack checks from the repo root:
 npm test
 ```
 
-The middleware/API now receives validated checkout event fixtures and stores safe normalized checkout event rows. It does not yet verify provider signatures, sync CRM data, emit analytics, or power dashboard views.
+The status dashboard shell lives in `dashboard/` as a Vite + React + Tailwind app:
+
+```bash
+npm run dev:dashboard
+```
+
+See [`dashboard/README.md`](dashboard/README.md) for lint/build commands. The shell uses mock data until Laravel dashboard API routes exist.
+
+The middleware/API receives validated checkout events, stores normalized rows, syncs eligible donations to HubSpot with local status tracking, and exposes data for a future dashboard API. Analytics, observability alerting, and live dashboard API wiring remain planned.
 
 Middleware deployment planning for Render is documented in:
 
