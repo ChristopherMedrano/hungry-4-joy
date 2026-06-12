@@ -18,6 +18,8 @@
     const baseUrl = window.location && window.location.href ? window.location.href : 'https://hungry-4-joy.local/';
     const url = new URL(href, baseUrl);
     url.searchParams.set('donation_attempt_id', donationAttemptId);
+    // Foxy session custom field backup when item options are missing from webhook zoom.
+    url.searchParams.set('h:donation_attempt_id', donationAttemptId);
 
     return url.toString();
   }

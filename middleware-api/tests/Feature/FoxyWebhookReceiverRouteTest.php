@@ -80,6 +80,68 @@ class FoxyWebhookReceiverRouteTest extends TestCase
         ]);
     }
 
+    public function test_foxy_webhook_receiver_reads_attempt_id_from_transaction_custom_field(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        $payload['_embedded']['fx:items'][0]['options'] = array_values(array_filter(
+            $payload['_embedded']['fx:items'][0]['options'],
+            fn (array $option): bool => $option['name'] !== 'donation_attempt_id'
+        ));
+        $payload['_embedded']['fx:custom_fields'] = [
+            [
+                'name' => 'donation_attempt_id',
+                'value' => 'h4j_attempt_foxy_session_1042',
+            ],
+        ];
+
+        $response = $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        );
+
+        $response->assertAccepted();
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'foxy_transaction_1042_transaction_created',
+            'donation_attempt_id' => 'h4j_attempt_foxy_session_1042',
+        ]);
+    }
+
+    public function test_foxy_webhook_receiver_reads_attempt_id_from_zoomed_item_options(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        unset($payload['_embedded']['fx:items'][0]['options']);
+        $payload['_embedded']['fx:items'][0]['_embedded'] = [
+            'fx:item_options' => [
+                ['name' => 'donation_label', 'value' => '3 loaves'],
+                ['name' => 'donation_type', 'value' => 'one_time'],
+                ['name' => 'source_page', 'value' => 'home'],
+                ['name' => 'donation_attempt_id', 'value' => 'h4j_attempt_foxy_cart_1042'],
+                ['name' => 'campaign_name', 'value' => 'Loaves 4 Joy'],
+                ['name' => 'checkout_provider', 'value' => 'foxy'],
+            ],
+        ];
+
+        $response = $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        );
+
+        $response->assertAccepted();
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'foxy_transaction_1042_transaction_created',
+            'donation_attempt_id' => 'h4j_attempt_foxy_cart_1042',
+            'source_page' => 'home',
+        ]);
+    }
+
     public function test_foxy_webhook_receiver_rejects_malformed_donation_attempt_id_option(): void
     {
         config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);

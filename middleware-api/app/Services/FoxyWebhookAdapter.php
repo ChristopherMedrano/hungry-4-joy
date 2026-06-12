@@ -29,7 +29,7 @@ class FoxyWebhookAdapter
             'event_id' => "foxy_transaction_{$transactionId}_{$eventSlug}",
             'event_type' => 'donation.created',
             'event_created_at' => $payload['date_created'] ?? $payload['date_modified'] ?? now()->toIso8601String(),
-            'donation_attempt_id' => $this->donationAttemptId($options, $transactionId),
+            'donation_attempt_id' => $this->donationAttemptId($payload, $options, $transactionId),
             'checkout_provider' => 'foxy',
             'checkout_session_id' => (string) ($payload['cart'] ?? $payload['cart_id'] ?? "foxy_transaction_{$transactionId}"),
             'transaction_id' => $transactionId,
@@ -113,17 +113,56 @@ class FoxyWebhookAdapter
     }
 
     /**
+     * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $options
      */
-    private function donationAttemptId(array $options, string $transactionId): string
+    private function donationAttemptId(array $payload, array $options, string $transactionId): string
     {
-        $donationAttemptId = (string) ($options['donation_attempt_id'] ?? '');
+        $fromItemOption = (string) ($options['donation_attempt_id'] ?? '');
 
-        if ($donationAttemptId !== '') {
-            return $donationAttemptId;
+        if ($fromItemOption !== '') {
+            return $fromItemOption;
+        }
+
+        $fromCustomField = (string) ($this->customFieldsByName($payload)['donation_attempt_id'] ?? '');
+
+        if ($fromCustomField !== '') {
+            return $fromCustomField;
         }
 
         return "h4j_attempt_foxy_transaction_{$transactionId}";
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function customFieldsByName(array $payload): array
+    {
+        $customFields = $payload['_embedded']['fx:custom_fields']
+            ?? $payload['custom_fields']
+            ?? [];
+
+        $mapped = [];
+
+        if (! is_array($customFields)) {
+            return $mapped;
+        }
+
+        foreach ($customFields as $field) {
+            if (! is_array($field)) {
+                continue;
+            }
+
+            $name = $field['name'] ?? null;
+            $value = $field['value'] ?? null;
+
+            if (is_string($name) && $value !== null) {
+                $mapped[$name] = $value;
+            }
+        }
+
+        return $mapped;
     }
 
     /**

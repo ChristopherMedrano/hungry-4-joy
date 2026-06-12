@@ -180,10 +180,11 @@ function App() {
       <div className="space-y-4">
         <EventFiltersBar filters={filters} onChange={setFilters} />
         <p className="text-xs text-slate-500">
-          Live data from Laravel{' '}
-          <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code>. Run{' '}
-          <code className="rounded bg-slate-800 px-1 py-0.5">php artisan checkout:replay-fixtures</code>{' '}
-          when the middleware database is empty.
+          Live data from{' '}
+          <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code>. Use{' '}
+          <code className="rounded bg-slate-800 px-1 py-0.5">npm run dev:hosted</code> for Render
+          data or <code className="rounded bg-slate-800 px-1 py-0.5">npm run dev</code> with local
+          middleware.
         </p>
         {content}
       </div>
