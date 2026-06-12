@@ -17,14 +17,16 @@ In scope:
 - Simulated checkout event fixtures.
 - Local Laravel fixture receiver validation, normalized storage, and duplicate prevention for safe fixture payloads at `POST /api/checkout/events`.
 - Signed Foxy webhook receipt, signature verification, safe field adaptation, normalized storage, and duplicate prevention at `POST /api/foxy/webhooks`.
+- HubSpot CRM sync for eligible completed donations with local `crm_sync_attempts` status tracking.
 - Safe transaction identifiers, statuses, timestamps, campaign codes, amounts, and donor/contact fields.
-- Local documentation and local reference payloads for receiver verification.
+- Local documentation and local reference payloads for receiver and CRM sync verification.
 
 Out of scope:
 
 - Production payment writes.
 - Raw payment method collection.
 - Subscription, recurring gift, or refund payloads.
+- Admin dashboard UI and dashboard API routes.
 - Storing real payment credentials, provider secrets, or webhook secrets in committed source files, docs, fixtures, logs, config examples, or database snapshots.
 - Provider API calls, API keys, access tokens, authorization headers, or committed provider/webhook secrets.
 - Production activation without environment-managed hosted secrets and provider test verification.

@@ -2,7 +2,7 @@
 
 This document defines the small data contracts used between parts of the Hungry-4-Joy demo ecosystem.
 
-The goal is to keep each system boundary clear. WordPress prepares campaign and donation context. Checkout receives safe metadata, including a canonical donation attempt identity. The local Laravel receiver validates checkout event fixtures and adapted provider webhooks, stores normalized safe fields, and prevents duplicate processing. Future CRM, analytics, observability, and dashboard workflows build on that receiver data.
+The goal is to keep each system boundary clear. WordPress prepares campaign and donation context. Checkout receives safe metadata, including a canonical donation attempt identity. The local Laravel receiver validates checkout event fixtures and adapted provider webhooks, stores normalized safe fields, prevents duplicate processing, and syncs eligible donations to HubSpot with local status tracking. Dashboard, analytics, and observability workflows build on that receiver and CRM data.
 
 These contracts should avoid sensitive payment data. Card numbers, CVV values, raw payment credentials, and payment method secrets do not belong in WordPress, Laravel, HubSpot, logs, or the dashboard.
 
@@ -409,13 +409,13 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the full chec
 
 ## 4. CRM / Marketing Sync Payload
 
-Status: Contract defined for HubSpot CRM MVP; implementation planned in issues #29–#33.
+Status: Implemented for HubSpot CRM MVP.
 
 This contract defines the normalized data Laravel prepares from stored `checkout_events` rows and maps into HubSpot for the practice nonprofit donation demo.
 
 The selected CRM target is HubSpot (free / STANDARD portal). The MVP uses Contact upsert, one Deal per donation attempt, and newsletter list enrollment.
 
-This mapping reflects the current practice portal and free-tier capabilities. Object choices, custom properties, list enrollment, and pipeline defaults may be adjusted during implementation (#29–#33) if HubSpot plan limits, API availability, or portal setup require a simpler fallback. `donation_attempt_id` remains the canonical external id across any revision.
+This mapping reflects the current practice portal and free-tier capabilities. Object choices, custom properties, list enrollment, and pipeline defaults may be adjusted if HubSpot plan limits, API availability, or portal setup require a simpler fallback. `donation_attempt_id` remains the canonical external id across any revision.
 
 ### Source
 
@@ -484,7 +484,7 @@ The MVP donor matching policy is email-only. Laravel does not search by name, ph
 | `donor.last_name` | `lastname` | Update on match |
 | `donor.phone` | `phone` | Update when present |
 
-Do not create a second contact when email already exists. Existing-contact versus new-contact detection stays inside HubSpot contact upsert for the MVP; Laravel records durable sync status and returned HubSpot ids in later issue #32.
+Do not create a second contact when email already exists. Existing-contact versus new-contact detection stays inside HubSpot contact upsert for the MVP; Laravel records durable sync status and returned HubSpot ids on `crm_sync_attempts`.
 
 ### HubSpot Deal Mapping
 
@@ -519,7 +519,7 @@ List membership is the MVP follow-up action. Campaign-specific lists and automat
 
 ### Local Sync Status Fields
 
-Later issues persist CRM outcomes on `crm_sync_attempts` linked to `checkout_events`:
+CRM outcomes persist on `crm_sync_attempts` linked to `checkout_events`:
 
 | Field | Example | Purpose |
 | --- | --- | --- |
@@ -532,7 +532,7 @@ Later issues persist CRM outcomes on `crm_sync_attempts` linked to `checkout_eve
 | `last_attempted_at` | `2026-06-08T12:00:00Z` | Last sync attempt time |
 | `next_retry_at` | `2026-06-08T12:15:00Z` | Next time a retry is eligible |
 
-Issue #32 records retry eligibility only. It does not add automatic retry scheduling, a manual retry command, or a retry API. Already-succeeded attempts are skipped so repeated jobs do not create duplicate HubSpot records.
+The MVP records retry eligibility only. It does not add automatic retry scheduling, a manual retry command, or a retry API. Already-succeeded attempts are skipped so repeated jobs do not create duplicate HubSpot records.
 
 ### Validation And Safety Rules
 
@@ -569,19 +569,376 @@ Issue #32 records retry eligibility only. It does not add automatic retry schedu
 
 ## 5. Dashboard Status Payload
 
-Status: planned.
+Status: Contract defined for dashboard MVP; API routes and UI planned in issues #36–#40.
 
-This future contract will define the data exposed by Laravel for the status dashboard.
+This contract defines the normalized data Laravel exposes to the admin/status dashboard. The dashboard reads application-owned records from `checkout_events` and `crm_sync_attempts`. It does not use raw provider payloads, observability tooling, or HubSpot as the source of truth.
 
-Expected future concerns:
+The purpose is to let a support or developer user inspect donation events, checkout ingest outcomes, CRM sync state, failures, and retry eligibility from safe local data.
 
-- donation records
-- donation attempt lookup
-- webhook event status
-- CRM sync status
-- failed jobs
-- retry history
-- reconciliation notes
+### Source
+
+Laravel middleware database tables:
+
+| Table | Role |
+| --- | --- |
+| `checkout_events` | Stored checkout/webhook events after validation and ingest |
+| `crm_sync_attempts` | One CRM sync lifecycle row per eligible checkout event |
+
+Duplicate checkout replays that return `duplicate_ignored` do not create `checkout_events` rows. The dashboard list shows stored events only.
+
+Later dashboard milestones may add `failed_jobs`, incident notes, and reconciliation notes. Those are out of scope for this contract revision.
+
+### Destination
+
+React or Next.js admin/status dashboard through Laravel JSON API routes.
+
+Planned route prefix:
+
+```text
+/api/dashboard
+```
+
+This issue defines payload shapes only. Route handlers, authentication, and frontend UI belong to later issues.
+
+### API Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/dashboard/events` | Paginated list of checkout events with summary CRM sync state |
+| `GET` | `/api/dashboard/events/{checkout_event_id}` | Full detail for one stored checkout event |
+| `GET` | `/api/dashboard/events/by-attempt/{donation_attempt_id}` | Lookup by canonical donation attempt id |
+
+Optional later endpoints for #39:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` | Trigger a safe manual CRM retry when eligible |
+
+### List Query Parameters
+
+| Parameter | Type | Example | Purpose |
+| --- | --- | --- | --- |
+| `campaign_id` | string | `loaves-campaign-01` | Filter by campaign |
+| `event_type` | string | `donation.created` | Filter by checkout event type |
+| `transaction_status` | string | `completed` | Filter by transaction status |
+| `crm_sync_status` | string | `retryable` | Filter by CRM sync status; use `not_applicable` for ineligible events with no attempt row |
+| `checkout_provider` | string | `foxy` | Filter by provider |
+| `source_page` | string | `home` | Filter by donation placement |
+| `ingest_channel` | string | `foxy_webhook` | Filter by derived ingest path: `foxy_webhook` or `fixture_receiver` |
+| `event_created_from` | ISO 8601 datetime | `2026-05-27T00:00:00Z` | Lower bound on checkout event time |
+| `event_created_to` | ISO 8601 datetime | `2026-05-27T23:59:59Z` | Upper bound on checkout event time |
+| `search` | string | `h4j_attempt_demo_loaves_0001` | Match `donation_attempt_id`, `event_id`, `transaction_id`, or donor email |
+| `page` | integer | `1` | Page number |
+| `per_page` | integer | `25` | Page size; default `25`, max `100` |
+| `sort` | string | `-event_created_at` | Sort field; prefix `-` for descending. Allowed: `event_created_at`, `created_at`, `donation_amount`, `campaign_name` |
+
+### Checkout Event Summary Object
+
+Each list row represents one stored `checkout_events` record plus a derived CRM sync summary.
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `checkout_event_id` | `1` | Local primary key |
+| `event_id` | `evt_h4j_demo_20260527_0001` | Stored checkout event identifier |
+| `donation_attempt_id` | `h4j_attempt_demo_loaves_0001` | Canonical attempt identity for cross-system lookup |
+| `event_type` | `donation.created` | Checkout event category |
+| `event_created_at` | `2026-05-27T14:05:00Z` | Checkout event timestamp |
+| `transaction_status` | `completed` | Transaction outcome |
+| `checkout_provider` | `foxy` | Provider reference |
+| `transaction_id` | `txn_demo_loaves_1042` | Safe provider transaction reference; may be `null` for failed checkouts |
+| `source_page` | `home` | Donation placement |
+| `campaign.campaign_id` | `loaves-campaign-01` | Campaign attribution |
+| `campaign.campaign_name` | `Loaves 4 Joy` | Human-readable campaign label |
+| `donation.amount` | `25` | Donation amount |
+| `donation.currency` | `USD` | Currency code |
+| `donation.donation_label` | `3 loaves` | Selected option label |
+| `donation.donation_type` | `one_time` | Giving type |
+| `donor.email` | `jordan.helper@example.test` | Support contact identity |
+| `donor.display_name` | `Jordan Helper` | Derived from first and last name for list views |
+| `ingest.received_at` | `2026-05-27T14:05:12Z` | When Laravel stored the row (`checkout_events.created_at`) |
+| `ingest.status` | `accepted` | Stored events use `accepted`; duplicate replays never appear in list results |
+| `ingest.channel` | `foxy_webhook` | Derived ingest path: `foxy_webhook` when `event_id` starts with `foxy_transaction_`; otherwise `fixture_receiver` for local/demo fixture posts |
+| `crm_sync.eligible` | `true` | Whether the event meets HubSpot sync eligibility rules |
+| `crm_sync.status` | `succeeded` | `not_applicable`, `pending`, `succeeded`, `failed`, or `retryable` |
+| `crm_sync.retry_count` | `0` | Retry attempts when an attempt row exists; `0` when not applicable |
+| `crm_sync.last_attempted_at` | `2026-05-27T14:05:13Z` | Last CRM sync attempt time; `null` when not applicable |
+| `crm_sync.next_retry_at` | `null` | Next retry eligibility time for retryable rows; otherwise `null` |
+| `crm_sync.error_code` | `null` | Safe failure category when failed or retryable; may be present on succeeded rows with list-enrollment warnings |
+| `status_summary` | `donation_completed_crm_synced` | Derived support label for list badges |
+
+### Checkout Event Detail Object
+
+Detail responses include every summary field plus support-oriented detail blocks.
+
+Additional detail fields:
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `checkout_session_id` | `sess_demo_loaves_0001` | Safe session or cart reference |
+| `idempotency_key` | `evt_h4j_demo_20260527_0001` | Ingest deduplication key |
+| `donor.first_name` | `Jordan` | Donor first name |
+| `donor.last_name` | `Helper` | Donor last name |
+| `donor.phone` | `555-0104` | Optional support phone |
+| `failure.failure_code` | `null` | Safe failure category for failed payments |
+| `failure.failure_message` | `null` | Redacted failure message |
+| `failure.provider_status` | `null` | Safe provider status |
+| `crm_sync.crm_sync_attempt_id` | `1` | Local CRM sync attempt row id; `null` when not applicable |
+| `crm_sync.hubspot_contact_id` | `fake_contact_jordan_helper_example_test` | External contact reference after success |
+| `crm_sync.hubspot_deal_id` | `fake_deal_1` | External deal reference after success |
+| `crm_sync.error_message` | `null` | Redacted CRM failure summary |
+| `crm_sync.hubspot_mode` | `fake` | `fake` when `HUBSPOT_ENABLED=false` or no access token; `live` when the HTTP HubSpot client is active |
+| `timestamps.updated_at` | `2026-05-27T14:05:13Z` | Last `checkout_events.updated_at` time |
+
+Detail responses must not include raw provider payloads, queue job payloads, or environment secrets.
+
+### CRM Sync Status Values
+
+| Value | Meaning |
+| --- | --- |
+| `not_applicable` | Event fails `hubSpotSyncEligible()`; no CRM sync is expected |
+| `pending` | Event is CRM-eligible and either has a `crm_sync_attempts.status = pending` row or has no attempt row yet |
+| `succeeded` | CRM sync completed; HubSpot ids may be present |
+| `failed` | Terminal CRM sync failure |
+| `retryable` | CRM sync failed but may be retried later |
+
+CRM sync eligibility follows Section 4 rules and matches `CheckoutEvent::hubSpotSyncEligible()`:
+
+- `event_type` is `donation.created`
+- `transaction_status` is `completed`
+- `donation_attempt_id` is present
+- `donor.email` is present
+
+Ineligible events must expose `crm_sync.status = not_applicable`, `crm_sync.eligible = false`, and omit HubSpot ids from detail payloads.
+
+### CRM Sync Status Derivation
+
+Dashboard API code should derive `crm_sync.status` from stored rows, not from HubSpot:
+
+| Condition | `crm_sync.eligible` | `crm_sync.status` |
+| --- | --- | --- |
+| `hubSpotSyncEligible()` is false | `false` | `not_applicable` |
+| Eligible and no `crm_sync_attempts` row | `true` | `pending` |
+| Attempt row exists | `true` | value from `crm_sync_attempts.status` |
+
+With the current `QUEUE_CONNECTION=sync` default, eligible events usually move from `pending` to a final attempt status in the same request. `pending` remains in the contract for async queue deployments and for the brief window while a sync attempt row is being written.
+
+Known `crm_sync_attempts.status` values in code today: `pending`, `succeeded`, `failed`, `retryable`.
+
+Known safe `error_code` values today:
+
+| `error_code` | Typical `crm_sync.status` | Meaning |
+| --- | --- | --- |
+| `hubspot_retryable_error` | `retryable` | Retryable HubSpot HTTP or timeout failure |
+| `hubspot_terminal_error` | `failed` | Non-retryable HubSpot failure |
+| `hubspot_list_warning` | `succeeded` | Contact and Deal synced, but newsletter list enrollment failed |
+
+When `error_code = hubspot_list_warning`, the dashboard should still treat the sync as succeeded and surface the warning in detail views.
+
+### Section 2 Vocabulary Mapping
+
+Section 2 defines cross-cutting producer vocabulary such as `crm_sync_pending` and `crm_sync_succeeded`. Dashboard payloads use the shorter attempt-row values above. Map them as follows:
+
+| Section 2 vocabulary | Dashboard `crm_sync.status` |
+| --- | --- |
+| `crm_sync_pending` | `pending` |
+| `crm_sync_succeeded` | `succeeded` |
+| `crm_sync_failed` | `failed` or `retryable`, depending on attempt row state |
+
+### Derived Status Summary Labels
+
+`status_summary` gives the dashboard a stable badge key without exposing provider internals.
+
+| `status_summary` | Typical conditions |
+| --- | --- |
+| `donation_completed_crm_synced` | Completed donation with `crm_sync.status = succeeded` and no `hubspot_list_warning` |
+| `donation_completed_crm_synced_with_warning` | Completed donation with `crm_sync.status = succeeded` and `error_code = hubspot_list_warning` |
+| `donation_completed_crm_pending` | Completed eligible donation with `crm_sync.status = pending` |
+| `donation_completed_crm_failed` | Completed eligible donation with `crm_sync.status = failed` |
+| `donation_completed_crm_retryable` | Completed eligible donation with `crm_sync.status = retryable` |
+| `donation_completed_crm_not_applicable` | Rare today: completed donation that fails current eligibility rules, such as legacy rows missing `donation_attempt_id` |
+| `payment_failed` | `event_type = payment.failed` |
+| `checkout_pending` | `transaction_status = pending` |
+
+Duplicate ingest attempts are not list rows. Support users infer duplicate protection from receiver responses and verification docs, not from dashboard list entries.
+
+### List Response Envelope
+
+```json
+{
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "per_page": 25,
+    "total": 0,
+    "last_page": 1
+  },
+  "filters": {
+    "campaign_id": null,
+    "event_type": null,
+    "transaction_status": null,
+    "crm_sync_status": null,
+    "checkout_provider": null,
+    "source_page": null,
+    "ingest_channel": null,
+    "event_created_from": null,
+    "event_created_to": null,
+    "search": null,
+    "sort": "-event_created_at"
+  }
+}
+```
+
+### Detail Response Envelope
+
+```json
+{
+  "data": {}
+}
+```
+
+Lookup by `donation_attempt_id` returns the same detail object or `404` when no stored checkout event exists.
+
+### Example List Row
+
+```json
+{
+  "checkout_event_id": 1,
+  "event_id": "evt_h4j_demo_20260527_0001",
+  "donation_attempt_id": "h4j_attempt_demo_loaves_0001",
+  "event_type": "donation.created",
+  "event_created_at": "2026-05-27T14:05:00Z",
+  "transaction_status": "completed",
+  "checkout_provider": "foxy",
+  "transaction_id": "txn_demo_loaves_1042",
+  "source_page": "home",
+  "campaign": {
+    "campaign_id": "loaves-campaign-01",
+    "campaign_name": "Loaves 4 Joy"
+  },
+  "donation": {
+    "amount": 25,
+    "currency": "USD",
+    "donation_label": "3 loaves",
+    "donation_type": "one_time"
+  },
+  "donor": {
+    "email": "jordan.helper@example.test",
+    "display_name": "Jordan Helper"
+  },
+  "ingest": {
+    "received_at": "2026-05-27T14:05:12Z",
+    "status": "accepted",
+    "channel": "fixture_receiver"
+  },
+  "crm_sync": {
+    "eligible": true,
+    "status": "succeeded",
+    "retry_count": 0,
+    "last_attempted_at": "2026-05-27T14:05:13Z",
+    "next_retry_at": null,
+    "error_code": null
+  },
+  "status_summary": "donation_completed_crm_synced"
+}
+```
+
+### Example Detail CRM Block
+
+```json
+{
+  "crm_sync": {
+    "eligible": true,
+    "crm_sync_attempt_id": 1,
+    "status": "retryable",
+    "hubspot_contact_id": null,
+    "hubspot_deal_id": null,
+    "error_code": "hubspot_retryable_error",
+    "error_message": "HubSpot deal creation failed with status 503.",
+    "retry_count": 1,
+    "last_attempted_at": "2026-05-27T14:05:13Z",
+    "next_retry_at": "2026-05-27T14:20:13Z"
+  }
+}
+```
+
+### Retry History Representation
+
+The MVP stores retry state on the current `crm_sync_attempts` row rather than a separate retry-history table.
+
+Dashboard detail views should expose:
+
+- `retry_count`
+- `last_attempted_at`
+- `next_retry_at`
+- current `error_code` and `error_message`
+
+Later issues may add append-only retry event history. Until then, list and detail payloads treat the attempt row as the authoritative retry snapshot.
+
+### Environment And Platform Constraints
+
+The dashboard contract must reflect how this practice app actually runs in local, demo, and hosted environments:
+
+| Constraint | Effect on dashboard data |
+| --- | --- |
+| `HUBSPOT_ENABLED=false` by default | CRM sync runs through `FakeHubSpotClient`; `hubspot_contact_id` and `hubspot_deal_id` values such as `fake_contact_*` and `fake_deal_*` are expected in local dev and on Render until live HubSpot secrets are configured |
+| HubSpot free / STANDARD portal | Contact upsert and Deal create are supported, but custom Deal properties must be created manually before live sync; list enrollment may fail and surface `hubspot_list_warning` on an otherwise succeeded attempt |
+| `QUEUE_CONNECTION=sync` on Render | No separate queue worker; CRM sync runs inline in the web request after ingest, so `pending` states are usually short-lived |
+| `POST /api/checkout/events` returns `404` in production | Hosted dashboard data comes from signed Foxy webhooks at `POST /api/foxy/webhooks`, not fixture replay |
+| Fixture receiver remains local/test-only | Rows with `ingest.channel = fixture_receiver` are expected in local verification; production rows should usually have `ingest.channel = foxy_webhook` |
+| Render free Postgres for middleware | Checkout and CRM sync rows persist across redeploys; this is the dashboard source of truth |
+| Render free WordPress SQLite is ephemeral | Campaign-site state is not dashboard source data; do not treat WordPress DB contents as integration status |
+| No dashboard auth yet | API routes under `/api/dashboard` require authentication and access-control work in later dashboard issues before public deployment |
+
+Expose `crm_sync.hubspot_mode` in detail responses so support users can tell whether stored HubSpot ids came from the fake client or a live portal write.
+
+### Reconciliation And Incident Notes
+
+Planned later dashboard fields, not part of the MVP payload yet:
+
+| Future field | Purpose |
+| --- | --- |
+| `reconciliation.status` | Mismatch flags between checkout, CRM, and support expectations |
+| `reconciliation.notes` | Human-written reconciliation notes |
+| `incident.note` | Support incident annotation tied to an event or attempt |
+| `observability.trace_id` | Optional link to developer traces |
+| `observability.sentry_event_id` | Optional link to Sentry errors |
+
+### Explicitly Forbidden Dashboard Fields
+
+Dashboard payloads must not include:
+
+- full card number
+- CVV or CVC values
+- raw payment credentials
+- payment method secrets
+- checkout API keys
+- authorization headers
+- access tokens
+- client secrets
+- webhook encryption keys
+- unredacted provider payloads
+- private donor notes
+- raw queue job serialization blobs
+
+See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-wide safety checklist.
+
+### Validation And Safety Rules
+
+- Dashboard data comes from stored safe columns only.
+- `donation_attempt_id` is the primary cross-system lookup key for detail and reconciliation views.
+- CRM sync summaries must follow the derivation rules above and eligibility rules from Section 4.
+- Error messages exposed to the dashboard must remain redacted summaries safe for support display.
+- Manual retry actions, when added in #39, must only target `failed` or `retryable` attempts and must not replay already-succeeded events.
+- Dashboard routes must not expose the local fixture receiver behavior as production ingest status.
+- Analytics event emission, alerting, and observability dashboards remain out of scope for this contract.
+
+### Dashboard Payload Acceptance Criteria
+
+- List and detail payload shapes are documented and aligned with current `checkout_events` and `crm_sync_attempts` columns.
+- Contract covers success, failure, duplicate-ingest exclusion, retryable CRM state, and ineligible CRM cases.
+- Filter fields support campaign, status, date range, provider, source page, and free-text lookup.
+- Sensitive payment and secret fields are explicitly excluded.
+- Later API and frontend issues can implement routes and UI without changing the payload vocabulary.
 
 ## Contract Principles
 
