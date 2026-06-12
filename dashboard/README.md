@@ -30,18 +30,28 @@ npm run build:dashboard
 
 ## Current scope
 
-Issue #36 shell only:
+Issue #37 checkout event views:
 
-- Base layout, navigation placeholders, filter bar, responsive event table, detail panel
-- Empty, loading, and error states (use the **Shell preview** control in the header)
-- Fictional mock rows shaped for `docs/contracts.md` Section 5
+- List and detail panels load from Laravel `/api/dashboard/events`
+- Filters are sent to the API as query parameters
+- Vite proxies `/api` to `http://127.0.0.1:8000` during local development
+
+Prerequisites for live data:
+
+```bash
+cd middleware-api
+php artisan migrate
+php artisan checkout:replay-fixtures
+php artisan serve
+```
+
+Then run the dashboard dev server in another terminal.
 
 Not included yet:
 
-- Laravel `/api/dashboard/*` routes
 - Authentication
-- Live checkout or CRM data
-- Manual CRM retry actions
+- Manual CRM retry actions (#39)
+- Deep HubSpot-specific views (#38)
 
 ## Stack
 

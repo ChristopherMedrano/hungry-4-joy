@@ -194,9 +194,19 @@ Confirm the API route exists:
 php artisan route:list --path=api
 ```
 
+Dashboard status routes for the admin UI:
+
+```text
+GET /api/dashboard/events
+GET /api/dashboard/events/{checkout_event_id}
+GET /api/dashboard/events/by-attempt/{donation_attempt_id}
+```
+
+These routes read stored `checkout_events` and `crm_sync_attempts` rows using the payload contract in `docs/contracts.md` Section 5. Authentication is not implemented yet.
+
 ## Current Boundary
 
-Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, and HubSpot CRM sync with local status tracking. It does not add admin dashboard views, analytics event emission, automatic CRM retry scheduling, or hosted checkout writes.
+Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking, and read-only dashboard status API routes. It does not add admin dashboard authentication, analytics event emission, automatic CRM retry scheduling, or hosted checkout writes.
 
 Run migrations when setting up local middleware storage. Dashboard API routes, frontend UI, analytics, and observability alerting remain planned for later milestones.
 

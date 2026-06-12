@@ -1,8 +1,8 @@
-import type { CheckoutEventDetail } from '../types/dashboard'
+import type { CheckoutEventSummary } from '../types/dashboard'
 import { StatusBadge } from './StatusBadge'
 
 interface EventTableProps {
-  events: CheckoutEventDetail[]
+  events: CheckoutEventSummary[]
   selectedId: number | null
   onSelect: (id: number) => void
 }

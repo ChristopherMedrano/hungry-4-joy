@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\DashboardEventController;
 use App\Jobs\SyncDonationToHubSpot;
 use App\Models\CheckoutEvent;
 use App\Services\CheckoutEventIngestor;
@@ -73,3 +74,13 @@ Route::post('/foxy/webhooks', function (
 
     return $checkoutEventResponse($result['status'], $result['code']);
 })->name('foxy.webhooks.store');
+
+Route::prefix('dashboard')->group(function () {
+    Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
+        ->name('dashboard.events.by-attempt');
+    Route::get('/events/{checkoutEvent}', [DashboardEventController::class, 'show'])
+        ->whereNumber('checkoutEvent')
+        ->name('dashboard.events.show');
+    Route::get('/events', [DashboardEventController::class, 'index'])
+        ->name('dashboard.events.index');
+});
