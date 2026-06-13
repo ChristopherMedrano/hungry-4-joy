@@ -259,6 +259,35 @@ Shared status vocabulary for later work:
 
 This contract defines the vocabulary. Later work decides where status records live and how they are displayed.
 
+### Checkout handoff registration
+
+Status: Implemented producer-side registration and reconciliation.
+
+When a donor clicks a campaign donation button, the WordPress theme registers a checkout handoff at:
+
+```text
+POST /api/checkout/handoffs
+```
+
+The browser sends a fire-and-forget JSON payload with the same safe metadata shape as §1 plus the generated `donation_attempt_id`. Laravel stores it in `checkout_handoffs` with `handoff_status = cart_handoff_created`. Duplicate posts for the same attempt id are idempotent.
+
+| Handoff status | Meaning |
+| --- | --- |
+| `cart_handoff_created` | Producer registered the click; checkout event not linked yet. |
+| `checkout_event_reconciled` | A normalized checkout event is linked to the handoff. |
+| `abandoned` | No Foxy transaction was found within the reconciliation window. |
+
+Reconciliation queries Foxy hAPI by `donation_attempt_id`, adapts the transaction through the shared mapper, and ingests via `CheckoutEventIngestor`. Signed Foxy webhooks can link the same handoff when they arrive first.
+
+| Foxy transaction status | Laravel `event_type` | Laravel `transaction_status` |
+| --- | --- | --- |
+| `completed`, `approved`, `authorized`, `captured`, `verified` | `donation.created` | `completed` |
+| `pending` | `donation.created` | `pending` |
+| `declined`, `rejected`, `failed` | `payment.failed` | `failed` |
+| empty with `data_is_fed = false` | `payment.failed` | `failed` (`checkout_incomplete`) |
+
+Debugging: when dashboard by-attempt lookup shows a handoff but no checkout event, inspect `handoff.reconciliation.note`, `next_reconcile_at`, and run `php artisan checkout:reconcile-handoffs`.
+
 Current accepted checkout events must include `donation_attempt_id`. The database column is nullable for deploy safety, but application validation requires it for normalized receiver events.
 
 Foxy webhook adaptation preserves a `donation_attempt_id` item option first. For older or manual payloads that lack the option, the adapter may create `h4j_attempt_foxy_transaction_<transaction-id>` as a fallback attempt identity. Malformed item-option values are rejected before ingestion.

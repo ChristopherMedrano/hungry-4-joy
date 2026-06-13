@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 use Symfony\Component\HttpFoundation\Response;
 
 Artisan::command('inspire', function () {
@@ -73,3 +74,15 @@ Artisan::command('dashboard:seed-status-demo {--path= : Directory containing das
 
     return self::SUCCESS;
 })->purpose('Seed checkout events that cover every dashboard transaction and CRM status badge');
+
+Artisan::command('checkout:reconcile-handoffs {--limit= : Maximum number of due handoffs to process}', function () {
+    $limit = $this->option('limit');
+    $processed = app(\App\Services\Foxy\FoxyReconciliationService::class)
+        ->reconcileDueHandoffs($limit !== null ? (int) $limit : null);
+
+    $this->info("Processed {$processed} checkout handoff(s).");
+
+    return self::SUCCESS;
+})->purpose('Reconcile registered checkout handoffs against Foxy transactions');
+
+Schedule::command('checkout:reconcile-handoffs')->everyMinute();

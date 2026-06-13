@@ -63,8 +63,16 @@ Set these secrets during Blueprint creation:
 | `APP_KEY` | Output of `cd middleware-api && php artisan key:generate --show` |
 | `APP_URL` | The Render service URL, such as `https://hungry-4-joy-middleware.onrender.com` |
 | `FOXY_WEBHOOK_ENCRYPTION_KEY` | Foxy JSON webhook encryption key |
+| `FOXY_CLIENT_ID` | Foxy OAuth client id for hAPI reconciliation |
+| `FOXY_CLIENT_SECRET` | Foxy OAuth client secret |
+| `FOXY_REFRESH_TOKEN` | Foxy OAuth refresh token |
+| `FOXY_STORE_ID` | Foxy store id for transaction lookup |
+
+WordPress receives `MIDDLEWARE_API_URL` from the middleware service URL via Blueprint wiring so browser handoff registration can reach `POST /api/checkout/handoffs`.
 
 Render injects the Postgres connection string into `DB_URL` from the Blueprint database reference.
+
+Schedule reconciliation on hosted middleware by ensuring a cron job runs `php artisan schedule:run` every minute, or run `php artisan checkout:reconcile-handoffs` manually during verification.
 
 After the service is live, verify:
 

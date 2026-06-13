@@ -103,7 +103,34 @@ class DashboardEventApiTest extends TestCase
         $this->getJson('/api/dashboard/events/by-attempt/h4j_attempt_demo_loaves_0001')
             ->assertOk()
             ->assertJsonPath('data.donation_attempt_id', 'h4j_attempt_demo_loaves_0001')
-            ->assertJsonPath('data.checkout_session_id', 'sess_demo_loaves_0001');
+            ->assertJsonPath('data.checkout_event.checkout_session_id', 'sess_demo_loaves_0001')
+            ->assertJsonPath('data.handoff', null);
+    }
+
+    public function test_dashboard_event_lookup_by_attempt_returns_handoff_only_when_no_checkout_event(): void
+    {
+        $this->postJson('/api/checkout/handoffs', [
+            'donation_attempt_id' => 'h4j_attempt_dashboard_handoff_only',
+            'checkout_provider' => 'foxy',
+            'source_page' => 'home',
+            'campaign_id' => 'loaves-campaign-01',
+            'campaign_name' => 'Loaves 4 Joy',
+            'donation_amount' => 25,
+            'donation_label' => '3 loaves',
+            'donation_type' => 'one_time',
+        ])->assertAccepted();
+
+        $this->getJson('/api/dashboard/events/by-attempt/h4j_attempt_dashboard_handoff_only')
+            ->assertOk()
+            ->assertJsonPath('data.donation_attempt_id', 'h4j_attempt_dashboard_handoff_only')
+            ->assertJsonPath('data.handoff.status', 'cart_handoff_created')
+            ->assertJsonPath('data.checkout_event', null);
+    }
+
+    public function test_dashboard_event_lookup_by_attempt_returns_404_when_neither_exists(): void
+    {
+        $this->getJson('/api/dashboard/events/by-attempt/h4j_attempt_missing_both')
+            ->assertNotFound();
     }
 
     public function test_dashboard_retryable_crm_state_is_reflected_in_summary(): void

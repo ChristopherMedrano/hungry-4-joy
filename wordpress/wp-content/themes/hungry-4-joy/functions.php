@@ -101,6 +101,15 @@ function h4j_enqueue_child_theme_assets() {
 		)
 	);
 
+	wp_localize_script(
+		'h4j-donation-attempt',
+		'H4J_HANDOFF_CONFIG',
+		array(
+			'apiUrl'     => getenv( 'MIDDLEWARE_API_URL' ) ?: '',
+			'sourcePage' => 'home',
+		)
+	);
+
 	// Register before the Foxy loader so click-time attempt ids are on the href first.
 	wp_enqueue_script(
 		'h4j-donation-attempt',

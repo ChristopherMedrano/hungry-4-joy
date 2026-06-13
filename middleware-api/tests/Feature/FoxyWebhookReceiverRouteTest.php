@@ -268,6 +268,76 @@ class FoxyWebhookReceiverRouteTest extends TestCase
         Bus::assertDispatched(SyncDonationToHubSpot::class);
     }
 
+    public function test_foxy_webhook_receiver_accepts_signed_transaction_modified_payload(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        $payload['status'] = 'completed';
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/modified')
+        )->assertAccepted();
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'foxy_transaction_1042_transaction_modified',
+            'event_type' => 'donation.created',
+        ]);
+    }
+
+    public function test_foxy_webhook_receiver_maps_declined_transaction_to_payment_failed(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        $payload['status'] = 'declined';
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/modified')
+        )->assertAccepted();
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'foxy_transaction_1042_transaction_modified',
+            'event_type' => 'payment.failed',
+            'transaction_status' => 'failed',
+            'failure_code' => 'card_declined',
+        ]);
+    }
+
+    public function test_foxy_webhook_links_existing_checkout_handoff(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $this->postJson('/api/checkout/handoffs', [
+            'donation_attempt_id' => 'h4j_attempt_foxy_cart_1042',
+            'checkout_provider' => 'foxy',
+            'source_page' => 'home',
+            'campaign_id' => 'loaves-campaign-01',
+            'campaign_name' => 'Loaves 4 Joy',
+            'donation_amount' => 25,
+            'donation_label' => '3 loaves',
+            'donation_type' => 'one_time',
+        ])->assertAccepted();
+
+        $payload = $this->foxyTransactionPayload();
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        )->assertAccepted();
+
+        $this->assertDatabaseHas('checkout_handoffs', [
+            'donation_attempt_id' => 'h4j_attempt_foxy_cart_1042',
+            'handoff_status' => 'checkout_event_reconciled',
+            'foxy_transaction_id' => '1042',
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
