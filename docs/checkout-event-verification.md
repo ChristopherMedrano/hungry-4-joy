@@ -99,6 +99,7 @@ rg -c 'href="https://hungry-4-joy.foxycart.com/cart' wordpress/wp-content/themes
 rg -c 'class="h4j-donation-button foxycart"' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 rg -n 'https://hungry-4-joy.foxycart.com/cart' wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html
 npm run test:donation-attempt-js
+npm run test:donation-analytics-js
 ```
 
 Expected result for the count checks:

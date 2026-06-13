@@ -188,10 +188,18 @@ Run the current local stack checks from the repo root:
 npm test
 ```
 
+`npm test` runs WordPress CSS build, fixture JSON checks, donation/analytics JS tests, the full middleware PHPUnit suite, dashboard production build, and `git diff --check`.
+
 The status dashboard shell lives in `dashboard/` as a Vite + React + Tailwind app:
 
 ```bash
 npm run dev:dashboard
+```
+
+For hosted middleware data during local UI work:
+
+```bash
+npm run dev:dashboard:hosted
 ```
 
 See [`dashboard/README.md`](dashboard/README.md) for lint/build commands and [`docs/dashboard-verification-walkthrough.md`](docs/dashboard-verification-walkthrough.md) for fixture verification.

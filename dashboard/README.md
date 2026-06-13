@@ -20,8 +20,17 @@ On localhost, **Hosted API (Render)** is the default and reads the hosted middle
 
 ### Hosted API data
 
+From `dashboard/`:
+
 ```bash
+cd dashboard
 npm run dev:hosted
+```
+
+From the repository root:
+
+```bash
+npm run dev:dashboard:hosted
 ```
 
 Proxies `/api` to the Render middleware service instead of local Laravel.
@@ -47,7 +56,9 @@ From the repo root:
 
 ```bash
 npm run dev:dashboard
+npm run dev:dashboard:hosted
 npm run build:dashboard
+npm run test:dashboard
 ```
 
 ## Current scope
