@@ -1,0 +1,33 @@
+{
+  "event_id": "evt_h4j_demo_status_0008",
+  "event_type": "payment.failed",
+  "event_created_at": "2026-06-12T10:35:00Z",
+  "donation_attempt_id": "h4j_attempt_demo_status_payment_failed",
+  "checkout_provider": "foxy",
+  "checkout_session_id": "sess_demo_status_payment_failed",
+  "transaction_id": null,
+  "transaction_status": "failed",
+  "idempotency_key": "evt_h4j_demo_status_0008",
+  "source_page": "home",
+  "campaign": {
+    "campaign_id": "fish-campaign-02",
+    "campaign_name": "Fish 4 Joy"
+  },
+  "donation": {
+    "amount": 25,
+    "currency": "USD",
+    "donation_label": "3 fish",
+    "donation_type": "one_time"
+  },
+  "donor": {
+    "email": "payment.failed@example.test",
+    "first_name": "Pay",
+    "last_name": "Declined",
+    "phone": "555-0208"
+  },
+  "failure": {
+    "failure_code": "card_declined",
+    "failure_message": "Payment was declined by the test gateway.",
+    "provider_status": "declined"
+  }
+}

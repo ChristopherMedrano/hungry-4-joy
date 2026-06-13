@@ -123,6 +123,14 @@ Replay the tracked Foxy-shaped checkout event fixtures through the receiver rout
 php artisan checkout:replay-fixtures
 ```
 
+Seed one dashboard row for every transaction and CRM status badge:
+
+```bash
+php artisan dashboard:seed-status-demo
+```
+
+See [`../examples/dashboard-status-demo/README.md`](../examples/dashboard-status-demo/README.md) for fixture coverage.
+
 The dedicated Foxy JSON webhook receiver is:
 
 ```text

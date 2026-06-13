@@ -1,0 +1,28 @@
+{
+  "event_id": "foxy_transaction_demo_status_0002_transaction_created",
+  "event_type": "donation.created",
+  "event_created_at": "2026-06-12T10:05:00Z",
+  "donation_attempt_id": "h4j_attempt_demo_status_webhook",
+  "checkout_provider": "foxy",
+  "checkout_session_id": "sess_demo_status_webhook",
+  "transaction_id": "demo_status_0002",
+  "transaction_status": "completed",
+  "idempotency_key": "foxy_transaction_demo_status_0002_transaction_created",
+  "source_page": "home",
+  "campaign": {
+    "campaign_id": "fish-campaign-02",
+    "campaign_name": "Fish 4 Joy"
+  },
+  "donation": {
+    "amount": 10,
+    "currency": "USD",
+    "donation_label": "1 fish",
+    "donation_type": "one_time"
+  },
+  "donor": {
+    "email": "webhook.donor@example.test",
+    "first_name": "Wren",
+    "last_name": "Webhook",
+    "phone": "555-0202"
+  }
+}
