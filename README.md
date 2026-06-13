@@ -263,3 +263,5 @@ wordpress/wp-content/cache/
 - [Render Deployment](docs/render-deployment.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
+
+Built with AI-assisted development.
