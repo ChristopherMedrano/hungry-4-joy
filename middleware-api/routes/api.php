@@ -35,6 +35,9 @@ $dispatchHubSpotSync = function (array $result): void {
     }
 };
 
+Route::post('/checkout/handoffs/reconcile', [CheckoutHandoffController::class, 'reconcile'])
+    ->name('checkout.handoffs.reconcile');
+
 Route::post('/checkout/handoffs', [CheckoutHandoffController::class, 'store'])
     ->name('checkout.handoffs.store');
 
