@@ -14,6 +14,8 @@ npm run dev
 
 Open the URL Vite prints (default `http://127.0.0.1:5173`).
 
+Use **View mode → Seeded** in the dashboard to browse all transaction and CRM badge states without running the API seeder.
+
 ### Hosted API data
 
 ```bash
@@ -57,8 +59,14 @@ Prerequisites for live data:
 ```bash
 cd middleware-api
 php artisan migrate
-php artisan checkout:replay-fixtures
+php artisan dashboard:seed-status-demo
 php artisan serve
+```
+
+The status demo seeder loads one row for every CRM and Foxy badge state. To also include the original checkout contract fixtures:
+
+```bash
+php artisan checkout:replay-fixtures
 ```
 
 Then run the dashboard dev server in another terminal.
