@@ -55,3 +55,21 @@ Artisan::command('checkout:replay-fixtures {--path= : Directory containing check
 
     return self::SUCCESS;
 })->purpose('Replay tracked checkout event fixtures through the local receiver route');
+
+Artisan::command('dashboard:seed-status-demo {--path= : Directory containing dashboard status demo fixture JSON files}', function () {
+    $seeder = app(\App\Support\Dashboard\DashboardStatusDemoSeeder::class);
+
+    try {
+        foreach ($seeder->seed($this->option('path')) as $line) {
+            $this->line($line);
+        }
+    } catch (\Throwable $exception) {
+        $this->error($exception->getMessage());
+
+        return self::FAILURE;
+    }
+
+    $this->info('Dashboard status demo rows are ready at /api/dashboard/events');
+
+    return self::SUCCESS;
+})->purpose('Seed checkout events that cover every dashboard transaction and CRM status badge');
