@@ -162,10 +162,11 @@ Future Laravel middleware owns:
 
 - CRM sync jobs and retry status.
 
-Future analytics work uses the event contract in [`contracts.md`](contracts.md) Section 6:
+Browser analytics use the event contract in [`contracts.md`](contracts.md) Section 6. Consent and `dataLayer` events live in:
 
-- Donation journey events.
-- Consent-aware conversion tracking.
+- `assets/js/analytics-consent.js`
+- `assets/js/donation-analytics.js`
+- `assets/js/donation-attempt.js` (dispatches `h4j:donation-handoff`)
 
 ## Verification
 

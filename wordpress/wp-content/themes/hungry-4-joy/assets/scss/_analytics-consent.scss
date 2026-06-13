@@ -1,0 +1,53 @@
+.h4j-analytics-consent {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  display: grid;
+  gap: 0.75rem;
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border: 1px solid rgb(45 212 191 / 35%);
+  border-radius: 0.75rem;
+  background: rgb(15 23 42 / 96%);
+  color: #e2e8f0;
+  box-shadow: 0 12px 32px rgb(2 6 23 / 45%);
+}
+
+.h4j-analytics-consent__accept[aria-pressed="true"],
+.h4j-analytics-consent__decline[aria-pressed="true"] {
+  outline: 2px solid #e2e8f0;
+  outline-offset: 2px;
+}
+
+.h4j-analytics-consent__text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.h4j-analytics-consent__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.h4j-analytics-consent__accept,
+.h4j-analytics-consent__decline {
+  flex: 1 1 auto;
+}
+
+.h4j-analytics-consent__decline {
+  background: transparent;
+  color: #e2e8f0;
+  border-color: rgb(148 163 184 / 55%);
+  box-shadow: none;
+}
+
+.h4j-analytics-consent__decline:hover {
+  background: rgb(51 65 85 / 85%);
+  color: #f8fafc;
+  border-color: rgb(148 163 184 / 75%);
+  box-shadow: none;
+  transform: none;
+}

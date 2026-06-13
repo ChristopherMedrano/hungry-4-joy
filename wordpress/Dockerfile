@@ -15,6 +15,7 @@ RUN curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-
     && chmod +x /usr/local/bin/wp
 
 COPY wp-config-render.php /usr/src/wordpress/wp-config.php
+COPY wp-content/themes/hungry-4-joy/assets/images/favicon.ico /usr/src/wordpress/favicon.ico
 COPY wp-content/themes/hungry-4-joy/ /usr/src/wordpress/wp-content/themes/hungry-4-joy/
 COPY bin/render-wordpress-start.sh /usr/local/bin/render-wordpress-start
 
