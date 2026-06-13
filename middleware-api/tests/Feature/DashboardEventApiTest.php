@@ -196,6 +196,7 @@ class DashboardEventApiTest extends TestCase
             ->assertJsonPath('data.crm_sync.crm_sync_attempt_id', $attempt->id)
             ->assertJsonPath('data.crm_sync.hubspot_contact_id', $attempt->hubspot_contact_id)
             ->assertJsonPath('data.crm_sync.hubspot_deal_id', $attempt->hubspot_deal_id)
+            ->assertJsonPath('data.crm_sync.hubspot_donation_attempt_id', 'h4j_attempt_demo_loaves_0001')
             ->assertJsonPath('data.crm_sync.last_attempted_at', fn ($value) => filled($value));
     }
 

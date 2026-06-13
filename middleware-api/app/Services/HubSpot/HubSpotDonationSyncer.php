@@ -57,6 +57,8 @@ class HubSpotDonationSyncer
 
             $this->hubSpot->associateDealToContact($dealId, $contactId);
 
+            $hubspotAttemptId = $this->hubSpot->getDealDonationAttemptId($dealId);
+
             $listResult = $this->hubSpot->addContactToList(
                 $contactId,
                 (string) config('services.hubspot.newsletter_list_id', '12'),
@@ -70,6 +72,7 @@ class HubSpotDonationSyncer
             'status' => 'succeeded',
             'hubspot_contact_id' => $contactId,
             'hubspot_deal_id' => $dealId,
+            'hubspot_donation_attempt_id' => $hubspotAttemptId,
             'error_code' => $warning === null ? null : 'hubspot_list_warning',
             'error_message' => $warning,
             'last_attempted_at' => now(),

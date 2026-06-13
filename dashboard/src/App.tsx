@@ -194,7 +194,7 @@ function App() {
     content = <EmptyState onResetFilters={() => setFilters(defaultFilters)} />
   } else {
     content = (
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
         <EventTable
           events={displayEvents}
           selectedId={activeSelectedId}

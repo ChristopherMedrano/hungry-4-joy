@@ -32,6 +32,7 @@ export interface CrmSyncDetail extends CrmSyncSummary {
   crm_sync_attempt_id: number | null
   hubspot_contact_id: string | null
   hubspot_deal_id: string | null
+  hubspot_donation_attempt_id: string | null
   error_message: string | null
   hubspot_mode: HubSpotMode
 }
@@ -39,7 +40,7 @@ export interface CrmSyncDetail extends CrmSyncSummary {
 export interface CheckoutEventSummary {
   checkout_event_id: number
   event_id: string
-  donation_attempt_id: string
+  donation_attempt_id: string | null
   event_type: string
   event_created_at: string
   transaction_status: TransactionStatus

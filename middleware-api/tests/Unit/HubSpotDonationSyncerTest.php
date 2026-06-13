@@ -62,6 +62,10 @@ class HubSpotDonationSyncerTest extends TestCase
                 'contactId' => 'fake_contact_jordan_helper_example_test',
             ],
             [
+                'method' => 'getDealDonationAttemptId',
+                'dealId' => 'fake_deal_1',
+            ],
+            [
                 'method' => 'addContactToList',
                 'contactId' => 'fake_contact_jordan_helper_example_test',
                 'listId' => '9',
@@ -83,6 +87,7 @@ class HubSpotDonationSyncerTest extends TestCase
         $this->assertSame('succeeded', $attempt->status);
         $this->assertSame('fake_contact_jordan_helper_example_test', $attempt->hubspot_contact_id);
         $this->assertSame('fake_deal_1', $attempt->hubspot_deal_id);
+        $this->assertSame('h4j_attempt_demo_loaves_0001', $attempt->hubspot_donation_attempt_id);
         $this->assertNull($attempt->error_code);
         $this->assertNull($attempt->error_message);
         $this->assertSame(0, $attempt->retry_count);
@@ -303,7 +308,7 @@ class HubSpotDonationSyncerTest extends TestCase
 
         (new SyncDonationToHubSpot($event->id))->handle(app(HubSpotDonationSyncer::class));
 
-        $this->assertCount(4, $fake->calls());
+        $this->assertCount(5, $fake->calls());
     }
 
     /**

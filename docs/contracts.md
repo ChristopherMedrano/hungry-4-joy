@@ -526,6 +526,7 @@ CRM outcomes persist on `crm_sync_attempts` linked to `checkout_events`:
 | `status` | `succeeded` | `pending`, `succeeded`, `failed`, `retryable` |
 | `hubspot_contact_id` | `12345` | External contact reference |
 | `hubspot_deal_id` | `67890` | External deal reference |
+| `hubspot_donation_attempt_id` | `h4j_attempt_demo_loaves_0001` | Deal property `h4j_donation_attempt_id` read back after sync for reconciliation |
 | `error_code` | `hubspot_validation_error` | Safe failure category |
 | `error_message` | `Deal property h4j_campaign_id is invalid.` | Redacted summary |
 | `retry_count` | `1` | Retry attempts |
@@ -687,6 +688,7 @@ Additional detail fields:
 | `crm_sync.crm_sync_attempt_id` | `1` | Local CRM sync attempt row id; `null` when not applicable |
 | `crm_sync.hubspot_contact_id` | `fake_contact_jordan_helper_example_test` | External contact reference after success |
 | `crm_sync.hubspot_deal_id` | `fake_deal_1` | External deal reference after success |
+| `crm_sync.hubspot_donation_attempt_id` | `h4j_attempt_demo_loaves_0001` | Deal property `h4j_donation_attempt_id` from HubSpot (or last stored sync value); `null` when unavailable |
 | `crm_sync.error_message` | `null` | Redacted CRM failure summary |
 | `crm_sync.hubspot_mode` | `fake` | `fake` when `HUBSPOT_ENABLED=false` or no access token; `live` when the HTTP HubSpot client is active |
 | `timestamps.updated_at` | `2026-05-27T14:05:13Z` | Last `checkout_events.updated_at` time |
@@ -854,6 +856,7 @@ Lookup by `donation_attempt_id` returns the same detail object or `404` when no 
     "status": "retryable",
     "hubspot_contact_id": null,
     "hubspot_deal_id": null,
+    "hubspot_donation_attempt_id": null,
     "error_code": "hubspot_retryable_error",
     "error_message": "HubSpot deal creation failed with status 503.",
     "retry_count": 1,

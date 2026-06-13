@@ -2,11 +2,13 @@
 
 namespace App\Support\Dashboard;
 
+use App\Contracts\HubSpotClient;
 use App\Models\CheckoutEvent;
 use App\Models\CrmSyncAttempt;
 
 class DashboardEventPresenter
 {
+    public function __construct(private readonly ?HubSpotClient $hubSpot = null) {}
     /**
      * @return array<string, mixed>
      */
@@ -77,6 +79,9 @@ class DashboardEventPresenter
             'crm_sync_attempt_id' => $attempt?->id,
             'hubspot_contact_id' => $eligible ? $attempt?->hubspot_contact_id : null,
             'hubspot_deal_id' => $eligible ? $attempt?->hubspot_deal_id : null,
+            'hubspot_donation_attempt_id' => $eligible
+                ? $this->resolveHubSpotDonationAttemptId($attempt)
+                : null,
             'error_message' => $attempt?->error_message,
             'hubspot_mode' => $this->hubspotMode(),
         ]);
@@ -161,5 +166,31 @@ class DashboardEventPresenter
         $accessToken = config('services.hubspot.access_token');
 
         return $enabled && filled($accessToken) ? 'live' : 'fake';
+    }
+
+    private function resolveHubSpotDonationAttemptId(?CrmSyncAttempt $attempt): ?string
+    {
+        if (! $attempt instanceof CrmSyncAttempt || ! filled($attempt->hubspot_deal_id)) {
+            return null;
+        }
+
+        try {
+            $fromHubSpot = $this->hubSpotClient()->getDealDonationAttemptId((string) $attempt->hubspot_deal_id);
+
+            if (filled($fromHubSpot)) {
+                return $fromHubSpot;
+            }
+        } catch (\Throwable) {
+            // Fall back to the last stored value from sync.
+        }
+
+        return filled($attempt->hubspot_donation_attempt_id)
+            ? $attempt->hubspot_donation_attempt_id
+            : null;
+    }
+
+    private function hubSpotClient(): HubSpotClient
+    {
+        return $this->hubSpot ?? app(HubSpotClient::class);
     }
 }

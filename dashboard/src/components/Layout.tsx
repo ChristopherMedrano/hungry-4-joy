@@ -15,7 +15,7 @@ export function Layout({ children, previewControl }: LayoutProps) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-3 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">
               Hungry-4-Joy
@@ -31,7 +31,7 @@ export function Layout({ children, previewControl }: LayoutProps) {
         </div>
         <nav
           aria-label="Dashboard sections"
-          className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-3 sm:px-6"
+          className="mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-3 pb-3 lg:px-4"
         >
           {navItems.map((item) => (
             <button
@@ -53,7 +53,7 @@ export function Layout({ children, previewControl }: LayoutProps) {
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto max-w-[1600px] px-3 py-6 lg:px-4">{children}</main>
     </div>
   )
 }
