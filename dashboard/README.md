@@ -24,6 +24,16 @@ npm run dev:hosted
 
 Proxies `/api` to the Render middleware service instead of local Laravel.
 
+### Hosted dashboard (Render)
+
+After Blueprint sync, the practice dashboard is available at:
+
+```text
+https://hungry-4-joy-dashboard.onrender.com
+```
+
+That service builds this app and proxies `/api` to the hosted middleware. See [`docs/render-deployment.md`](../docs/render-deployment.md).
+
 ## Checks
 
 ```bash

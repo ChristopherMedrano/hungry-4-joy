@@ -4,8 +4,9 @@ This project should deploy to Render as separate services:
 
 - Laravel middleware/API as a Render Web Service.
 - WordPress as a separate demo Render Web Service using SQLite.
+- React status dashboard as a Render Web Service (nginx + static Vite build).
 
-Keeping them separate preserves the project boundary: WordPress owns campaign content and demo cart links, while Laravel owns checkout event receipt and integration state.
+Keeping them separate preserves the project boundary: WordPress owns campaign content and demo cart links, Laravel owns checkout event receipt and integration state, and the dashboard is a read/support UI over the middleware API.
 
 ## WordPress Demo Site
 
@@ -133,6 +134,39 @@ Run a test donation from `https://hungry-4-joy-wordpress.onrender.com` through t
 4. Confirm `/api/dashboard/events` stops receiving new `foxy_webhook` rows.
 
 See `docs/foxy-middleware-connection-plan.md` (Phase 2) for duplicate replay (`duplicate_ignored`) and `donation_attempt_id` behavior.
+
+## Status Dashboard
+
+The dashboard is defined in the root [`render.yaml`](../render.yaml) Blueprint as a Docker web service.
+
+Render resources:
+
+- Web service: `hungry-4-joy-dashboard`
+- Runtime: Docker
+- Docker root: `dashboard/`
+- Health check: `/`
+- Public URL: `https://hungry-4-joy-dashboard.onrender.com` (after Blueprint sync)
+
+The container builds the Vite app and serves it with nginx. Browser requests to `/api/*` are proxied to the middleware service using `MIDDLEWARE_API_TARGET` (wired from the middleware `RENDER_EXTERNAL_URL`). This keeps the dashboard on same-origin `/api` paths without CORS changes.
+
+After deploy, verify:
+
+```bash
+curl -I https://hungry-4-joy-dashboard.onrender.com
+curl https://hungry-4-joy-dashboard.onrender.com/api/health
+curl https://hungry-4-joy-dashboard.onrender.com/api/dashboard/events
+```
+
+Open the dashboard in a browser and confirm checkout events load in **Live API** view mode. Manual CRM retry actions call through the same proxied `/api` path.
+
+**Blueprint sync:** If the dashboard service is new, open the Render Blueprint for this repo and sync so `hungry-4-joy-dashboard` is created. Existing WordPress and middleware services are unchanged.
+
+Local equivalent without Docker:
+
+```bash
+cd dashboard && npm run dev          # proxies /api to local middleware
+cd dashboard && npm run dev:hosted   # proxies /api to Render middleware
+```
 
 ## References
 
