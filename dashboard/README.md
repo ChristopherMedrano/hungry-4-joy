@@ -14,7 +14,9 @@ npm run dev
 
 Open the URL Vite prints (default `http://127.0.0.1:5173`).
 
-Use **View mode → Seeded** in the dashboard to browse all transaction and CRM badge states without running the API seeder.
+Use **View mode → Seeded preview** to browse every transaction and CRM badge state without running the API seeder.
+
+On localhost, **Hosted API (Render)** is the default and reads the hosted middleware database. Use **Local API (demo fixtures)** when testing against `php artisan serve` and seeded demo rows.
 
 ### Hosted API data
 
@@ -66,7 +68,7 @@ Issue #38 HubSpot CRM sync views:
 
 Issue #39 CRM sync retry actions:
 
-- Manual retry button for retryable, failed, and list-warning states (Live API mode)
+- Manual retry button for retryable, failed, and list-warning states (API modes)
 - Disabled retry with explanation for synced, pending, and not-applicable states
 - Duplicate-click prevention via loading state; list and detail refresh after retry
 

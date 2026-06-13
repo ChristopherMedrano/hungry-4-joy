@@ -29,6 +29,16 @@ export class DashboardApiError extends Error {
   }
 }
 
+let dashboardApiBase = ''
+
+export function setDashboardApiBase(base: string): void {
+  dashboardApiBase = base.replace(/\/$/, '')
+}
+
+function apiUrl(path: string): string {
+  return `${dashboardApiBase}${path}`
+}
+
 function toQuery(filters: EventFilters, page = 1): string {
   const params = new URLSearchParams()
 
@@ -64,7 +74,7 @@ export async function fetchDashboardEvents(
   filters: EventFilters,
   page = 1,
 ): Promise<DashboardListResponse> {
-  const response = await fetch(`/api/dashboard/events?${toQuery(filters, page)}`)
+  const response = await fetch(`${apiUrl('/api/dashboard/events')}?${toQuery(filters, page)}`)
 
   const payload = await parseJsonOrThrow<DashboardListResponse>(response)
 
@@ -77,7 +87,7 @@ export async function fetchDashboardEvents(
 export async function fetchDashboardEventDetail(
   checkoutEventId: number,
 ): Promise<CheckoutEventDetail> {
-  const response = await fetch(`/api/dashboard/events/${checkoutEventId}`)
+  const response = await fetch(apiUrl(`/api/dashboard/events/${checkoutEventId}`))
   const payload = await parseJsonOrThrow<DashboardDetailResponse>(response)
 
   return normalizeEventSummary(payload.data)
@@ -86,7 +96,7 @@ export async function fetchDashboardEventDetail(
 export async function fetchCrmSyncRetry(
   crmSyncAttemptId: number,
 ): Promise<CheckoutEventDetail> {
-  const response = await fetch(`/api/dashboard/crm-sync/${crmSyncAttemptId}/retry`, {
+  const response = await fetch(apiUrl(`/api/dashboard/crm-sync/${crmSyncAttemptId}/retry`), {
     method: 'POST',
     headers: { Accept: 'application/json' },
   })

@@ -89,7 +89,16 @@ export interface CheckoutEventDetail extends CheckoutEventSummary {
   }
 }
 
-export type ShellViewState = 'ready' | 'seeded' | 'loading' | 'empty' | 'error'
+export type DashboardDataMode =
+  | 'hosted-api'
+  | 'local-api'
+  | 'seeded'
+  | 'loading'
+  | 'empty'
+  | 'error'
+
+/** @deprecated Use DashboardDataMode */
+export type ShellViewState = DashboardDataMode
 
 export interface EventFilters {
   campaign_id: string
