@@ -165,7 +165,8 @@ Local equivalent without Docker:
 
 ```bash
 cd dashboard && npm run dev          # proxies /api to local middleware
-cd dashboard && npm run dev:hosted   # proxies /api to Render middleware
+npm run dev:dashboard:hosted         # same, from repository root
+cd dashboard && npm run dev:hosted   # equivalent to dev:dashboard:hosted
 ```
 
 ## References

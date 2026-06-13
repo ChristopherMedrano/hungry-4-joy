@@ -174,6 +174,8 @@ For this slice, a useful check is:
 
 ```bash
 npm run build:wp-css
+npm run test:donation-attempt-js
+npm run test:donation-analytics-js
 git diff --check
 ```
 
