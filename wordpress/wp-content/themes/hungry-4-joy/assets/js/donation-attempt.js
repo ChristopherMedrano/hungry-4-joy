@@ -44,6 +44,10 @@
       try {
         link.href = withDonationAttemptId(link.href, donationAttemptId);
         link.dataset.donationAttemptId = donationAttemptId;
+        document.dispatchEvent(new CustomEvent('h4j:donation-handoff', {
+          detail: { link, donationAttemptId },
+          bubbles: true,
+        }));
       } catch (error) {
         console.error('Unable to prepare donation attempt handoff.', error);
       }
