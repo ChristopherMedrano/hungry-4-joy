@@ -35,6 +35,7 @@ class DashboardEventApiTest extends TestCase
                     'event_created_to' => null,
                     'search' => null,
                     'sort' => '-event_created_at',
+                    'retry_activity' => null,
                 ],
             ]);
     }
@@ -198,6 +199,49 @@ class DashboardEventApiTest extends TestCase
             ->assertJsonPath('data.crm_sync.hubspot_deal_id', $attempt->hubspot_deal_id)
             ->assertJsonPath('data.crm_sync.hubspot_donation_attempt_id', 'h4j_attempt_demo_loaves_0001')
             ->assertJsonPath('data.crm_sync.last_attempted_at', fn ($value) => filled($value));
+    }
+
+    public function test_dashboard_retry_activity_filter_returns_failed_retryable_and_list_warning_rows(): void
+    {
+        $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
+            ->assertAccepted();
+
+        $event = CheckoutEvent::firstOrFail();
+        CrmSyncAttempt::query()->where('checkout_event_id', $event->id)->update([
+            'status' => 'retryable',
+            'error_code' => 'hubspot_retryable_error',
+            'retry_count' => 1,
+        ]);
+
+        $this->getJson('/api/dashboard/events?retry_activity=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.donation_attempt_id', 'h4j_attempt_demo_loaves_0001')
+            ->assertJsonPath('filters.retry_activity', '1');
+
+        CrmSyncAttempt::query()->where('checkout_event_id', $event->id)->update([
+            'status' => 'succeeded',
+            'error_code' => 'hubspot_list_warning',
+            'error_message' => 'HubSpot list enrollment failed with status 403.',
+            'retry_count' => 0,
+        ]);
+
+        $this->getJson('/api/dashboard/events?retry_activity=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.crm_status_summary', 'warning');
+
+        CrmSyncAttempt::query()->where('checkout_event_id', $event->id)->update([
+            'status' => 'succeeded',
+            'error_code' => null,
+            'error_message' => null,
+            'retry_count' => 1,
+        ]);
+
+        $this->getJson('/api/dashboard/events?retry_activity=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.crm_sync.retry_count', 1);
     }
 
     /**

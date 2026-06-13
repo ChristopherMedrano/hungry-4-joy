@@ -652,6 +652,7 @@ On Render and local default configs, `QUEUE_CONNECTION=sync` runs the retry inli
 | `event_created_from` | ISO 8601 datetime | `2026-05-27T00:00:00Z` | Lower bound on checkout event time |
 | `event_created_to` | ISO 8601 datetime | `2026-05-27T23:59:59Z` | Upper bound on checkout event time |
 | `search` | string | `h4j_attempt_demo_loaves_0001` | Match `donation_attempt_id`, `event_id`, `transaction_id`, or donor email |
+| `retry_activity` | boolean | `1` | When true, return only eligible donations whose CRM sync row has retry activity: `retry_count > 0`, status `failed` or `retryable`, or `error_code = hubspot_list_warning`. Snapshot fields only; not an append-only retry log. |
 | `page` | integer | `1` | Page number |
 | `per_page` | integer | `25` | Page size; default `25`, max `100` |
 | `sort` | string | `-event_created_at` | Sort field; prefix `-` for descending. Allowed: `event_created_at`, `created_at`, `donation_amount`, `campaign_name` |

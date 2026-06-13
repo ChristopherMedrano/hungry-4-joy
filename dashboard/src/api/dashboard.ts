@@ -73,8 +73,11 @@ async function parseJsonOrThrow<T>(response: Response): Promise<T> {
 export async function fetchDashboardEvents(
   filters: EventFilters,
   page = 1,
+  options?: { retryActivity?: boolean },
 ): Promise<DashboardListResponse> {
-  const response = await fetch(`${apiUrl('/api/dashboard/events')}?${toQuery(filters, page)}`)
+  const params = toQuery(filters, page)
+  const query = options?.retryActivity ? `${params}&retry_activity=1` : params
+  const response = await fetch(`${apiUrl('/api/dashboard/events')}?${query}`)
 
   const payload = await parseJsonOrThrow<DashboardListResponse>(response)
 
