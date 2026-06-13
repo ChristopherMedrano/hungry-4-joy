@@ -4,14 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CheckoutEvent;
+use App\Models\CheckoutHandoff;
 use App\Support\Dashboard\DashboardEventPresenter;
+use App\Support\Dashboard\DashboardHandoffPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DashboardEventController extends Controller
 {
-    public function __construct(private readonly DashboardEventPresenter $presenter) {}
+    public function __construct(
+        private readonly DashboardEventPresenter $presenter,
+        private readonly DashboardHandoffPresenter $handoffPresenter,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -83,13 +88,25 @@ class DashboardEventController extends Controller
 
     public function showByAttempt(string $donationAttemptId): JsonResponse
     {
+        $handoff = CheckoutHandoff::query()
+            ->where('donation_attempt_id', $donationAttemptId)
+            ->first();
+
         $event = CheckoutEvent::query()
             ->with(['crmSyncAttempt', 'serverAnalyticsEvents.checkoutEvent'])
             ->where('donation_attempt_id', $donationAttemptId)
-            ->firstOrFail();
+            ->first();
+
+        if ($handoff === null && $event === null) {
+            abort(404);
+        }
 
         return response()->json([
-            'data' => $this->presenter->detail($event),
+            'data' => [
+                'donation_attempt_id' => $donationAttemptId,
+                'handoff' => $handoff ? $this->handoffPresenter->summary($handoff) : null,
+                'checkout_event' => $event ? $this->presenter->detail($event) : null,
+            ],
         ]);
     }
 

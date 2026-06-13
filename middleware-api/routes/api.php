@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\CheckoutHandoffController;
 use App\Http\Controllers\Api\DashboardCrmSyncRetryController;
 use App\Http\Controllers\Api\DashboardEventController;
 use App\Http\Controllers\Api\DashboardServerAnalyticsController;
+use App\Services\CheckoutHandoffLinker;
 use App\Jobs\SyncDonationToHubSpot;
 use App\Models\CheckoutEvent;
 use App\Services\CheckoutEventIngestor;
@@ -33,6 +35,9 @@ $dispatchHubSpotSync = function (array $result): void {
     }
 };
 
+Route::post('/checkout/handoffs', [CheckoutHandoffController::class, 'store'])
+    ->name('checkout.handoffs.store');
+
 Route::post('/checkout/events', function (
     Request $request,
     CheckoutEventIngestor $ingestor
@@ -49,7 +54,8 @@ Route::post('/foxy/webhooks', function (
     Request $request,
     FoxyWebhookVerifier $verifier,
     FoxyWebhookAdapter $adapter,
-    CheckoutEventIngestor $ingestor
+    CheckoutEventIngestor $ingestor,
+    CheckoutHandoffLinker $handoffLinker
 ) use ($checkoutEventResponse, $dispatchHubSpotSync) {
     if (! $verifier->configured()) {
         return $checkoutEventResponse('webhook_not_configured', Response::HTTP_SERVICE_UNAVAILABLE);
@@ -73,6 +79,21 @@ Route::post('/foxy/webhooks', function (
 
     $result = $ingestor->ingest($normalized);
     $dispatchHubSpotSync($result);
+
+    $checkoutEvent = $result['checkout_event'] ?? null;
+
+    if ($checkoutEvent instanceof CheckoutEvent) {
+        $handoffLinker->linkFromCheckoutEvent($checkoutEvent, (string) ($payload['id'] ?? null));
+    } elseif (($result['status'] ?? '') === 'duplicate_ignored') {
+        $existing = CheckoutEvent::query()
+            ->where('donation_attempt_id', $normalized['donation_attempt_id'] ?? '')
+            ->orWhere('transaction_id', (string) ($payload['id'] ?? ''))
+            ->first();
+
+        if ($existing instanceof CheckoutEvent) {
+            $handoffLinker->linkFromCheckoutEvent($existing, (string) ($payload['id'] ?? null));
+        }
+    }
 
     return $checkoutEventResponse($result['status'], $result['code']);
 })->name('foxy.webhooks.store');

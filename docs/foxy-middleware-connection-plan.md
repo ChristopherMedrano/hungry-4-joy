@@ -75,6 +75,47 @@ donation-created.one-time.json: duplicate_ignored
 payment-failed.one-time.json: duplicate_ignored
 ```
 
+## Phase 1.5: Browser Handoff Registration And Foxy Reconciliation
+
+The WordPress theme registers checkout handoffs at click time without writing to the WordPress database:
+
+```text
+POST /api/checkout/handoffs
+```
+
+Hosted WordPress receives `MIDDLEWARE_API_URL` from Render (wired to the middleware service URL). The middleware CORS allowlist includes the hosted WordPress origin so the browser can POST safely.
+
+After registration, Laravel reconciles immediately and on a backoff schedule:
+
+```bash
+php artisan checkout:reconcile-handoffs
+```
+
+Hosted backoff depends on Render invoking `php artisan schedule:run` every minute (or running the command manually during demo verification).
+
+Foxy hAPI reconciliation requires OAuth credentials stored only in environment configuration:
+
+| Key | Purpose |
+| --- | --- |
+| `FOXY_CLIENT_ID` | Foxy OAuth client id |
+| `FOXY_CLIENT_SECRET` | Foxy OAuth client secret |
+| `FOXY_REFRESH_TOKEN` | Long-lived refresh token for hAPI access |
+| `FOXY_STORE_ID` | Foxy store id (for example `120139`) |
+
+Reconciliation lookup filter:
+
+```text
+GET /stores/{store_id}/transactions?items:item_options:name[donation_attempt_id]={attempt_id}&zoom=items,items:item_options,payments,custom_fields
+```
+
+Declined or incomplete Foxy transactions (`declined`, empty status with `data_is_fed: false`) normalize to `payment.failed` so dashboard by-attempt lookup can show both the handoff and the failed checkout event.
+
+Verify decline handling with Authorize.net sandbox test cards (success `4111111111111111`, decline via billing ZIP `46282`), then:
+
+```bash
+curl https://<middleware-render-host>/api/dashboard/events/by-attempt/<donation_attempt_id>
+```
+
 ## Phase 2: Actual Foxy Webhook Connection
 
 Foxy's webhook API supports JSON webhooks that push data to an endpoint. The Foxy webhook resource includes fields such as `format`, `url`, `query`, `encryption_key`, `event_resource`, and `is_active`. Foxy's docs note that JSON webhook configuration requires an `encryption_key`, and that key is also used for payload signature integrity.

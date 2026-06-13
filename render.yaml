@@ -22,6 +22,11 @@ services:
         value: demo.sqlite
       - key: WP_DEBUG
         value: "false"
+      - key: MIDDLEWARE_API_URL
+        fromService:
+          name: hungry-4-joy-middleware
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
       - key: PORT
         value: "80"
 
@@ -44,6 +49,14 @@ services:
         sync: false
       - key: FOXY_WEBHOOK_ENCRYPTION_KEY
         sync: false
+      - key: FOXY_CLIENT_ID
+        sync: false
+      - key: FOXY_CLIENT_SECRET
+        sync: false
+      - key: FOXY_REFRESH_TOKEN
+        sync: false
+      - key: FOXY_STORE_ID
+        sync: false
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_URL
@@ -61,7 +74,7 @@ services:
       - key: MAIL_MAILER
         value: log
       - key: CORS_ALLOWED_ORIGINS
-        value: https://hungry-4-joy-dashboard.onrender.com,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:5173,http://localhost:5174
+        value: https://hungry-4-joy-dashboard.onrender.com,https://hungry-4-joy-wordpress.onrender.com,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:5173,http://localhost:5174
 
   - type: web
     name: hungry-4-joy-dashboard

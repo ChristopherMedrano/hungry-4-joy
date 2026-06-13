@@ -24,6 +24,10 @@ return [
 
     'foxy' => [
         'webhook_encryption_key' => env('FOXY_WEBHOOK_ENCRYPTION_KEY'),
+        'client_id' => env('FOXY_CLIENT_ID'),
+        'client_secret' => env('FOXY_CLIENT_SECRET'),
+        'refresh_token' => env('FOXY_REFRESH_TOKEN'),
+        'store_id' => env('FOXY_STORE_ID'),
     ],
 
     'hubspot' => [
