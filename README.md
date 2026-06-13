@@ -1,10 +1,22 @@
 # Hungry-4-Joy
 
-Hungry-4-Joy is a personal educational prototype of a lean nonprofit donation ecosystem.
+Hungry-4-Joy is a demo prototype of a lean nonprofit donation ecosystem.
 
 The goal is to show how a public campaign site, checkout events, middleware, CRM sync, analytics, observability, and a support dashboard can work together as one small system.
 
 This is not intended to become a full fundraising platform. It is a focused MVP for demonstrating integration architecture, operational workflows, and production-style support boundaries.
+
+## See the project (Render)
+
+Hosted demo services:
+
+| Service | URL |
+| --- | --- |
+| Campaign site (WordPress) | [hungry-4-joy-wordpress.onrender.com](https://hungry-4-joy-wordpress.onrender.com) |
+| Integration status dashboard | [hungry-4-joy-dashboard.onrender.com](https://hungry-4-joy-dashboard.onrender.com) |
+| Middleware API health | [hungry-4-joy-middleware.onrender.com/api/health](https://hungry-4-joy-middleware.onrender.com/api/health) |
+
+Start on the **campaign site** for the donation flow. Open the **dashboard** to inspect checkout events, CRM sync status, and retry activity from live webhook ingest.
 
 ## Planned Ecosystem
 
@@ -65,38 +77,17 @@ Laravel middleware/API
 
 ## Project Progress
 
-The first implementation slices establish the WordPress public site and the Laravel middleware/API foundation.
-
-Current:
-
-- DDEV WordPress local environment
-- Twenty Twenty-Five child theme
-- Sass/SCSS source workflow for child theme styling
-- compiled child theme CSS enqueued by WordPress
-- campaign page with one-time donation buttons
-- safe Foxy demo cart handoff
-- root-level Laravel middleware/API app in `middleware-api/`
-- local Laravel API health endpoint at `/api/health`
-- checkout event receiver at `/api/checkout/events`
-- safe normalized checkout event storage and duplicate prevention
-- signed Foxy JSON webhook intake and HubSpot CRM sync with local status tracking
-- Vite + React admin/status dashboard with Laravel dashboard API routes
-- architecture, contract, and verification documentation
-
-Planned:
-
-- marketing analytics events and consent-aware tracking (MVP 6)
-- operational logging, alert flags, and CI/CD workflow (MVP 6)
-- launch hardening and handoff runbooks (MVP 7)
+Track implementation status in [GitHub Issues](https://github.com/ChristopherMedrano/hungry-4-joy/issues) and [Milestones](https://github.com/ChristopherMedrano/hungry-4-joy/milestones).
 
 ## Project Stack
 
-Front End:
+Frontend (WP/Dashboard):
 
 - CMS: WordPress, campaign content.
 - Theme: Twenty Twenty-Five, block foundation.
 - Child theme: Hungry-4-Joy, project presentation.
 - Style system: Sass/SCSS, compiled theme CSS.
+- Status dashboard: Vite + React + Tailwind CSS in `dashboard/`.
 
 Checkout and integrations:
 
@@ -108,12 +99,7 @@ Backend and data:
 
 - Framework: Laravel, middleware and APIs.
 - Queue: Laravel jobs, retryable sync work.
-- Database: local app state, audit trail.
-
-Dashboard:
-
-- Front end: Vite + React + Tailwind CSS status UI in `dashboard/`.
-- API backend: Laravel JSON routes at `/api/dashboard`.
+- Database: PostgreSQL, SQLite.
 
 Development and deployment:
 
@@ -163,8 +149,6 @@ Install middleware/API dependencies:
 cd middleware-api
 composer install
 ```
-
-Create local middleware/API environment config if `.env` is missing:
 
 ```bash
 if [ ! -f .env ]; then
@@ -220,12 +204,6 @@ npm run dev:dashboard
 See [`dashboard/README.md`](dashboard/README.md) for lint/build commands and [`docs/dashboard-verification-walkthrough.md`](docs/dashboard-verification-walkthrough.md) for fixture verification.
 
 The middleware/API receives validated checkout events, stores normalized rows, syncs eligible donations to HubSpot with local status tracking, and exposes dashboard status and retry APIs.
-
-Middleware deployment planning for Render is documented in:
-
-```text
-docs/render-deployment.md
-```
 
 ## SCSS Workflow
 
@@ -292,7 +270,3 @@ wordpress/wp-content/cache/
 - [Render Deployment](docs/render-deployment.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
-
-## Guiding Principle
-
-Build small, demoable slices that prove one integration boundary at a time.
