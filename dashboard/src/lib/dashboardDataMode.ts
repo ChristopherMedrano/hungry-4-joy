@@ -40,15 +40,13 @@ export function viewModeOptions(): { value: DashboardDataMode; label: string }[]
     })
   }
 
-  options.push({ value: 'seeded', label: 'Seeded preview' })
+  options.push({ value: 'seeded', label: 'Seeded' })
 
-  if (import.meta.env.DEV) {
-    options.push(
-      { value: 'loading', label: 'Loading preview' },
-      { value: 'empty', label: 'Empty preview' },
-      { value: 'error', label: 'Error preview' },
-    )
-  }
+  options.push(
+    { value: 'loading', label: 'Loading preview' },
+    { value: 'empty', label: 'Empty preview' },
+    { value: 'error', label: 'Error preview' },
+  )
 
   return options
 }
