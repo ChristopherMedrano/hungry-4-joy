@@ -25,3 +25,5 @@ The command is idempotent: re-running updates CRM attempt rows without creating 
 | `payment-failed-donation.json` | Failed | N/A | payment.failed@example.test |
 
 All donor data is fictional and uses `@example.test` addresses. Ingest channel (`fixture_receiver` vs `foxy_webhook`) appears in event detail, not the list transaction status column.
+
+Full browser and API verification steps: [`docs/dashboard-verification-walkthrough.md`](../../docs/dashboard-verification-walkthrough.md).

@@ -220,9 +220,9 @@ The status dashboard shell lives in `dashboard/` as a Vite + React + Tailwind ap
 npm run dev:dashboard
 ```
 
-See [`dashboard/README.md`](dashboard/README.md) for lint/build commands. The shell uses mock data until Laravel dashboard API routes exist.
+See [`dashboard/README.md`](dashboard/README.md) for lint/build commands and [`docs/dashboard-verification-walkthrough.md`](docs/dashboard-verification-walkthrough.md) for fixture verification.
 
-The middleware/API receives validated checkout events, stores normalized rows, syncs eligible donations to HubSpot with local status tracking, and exposes data for a future dashboard API. Analytics, observability alerting, and live dashboard API wiring remain planned.
+The middleware/API receives validated checkout events, stores normalized rows, syncs eligible donations to HubSpot with local status tracking, and exposes dashboard status and retry APIs.
 
 Middleware deployment planning for Render is documented in:
 
@@ -290,6 +290,7 @@ wordpress/wp-content/cache/
 - [Checkout And Payment Safety Boundary](docs/payment-safety-boundary.md)
 - [Checkout Event Verification Walkthrough](docs/checkout-event-verification.md)
 - [Middleware Receiver Verification](docs/middleware-receiver-verification.md)
+- [Dashboard Verification Walkthrough](docs/dashboard-verification-walkthrough.md)
 - [Foxy To Middleware Connection Plan](docs/foxy-middleware-connection-plan.md)
 - [Render Deployment](docs/render-deployment.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)

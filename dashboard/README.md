@@ -103,17 +103,17 @@ After replaying fixtures, inspect these rows in the dashboard:
 | Failed | Mutate attempt to `failed` with `hubspot_terminal_error` | Failed | Red CRM sync failed callout |
 | Warning | Mutate attempt to `succeeded` + `hubspot_list_warning` | Warning | Amber synced-with-warning callout |
 
-Run the dashboard API tests:
+Run the dashboard verification bundle from the repo root:
 
 ```bash
-cd middleware-api
-php artisan test --filter=Dashboard
+npm run test:dashboard
 ```
+
+See [`docs/dashboard-verification-walkthrough.md`](../docs/dashboard-verification-walkthrough.md) for the full local and browser inspection path.
 
 Not included yet:
 
 - Authentication
-- Dashboard fixture walkthrough doc (#40)
 
 ## Stack
 
