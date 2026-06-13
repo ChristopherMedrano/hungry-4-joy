@@ -16,7 +16,7 @@ Open the URL Vite prints (default `http://127.0.0.1:5173`).
 
 Use **View mode → Seeded preview** to browse every transaction and CRM badge state without running the API seeder.
 
-On localhost, **Hosted API (Render)** is the default and reads the hosted middleware database. Use **Local API (demo fixtures)** when testing against `php artisan serve` and seeded demo rows.
+On localhost, **Hosted API (Render)** is the default and reads the hosted middleware database. Use **Local API (demo fixtures)** when testing against `php artisan serve` and seeded demo rows. **Seeded** and shell preview modes work on hosted and local builds.
 
 ### Hosted API data
 
