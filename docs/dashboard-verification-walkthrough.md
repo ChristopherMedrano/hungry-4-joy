@@ -17,7 +17,7 @@ Related docs:
 - Dashboard list and detail API routes return contract-shaped JSON from local data only.
 - Demo seeder loads one row per transaction and CRM badge state.
 - Duplicate checkout replays do not create extra dashboard rows.
-- Retry activity index lists current CRM retry/failure/warning snapshots.
+- Retry activity lists CRM sync rows with retry-related status from stored attempt data.
 - Frontend lint, typecheck, and production build succeed.
 - Browser UI renders expected badges and detail callouts without payment or secret fields.
 
@@ -157,7 +157,7 @@ Expected:
 
 - Rows for failed, retryable, and list-warning donations from the demo seeder.
 - Rows link to checkout events by **donation attempt id**.
-- Hint text explains this is a **current snapshot**, not a full retry event log.
+- Hint text describes how Retry activity is derived from stored CRM sync attempt fields.
 
 Filter **CRM sync → retryable** on the checkout events tab and confirm the same retryable row appears in both places.
 

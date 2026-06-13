@@ -227,8 +227,6 @@ Dashboard verification walkthrough: [`docs/dashboard-verification-walkthrough.md
 
 ## Current Boundary
 
-Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking, dashboard status API routes, and manual CRM sync retry for eligible attempts. It does not add admin dashboard authentication, analytics event emission, automatic CRM retry scheduling, or hosted checkout writes.
-
-Run migrations when setting up local middleware storage. Analytics and observability alerting remain planned for later milestones.
+Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking, dashboard status API routes, and manual CRM sync retry for eligible attempts. Automatic CRM retry scheduling and analytics event emission are handled in later milestones.
 
 Keep `.env` local and uncommitted. Use `.env.example` for safe local placeholders only.
