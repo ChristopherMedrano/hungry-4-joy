@@ -85,4 +85,26 @@ class CheckoutHandoffRegistrationTest extends TestCase
 
         $this->assertSame(0, CheckoutHandoff::count());
     }
+
+    public function test_handoff_reconcile_endpoint_retries_existing_handoff(): void
+    {
+        $this->postJson('/api/checkout/handoffs', $this->validPayload('h4j_attempt_reconcile_endpoint_01'))
+            ->assertAccepted();
+
+        $this->postJson('/api/checkout/handoffs/reconcile', [
+            'donation_attempt_id' => 'h4j_attempt_reconcile_endpoint_01',
+        ])
+            ->assertAccepted()
+            ->assertJsonPath('status', 'reconcile_attempted')
+            ->assertJsonPath('handoff.reconciliation.reconcile_attempts', 2);
+    }
+
+    public function test_handoff_reconcile_endpoint_returns_404_for_unknown_attempt(): void
+    {
+        $this->postJson('/api/checkout/handoffs/reconcile', [
+            'donation_attempt_id' => 'h4j_attempt_missing_reconcile_01',
+        ])
+            ->assertNotFound()
+            ->assertJsonPath('status', 'handoff_not_found');
+    }
 }
