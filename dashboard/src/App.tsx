@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchDashboardEventDetail, fetchDashboardEvents } from './api/dashboard'
+import { fetchCrmSyncRetry, fetchDashboardEventDetail, fetchDashboardEvents } from './api/dashboard'
 import { EmptyState } from './components/EmptyState'
 import { ErrorState } from './components/ErrorState'
 import { EventDetailPanel } from './components/EventDetailPanel'
@@ -38,6 +38,8 @@ function App() {
   const [isLoadingList, setIsLoadingList] = useState(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
+  const [isCrmRetrying, setIsCrmRetrying] = useState(false)
+  const [crmRetryError, setCrmRetryError] = useState<string | null>(null)
 
   const isSeededView = viewState === 'seeded'
 
@@ -117,6 +119,7 @@ function App() {
     async function loadDetail(): Promise<void> {
       setIsLoadingDetail(true)
       setDetailError(null)
+      setCrmRetryError(null)
 
       try {
         const detail = await fetchDashboardEventDetail(activeSelectedId!)
@@ -143,6 +146,36 @@ function App() {
       cancelled = true
     }
   }, [viewState, activeSelectedId])
+
+  async function handleCrmRetry(): Promise<void> {
+    const attemptId = selectedDetail?.crm_sync.crm_sync_attempt_id
+    if (attemptId === null || attemptId === undefined) {
+      return
+    }
+
+    setIsCrmRetrying(true)
+    setCrmRetryError(null)
+
+    try {
+      const updated = await fetchCrmSyncRetry(attemptId)
+      setSelectedDetail(updated)
+      setLiveEvents((events) =>
+        events.map((event) =>
+          event.checkout_event_id === updated.checkout_event_id
+            ? {
+                ...event,
+                crm_sync: updated.crm_sync,
+                crm_status_summary: updated.crm_status_summary,
+              }
+            : event,
+        ),
+      )
+    } catch (error) {
+      setCrmRetryError(error instanceof Error ? error.message : 'CRM sync retry failed.')
+    } finally {
+      setIsCrmRetrying(false)
+    }
+  }
 
   const previewControl = (
     <label className="text-sm text-slate-400">
@@ -210,6 +243,10 @@ function App() {
         ) : (
           <EventDetailPanel
             event={isSeededView ? seededDetail : activeSelectedId === null ? null : selectedDetail}
+            onCrmRetry={isSeededView ? undefined : handleCrmRetry}
+            isCrmRetrying={isCrmRetrying}
+            crmRetryError={crmRetryError}
+            crmRetryDisabled={isSeededView}
           />
         )}
       </div>

@@ -533,7 +533,7 @@ CRM outcomes persist on `crm_sync_attempts` linked to `checkout_events`:
 | `last_attempted_at` | `2026-06-08T12:00:00Z` | Last sync attempt time |
 | `next_retry_at` | `2026-06-08T12:15:00Z` | Next time a retry is eligible |
 
-The MVP records retry eligibility only. It does not add automatic retry scheduling, a manual retry command, or a retry API. Already-succeeded attempts are skipped so repeated jobs do not create duplicate HubSpot records.
+The MVP records retry eligibility on `crm_sync_attempts`. Automatic retry scheduling is not implemented. Manual retry is available through the dashboard API (`POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry`). Already-succeeded attempts are skipped so repeated jobs do not create duplicate HubSpot records, except list-enrollment warnings which retry list membership only.
 
 ### Validation And Safety Rules
 
@@ -570,7 +570,7 @@ The MVP records retry eligibility only. It does not add automatic retry scheduli
 
 ## 5. Dashboard Status Payload
 
-Status: Contract defined for dashboard MVP; API routes and UI planned in issues #36–#40.
+Status: Contract defined for dashboard MVP; GET list/detail and POST manual CRM retry implemented in issues #36–#39; frontend UI in #37–#39.
 
 This contract defines the normalized data Laravel exposes to the admin/status dashboard. The dashboard reads application-owned records from `checkout_events` and `crm_sync_attempts`. It does not use raw provider payloads, observability tooling, or HubSpot as the source of truth.
 
@@ -608,12 +608,35 @@ This issue defines payload shapes only. Route handlers, authentication, and fron
 | `GET` | `/api/dashboard/events` | Paginated list of checkout events with summary CRM sync state |
 | `GET` | `/api/dashboard/events/{checkout_event_id}` | Full detail for one stored checkout event |
 | `GET` | `/api/dashboard/events/by-attempt/{donation_attempt_id}` | Lookup by canonical donation attempt id |
-
-Optional later endpoints for #39:
-
-| Method | Path | Purpose |
-| --- | --- | --- |
 | `POST` | `/api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` | Trigger a safe manual CRM retry when eligible |
+
+### Manual CRM Retry Endpoint
+
+`POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry`
+
+Path parameter `crm_sync_attempt_id` matches `crm_sync.crm_sync_attempt_id` from detail responses.
+
+Eligible attempt states: `failed`, `retryable`, and `succeeded` with `error_code = hubspot_list_warning` (list enrollment retry only). The parent checkout event must remain HubSpot sync eligible. Manual retry bypasses `next_retry_at`; that field stays informational until automatic scheduling exists.
+
+**Success — 200 OK**
+
+```json
+{
+  "data": { }
+}
+```
+
+The `data` object uses the same Checkout Event Detail shape as `GET /api/dashboard/events/{checkout_event_id}`.
+
+**Errors**
+
+| Status | When | Body |
+| --- | --- | --- |
+| 404 | Attempt id not found | Laravel default |
+| 409 | Attempt status is `pending` | `{ "message": "CRM sync is already in progress for this attempt." }` |
+| 422 | Ineligible attempt or checkout event | `{ "message": "This CRM sync attempt is not eligible for manual retry." }` |
+
+On Render and local default configs, `QUEUE_CONNECTION=sync` runs the retry inline before the response returns.
 
 ### List Query Parameters
 
@@ -877,7 +900,7 @@ Dashboard detail views should expose:
 - `next_retry_at`
 - current `error_code` and `error_message`
 
-Later issues may add append-only retry event history. Until then, list and detail payloads treat the attempt row as the authoritative retry snapshot.
+Later issues may add append-only retry event history. Until then, list and detail payloads treat the attempt row as the authoritative retry snapshot. Manual retry updates the same row (`retry_count`, `last_attempted_at`, `next_retry_at`, status, and error fields).
 
 ### Environment And Platform Constraints
 
@@ -933,7 +956,7 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-w
 - `donation_attempt_id` is the primary cross-system lookup key for detail and reconciliation views.
 - CRM sync summaries must follow the derivation rules above and eligibility rules from Section 4.
 - Error messages exposed to the dashboard must remain redacted summaries safe for support display.
-- Manual retry actions, when added in #39, must only target `failed` or `retryable` attempts and must not replay already-succeeded events.
+- Manual retry actions must only target `failed`, `retryable`, or list-warning `succeeded` attempts and must not replay clean succeeded events.
 - Dashboard routes must not expose the local fixture receiver behavior as production ingest status.
 - Analytics event emission, alerting, and observability dashboards remain out of scope for this contract.
 

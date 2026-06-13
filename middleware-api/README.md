@@ -162,7 +162,7 @@ Donor matching for the MVP is email-only. The syncer calls `HubSpotClient::upser
 
 HubSpot sync runs as a Laravel job on `QUEUE_CONNECTION=sync` so Render free-tier deployments do not need a separate always-on worker. The job is dispatched only for newly accepted completed donation events.
 
-One `crm_sync_attempts` row tracks each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Retry eligibility is recorded for future dashboard tooling; this MVP does not add an automatic retry scheduler, manual retry command, or retry API.
+One `crm_sync_attempts` row tracks each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Automatic retry scheduling is not implemented. Manual retry is available at `POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` for eligible dashboard records.
 
 Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal uses a **static** contact segment for API list enrollment. Set `HUBSPOT_NEWSLETTER_LIST_ID` to the segment's **ILS Segment ID** (not the Legacy V1 list ID). Active/dynamic segments reject membership API calls even when scopes are correct.
 
@@ -218,13 +218,14 @@ Dashboard status routes for the admin UI:
 GET /api/dashboard/events
 GET /api/dashboard/events/{checkout_event_id}
 GET /api/dashboard/events/by-attempt/{donation_attempt_id}
+POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry
 ```
 
 These routes read stored `checkout_events` and `crm_sync_attempts` rows using the payload contract in `docs/contracts.md` Section 5. Authentication is not implemented yet.
 
 ## Current Boundary
 
-Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking, and read-only dashboard status API routes. It does not add admin dashboard authentication, analytics event emission, automatic CRM retry scheduling, or hosted checkout writes.
+Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking, dashboard status API routes, and manual CRM sync retry for eligible attempts. It does not add admin dashboard authentication, analytics event emission, automatic CRM retry scheduling, or hosted checkout writes.
 
 Run migrations when setting up local middleware storage. Dashboard API routes, frontend UI, analytics, and observability alerting remain planned for later milestones.
 

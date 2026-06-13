@@ -20,6 +20,15 @@ export interface DashboardDetailResponse {
   data: CheckoutEventDetail
 }
 
+export class DashboardApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 function toQuery(filters: EventFilters, page = 1): string {
   const params = new URLSearchParams()
 
@@ -36,12 +45,19 @@ function toQuery(filters: EventFilters, page = 1): string {
   return params.toString()
 }
 
-async function parseJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`Dashboard API request failed with status ${response.status}.`)
+async function parseJsonOrThrow<T>(response: Response): Promise<T> {
+  const payload = (await response.json().catch(() => ({}))) as {
+    message?: string
   }
 
-  return response.json() as Promise<T>
+  if (!response.ok) {
+    throw new DashboardApiError(
+      payload.message ?? `Dashboard API request failed with status ${response.status}.`,
+      response.status,
+    )
+  }
+
+  return payload as T
 }
 
 export async function fetchDashboardEvents(
@@ -50,7 +66,7 @@ export async function fetchDashboardEvents(
 ): Promise<DashboardListResponse> {
   const response = await fetch(`/api/dashboard/events?${toQuery(filters, page)}`)
 
-  const payload = await parseJson<DashboardListResponse>(response)
+  const payload = await parseJsonOrThrow<DashboardListResponse>(response)
 
   return {
     ...payload,
@@ -62,7 +78,19 @@ export async function fetchDashboardEventDetail(
   checkoutEventId: number,
 ): Promise<CheckoutEventDetail> {
   const response = await fetch(`/api/dashboard/events/${checkoutEventId}`)
-  const payload = await parseJson<DashboardDetailResponse>(response)
+  const payload = await parseJsonOrThrow<DashboardDetailResponse>(response)
+
+  return normalizeEventSummary(payload.data)
+}
+
+export async function fetchCrmSyncRetry(
+  crmSyncAttemptId: number,
+): Promise<CheckoutEventDetail> {
+  const response = await fetch(`/api/dashboard/crm-sync/${crmSyncAttemptId}/retry`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+  })
+  const payload = await parseJsonOrThrow<DashboardDetailResponse>(response)
 
   return normalizeEventSummary(payload.data)
 }

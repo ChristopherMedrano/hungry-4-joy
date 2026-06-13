@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\DashboardCrmSyncRetryController;
 use App\Http\Controllers\Api\DashboardEventController;
 use App\Jobs\SyncDonationToHubSpot;
 use App\Models\CheckoutEvent;
@@ -76,6 +77,9 @@ Route::post('/foxy/webhooks', function (
 })->name('foxy.webhooks.store');
 
 Route::prefix('dashboard')->group(function () {
+    Route::post('/crm-sync/{crmSyncAttempt}/retry', [DashboardCrmSyncRetryController::class, 'store'])
+        ->whereNumber('crmSyncAttempt')
+        ->name('dashboard.crm-sync.retry');
     Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
         ->name('dashboard.events.by-attempt');
     Route::get('/events/{checkoutEvent}', [DashboardEventController::class, 'show'])

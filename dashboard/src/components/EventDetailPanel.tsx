@@ -6,6 +6,10 @@ import { TransactionStatusBadge } from './TransactionStatusBadge'
 
 interface EventDetailPanelProps {
   event: CheckoutEventDetail | null
+  onCrmRetry?: () => Promise<void>
+  isCrmRetrying?: boolean
+  crmRetryError?: string | null
+  crmRetryDisabled?: boolean
 }
 
 function DetailRow({ label, value }: { label: string; value: string | null }) {
@@ -52,7 +56,13 @@ function checkoutCallout(event: CheckoutEventDetail) {
   }
 }
 
-export function EventDetailPanel({ event }: EventDetailPanelProps) {
+export function EventDetailPanel({
+  event,
+  onCrmRetry,
+  isCrmRetrying = false,
+  crmRetryError = null,
+  crmRetryDisabled = false,
+}: EventDetailPanelProps) {
   if (!event) {
     return (
       <aside className="rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-sm text-slate-400">
@@ -84,6 +94,10 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
         crmStatusSummary={event.crm_status_summary}
         crmSync={event.crm_sync}
         checkoutDonationAttemptId={event.donation_attempt_id}
+        onRetry={onCrmRetry}
+        isRetrying={isCrmRetrying}
+        retryError={crmRetryError}
+        retryDisabled={crmRetryDisabled}
       />
     </aside>
   )
