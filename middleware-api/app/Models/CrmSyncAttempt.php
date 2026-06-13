@@ -29,6 +29,15 @@ class CrmSyncAttempt extends Model
         ];
     }
 
+    public function manualRetryEligible(): bool
+    {
+        return match ($this->status) {
+            'failed', 'retryable' => true,
+            'succeeded' => $this->error_code === 'hubspot_list_warning',
+            default => false,
+        };
+    }
+
     /**
      * @return BelongsTo<CheckoutEvent, $this>
      */

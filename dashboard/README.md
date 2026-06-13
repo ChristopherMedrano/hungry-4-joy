@@ -54,6 +54,12 @@ Issue #38 HubSpot CRM sync views:
 - Safe HubSpot contact/deal references, error codes, and redacted error messages
 - `last_attempted_at`, retry count, and next retry timestamps in detail
 
+Issue #39 CRM sync retry actions:
+
+- Manual retry button for retryable, failed, and list-warning states (Live API mode)
+- Disabled retry with explanation for synced, pending, and not-applicable states
+- Duplicate-click prevention via loading state; list and detail refresh after retry
+
 Prerequisites for live data:
 
 ```bash
@@ -81,6 +87,7 @@ After replaying fixtures, inspect these rows in the dashboard:
 | Not applicable | Replay `payment-failed.one-time.json` | N/A | Gray "CRM sync not applicable" |
 | Pending checkout | Replay `checkout-pending.one-time.json` | N/A | Gray not-applicable callout |
 | Retryable | Mutate attempt to `retryable` (see API test) | Retryable | Orange retryable failure callout |
+| Retry action | Live API → retryable row → Retry sync now | Synced (after success) | Button disabled while request is in flight |
 | Failed | Mutate attempt to `failed` with `hubspot_terminal_error` | Failed | Red CRM sync failed callout |
 | Warning | Mutate attempt to `succeeded` + `hubspot_list_warning` | Warning | Amber synced-with-warning callout |
 
@@ -88,13 +95,12 @@ Run the dashboard API tests:
 
 ```bash
 cd middleware-api
-php artisan test --filter=DashboardEvent
+php artisan test --filter=Dashboard
 ```
 
 Not included yet:
 
 - Authentication
-- Manual CRM retry actions (#39)
 - Dashboard fixture walkthrough doc (#40)
 
 ## Stack
