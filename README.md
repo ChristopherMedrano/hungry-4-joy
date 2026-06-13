@@ -121,7 +121,7 @@ Dashboard:
 Development and deployment:
 
 - Local environment: DDEV, WordPress development.
-- Hosting target: Render, app services.
+- Hosting target: Render — WordPress, middleware API, and status dashboard (`render.yaml`).
 - CI/CD: GitHub Actions, repeatable checks.
 
 ## Local Development

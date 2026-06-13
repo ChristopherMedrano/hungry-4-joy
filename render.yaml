@@ -61,6 +61,21 @@ services:
       - key: MAIL_MAILER
         value: log
 
+  - type: web
+    name: hungry-4-joy-dashboard
+    runtime: docker
+    plan: free
+    rootDir: dashboard
+    healthCheckPath: /
+    envVars:
+      - key: MIDDLEWARE_API_TARGET
+        fromService:
+          name: hungry-4-joy-middleware
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: PORT
+        value: "8080"
+
 databases:
   - name: hungry-4-joy-middleware-db
     plan: free
