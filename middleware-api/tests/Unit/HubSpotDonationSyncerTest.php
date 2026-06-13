@@ -213,6 +213,7 @@ class HubSpotDonationSyncerTest extends TestCase
         $this->assertSame('succeeded', $attempt->status);
         $this->assertNull($attempt->error_code);
         $this->assertNull($attempt->error_message);
+        $this->assertSame(1, $attempt->retry_count);
         $this->assertSame(2, count(array_filter(
             $fake->calls(),
             fn (array $call): bool => $call['method'] === 'addContactToList'
