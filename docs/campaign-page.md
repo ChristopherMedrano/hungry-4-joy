@@ -162,12 +162,10 @@ Future Laravel middleware owns:
 
 - CRM sync jobs and retry status.
 
-Future analytics and dashboard work owns:
+Future analytics work uses the event contract in [`contracts.md`](contracts.md) Section 6:
 
 - Donation journey events.
 - Consent-aware conversion tracking.
-- Operational status views.
-- Failure and retry visibility.
 
 ## Verification
 

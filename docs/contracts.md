@@ -4,6 +4,15 @@ This document defines the small data contracts used between parts of the Hungry-
 
 The goal is to keep each system boundary clear. WordPress prepares campaign and donation context. Checkout receives safe metadata, including a canonical donation attempt identity. The local Laravel receiver validates checkout event fixtures and adapted provider webhooks, stores normalized safe fields, prevents duplicate processing, and syncs eligible donations to HubSpot with local status tracking. Dashboard, analytics, and observability workflows build on that receiver and CRM data.
 
+Contract sections:
+
+1. Campaign checkout metadata
+2. Canonical donation identity
+3. Checkout event payload
+4. CRM / marketing sync payload
+5. Dashboard status payload
+6. Marketing analytics events
+
 These contracts should avoid sensitive payment data. Card numbers, CVV values, raw payment credentials, and payment method secrets do not belong in WordPress, Laravel, HubSpot, logs, or the dashboard.
 
 The project-wide checkout and payment safety boundary is documented in [`payment-safety-boundary.md`](payment-safety-boundary.md).
@@ -952,6 +961,190 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-w
 - Contract covers success, failure, duplicate-ingest exclusion, retryable CRM state, and ineligible CRM cases.
 - Filter fields support campaign, status, date range, provider, source page, and free-text lookup.
 - Sensitive payment and secret fields are explicitly excluded.
+
+## 6. Marketing Analytics Events
+
+Status: Contract defined.
+
+This contract defines the **event names and safe properties** for donation-journey analytics. It aligns browser-side GTM-style `dataLayer` events with server-side conversion events derived from stored checkout and CRM sync records.
+
+Production writes to Google Analytics, Meta Pixel, Meta Conversions API, or other vendors are **out of scope** for this section. Later issues emit or log events using this vocabulary only.
+
+Related docs:
+
+- Journey overview: [`architecture.md`](architecture.md) — Section 6 Marketing Analytics / Event Tracking
+- Campaign metadata source: Section 1 of this document
+- Canonical identity: Section 2 of this document
+- Server conversion source records: Sections 3 and 4 of this document
+
+### Purpose
+
+- Use one event name list across browser and server producers.
+- Tie journey events to `donation_attempt_id` when a checkout attempt exists.
+- Carry campaign attribution and safe donation metadata without payment secrets.
+- Support later consent-aware browser tracking (#43) and server-side conversion emission (#44).
+
+### Event Envelope
+
+All analytics events share a common envelope. Browser producers push to `window.dataLayer`. Server producers write application-owned analytics records or logs using the same field names.
+
+| Field | Example | Required | Purpose |
+| --- | --- | --- | --- |
+| `event` | `StartDonation` | yes | Analytics event name from the catalog below. |
+| `analytics_event_id` | `anl_h4j_20260527_0001` | yes | Stable unique id for this analytics emission. Browser events generate at push time. Server events generate when Laravel emits the record. |
+| `event_created_at` | `2026-05-27T14:05:00Z` | yes | ISO 8601 timestamp for when the analytics event was produced. |
+| `producer` | `browser` | yes | `browser` or `server`. |
+| `donation_attempt_id` | `h4j_attempt_demo_loaves_0001` | when known | Canonical checkout attempt identity from Section 2. Required for attempt-scoped events. |
+| `campaign_id` | `loaves-campaign-01` | when known | Campaign attribution. |
+| `campaign_name` | `Loaves 4 Joy` | when known | Human-readable campaign label. |
+| `donation_amount` | `25` | when known | Numeric amount in major currency units. |
+| `donation_currency` | `USD` | when known | ISO 4217 currency code. |
+| `donation_label` | `3 loaves` | when known | Human-readable option label. |
+| `donation_type` | `one_time` | when known | Donation type vocabulary from Section 1. |
+| `source_page` | `home` | when known | WordPress placement or page slug. |
+| `checkout_provider` | `foxy` | when known | Checkout provider context. |
+| `transaction_status` | `completed` | when known | `completed`, `failed`, or `pending` when checkout result is known. |
+| `checkout_event_id` | `evt_h4j_demo_20260527_0001` | server only, when known | Stored checkout `event_id` for server events tied to ingest. |
+| `crm_sync_status` | `succeeded` | server only, when known | CRM sync status for HubSpot analytics events. |
+| `crm_error_code` | `hubspot_list_warning` | server only, when known | Redacted CRM error code when sync did not fully succeed. |
+
+`analytics_event_id` is independent of checkout `event_id`, Foxy transaction ids, and webhook ids. It identifies one analytics emission only.
+
+### Event Catalog
+
+Event names match [`architecture.md`](architecture.md) Section 6.
+
+| Event | Producer | When it fires | Required properties |
+| --- | --- | --- | --- |
+| `PageView` | browser | Campaign or site page load | `source_page` |
+| `ViewCampaign` | browser | Donor views a campaign block with donation options | `campaign_id`, `campaign_name`, `source_page` |
+| `StartDonation` | browser | Donor clicks a donation button; theme script generates `donation_attempt_id` | `donation_attempt_id`, campaign + donation fields from button metadata |
+| `InitiateCheckout` | browser | Browser navigates to hosted Foxy cart with attempt metadata | `donation_attempt_id`, campaign + donation fields |
+| `DonationCompleted` | browser and server | Browser: optional return/thank-you surface when present. Server: Laravel stores `donation.created` with `transaction_status = completed` | `donation_attempt_id`, campaign + donation fields, `transaction_status = completed` |
+| `PaymentFailed` | browser and server | Browser: optional failure surface when present. Server: Laravel stores `payment.failed` or failed checkout state | `donation_attempt_id` when known, campaign + donation fields when known, `transaction_status = failed` |
+| `HubSpotSyncSucceeded` | server | CRM sync attempt reaches `succeeded` without list warning | `donation_attempt_id`, `checkout_event_id`, `crm_sync_status = succeeded`, campaign + donation fields from stored checkout row |
+| `HubSpotSyncFailed` | server | CRM sync attempt is `failed` or `retryable`, or succeeded with `hubspot_list_warning` | `donation_attempt_id`, `checkout_event_id`, `crm_sync_status`, `crm_error_code`, campaign + donation fields when stored |
+
+**Browser vs server responsibilities**
+
+- **Browser** owns pre-checkout journey events (`PageView` through `InitiateCheckout`) and optional on-page confirmation surfaces.
+- **Server** is the source of truth for confirmed checkout outcomes and CRM sync results. When browser and server both emit `DonationCompleted` or `PaymentFailed`, they must use the same event name and the same `donation_attempt_id`, but each emission keeps its own `analytics_event_id`.
+- **Consent (#43):** browser events must not fire marketing tags until consent rules pass. This contract defines names and properties only; consent gating is implemented separately.
+
+### Mapping From Existing Contracts
+
+| Analytics field | Source |
+| --- | --- |
+| `donation_attempt_id` | Section 2; WordPress click script or Laravel stored checkout row |
+| `campaign_id`, `campaign_name` | Section 1 button `data-*` attributes or stored checkout campaign columns |
+| `donation_amount`, `donation_label`, `donation_type`, `donation_currency` | Section 1 metadata or stored checkout donation columns |
+| `source_page`, `checkout_provider` | Section 1 metadata or stored checkout columns |
+| `transaction_status`, `checkout_event_id` | Section 3 checkout event |
+| `crm_sync_status`, `crm_error_code` | Section 4 CRM sync attempt row |
+
+Inspect browser metadata on [`front-page.html`](../wordpress/wp-content/themes/hungry-4-joy/templates/front-page.html). Inspect server field shapes in [`examples/checkout-events/`](../examples/checkout-events/).
+
+### Browser Example
+
+After consent checks pass (#43), a donation click should be representable as:
+
+```javascript
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  event: 'StartDonation',
+  analytics_event_id: 'anl_h4j_browser_start_0001',
+  event_created_at: '2026-05-27T14:04:58Z',
+  producer: 'browser',
+  donation_attempt_id: 'h4j_attempt_demo_loaves_0001',
+  campaign_id: 'loaves-campaign-01',
+  campaign_name: 'Loaves 4 Joy',
+  donation_amount: 25,
+  donation_currency: 'USD',
+  donation_label: '3 loaves',
+  donation_type: 'one_time',
+  source_page: 'home',
+  checkout_provider: 'foxy',
+});
+```
+
+### Server Example
+
+After Laravel ingests [`donation-created.one-time.json`](../examples/checkout-events/donation-created.one-time.json), a server analytics record should be representable as:
+
+```json
+{
+  "event": "DonationCompleted",
+  "analytics_event_id": "anl_h4j_server_donation_0001",
+  "event_created_at": "2026-05-27T14:05:00Z",
+  "producer": "server",
+  "donation_attempt_id": "h4j_attempt_demo_loaves_0001",
+  "checkout_event_id": "evt_h4j_demo_20260527_0001",
+  "campaign_id": "loaves-campaign-01",
+  "campaign_name": "Loaves 4 Joy",
+  "donation_amount": 25,
+  "donation_currency": "USD",
+  "donation_label": "3 loaves",
+  "donation_type": "one_time",
+  "source_page": "home",
+  "checkout_provider": "foxy",
+  "transaction_status": "completed"
+}
+```
+
+After CRM sync succeeds for that checkout event:
+
+```json
+{
+  "event": "HubSpotSyncSucceeded",
+  "analytics_event_id": "anl_h4j_server_crm_0001",
+  "event_created_at": "2026-05-27T14:05:12Z",
+  "producer": "server",
+  "donation_attempt_id": "h4j_attempt_demo_loaves_0001",
+  "checkout_event_id": "evt_h4j_demo_20260527_0001",
+  "crm_sync_status": "succeeded",
+  "campaign_id": "loaves-campaign-01",
+  "campaign_name": "Loaves 4 Joy",
+  "donation_amount": 25,
+  "donation_currency": "USD",
+  "donation_label": "3 loaves",
+  "donation_type": "one_time",
+  "source_page": "home",
+  "checkout_provider": "foxy",
+  "transaction_status": "completed"
+}
+```
+
+### Debugging Notes
+
+| Symptom | Likely cause | What to inspect |
+| --- | --- | --- |
+| Duplicate `DonationCompleted` for one attempt | Browser thank-you/page reload and server conversion both fired, or duplicate page view | Compare `analytics_event_id` values; confirm one server row per stored checkout `event_id` |
+| Browser `StartDonation` without server checkout event | Donor abandoned cart, webhook delay, or ingest failure | Foxy cart URL contains `donation_attempt_id`; middleware `/api/dashboard/events/by-attempt/{id}` |
+| Server checkout event without browser journey events | Consent blocked browser tags, JavaScript disabled, or direct webhook-only path | Stored checkout row ingest channel `foxy_webhook`; button metadata on campaign page |
+| Missing `donation_attempt_id` on browser events | JavaScript disabled or click handler failed before handoff | Link `dataset.donationAttemptId` and cart URL query params |
+| Missing `donation_attempt_id` on server events | Legacy/manual webhook payload without item option | `FoxyWebhookAdapter` fallback `h4j_attempt_foxy_transaction_<transaction-id>` |
+| `HubSpotSyncFailed` after `DonationCompleted` | CRM sync error or list warning | Dashboard CRM detail; `crm_error_code` on analytics envelope |
+
+### Explicitly Forbidden Analytics Fields
+
+Analytics payloads must not include:
+
+- full card number, CVV, or CVC
+- raw payment credentials or payment method secrets
+- checkout API keys, bearer tokens, client secrets, or webhook encryption keys
+- unredacted provider payloads
+- private donor notes beyond the safe donor fields already stored for checkout
+
+See [`payment-safety-boundary.md`](payment-safety-boundary.md).
+
+### Analytics Contract Acceptance Criteria
+
+- Event names align with [`architecture.md`](architecture.md) Section 6.
+- Browser and server responsibilities are documented for each catalog event.
+- Properties use `donation_attempt_id` from Section 2 when a checkout attempt exists.
+- Property shapes align with campaign button metadata and checkout event fixtures.
+- Duplicate, missing-event, and missing-identity debugging notes are documented.
+- Production analytics vendor writes remain out of scope.
 
 ## Contract Principles
 

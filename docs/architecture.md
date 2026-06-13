@@ -166,6 +166,8 @@ What this demonstrates:
 
 Marketing analytics tracks the donation journey and campaign performance. This section is modeled on common nonprofit campaign requirements: tag-manager style browser events, Meta/Facebook Pixel-style conversion events, server-side conversion events, and consent-aware tracking.
 
+Event names, safe properties, browser/server responsibilities, and debugging notes are defined in [`contracts.md`](contracts.md) — Section 6 Marketing Analytics Events.
+
 This is separate from error monitoring.
 
 Implementation direction:
