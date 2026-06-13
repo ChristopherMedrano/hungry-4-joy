@@ -900,7 +900,7 @@ Dashboard detail views should expose:
 - `next_retry_at`
 - current `error_code` and `error_message`
 
-Later issues may add append-only retry event history. Until then, list and detail payloads treat the attempt row as the authoritative retry snapshot. Manual retry updates the same row (`retry_count`, `last_attempted_at`, `next_retry_at`, status, and error fields).
+Later issues may add append-only retry event history. Until then, list and detail payloads treat the attempt row as the authoritative retry snapshot. Manual retry updates the same row (`retry_count`, `last_attempted_at`, `next_retry_at`, status, and error fields). `retry_count` increments on HubSpot sync failures and on each list-enrollment retry attempt (including manual dashboard retries for `hubspot_list_warning` rows).
 
 ### Environment And Platform Constraints
 

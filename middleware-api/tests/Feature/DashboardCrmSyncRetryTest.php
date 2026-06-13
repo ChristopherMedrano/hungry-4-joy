@@ -75,6 +75,29 @@ class DashboardCrmSyncRetryTest extends TestCase
             ->assertJsonPath('message', 'CRM sync is already in progress for this attempt.');
     }
 
+    public function test_list_warning_attempt_retry_increments_retry_count(): void
+    {
+        $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
+            ->assertAccepted();
+
+        $event = CheckoutEvent::firstOrFail();
+        $attempt = CrmSyncAttempt::where('checkout_event_id', $event->id)->firstOrFail();
+        $attempt->update([
+            'status' => 'succeeded',
+            'hubspot_contact_id' => '498781781750',
+            'hubspot_deal_id' => '329059097290',
+            'error_code' => 'hubspot_list_warning',
+            'error_message' => 'HubSpot list enrollment failed with status 403.',
+            'retry_count' => 0,
+        ]);
+
+        $this->postJson("/api/dashboard/crm-sync/{$attempt->id}/retry")
+            ->assertOk()
+            ->assertJsonPath('data.crm_status_summary', 'synced')
+            ->assertJsonPath('data.crm_sync.retry_count', 1)
+            ->assertJsonPath('data.crm_sync.error_code', null);
+    }
+
     public function test_unknown_attempt_returns_404(): void
     {
         $this->postJson('/api/dashboard/crm-sync/99999/retry')->assertNotFound();

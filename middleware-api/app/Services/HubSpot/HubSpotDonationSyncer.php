@@ -109,6 +109,7 @@ class HubSpotDonationSyncer
         $attempt->forceFill([
             'error_code' => $warning === null ? null : 'hubspot_list_warning',
             'error_message' => $warning,
+            'retry_count' => $attempt->retry_count + 1,
             'last_attempted_at' => now(),
         ])->save();
 
