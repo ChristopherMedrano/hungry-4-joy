@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:hosted": "DASHBOARD_API_TARGET=https://hungry-4-joy-middleware.onrender.com vite",
+    "dev:hosted": "VITE_USE_LOCAL_PROXY_HOSTED=1 DASHBOARD_API_TARGET=https://hungry-4-joy-middleware.onrender.com vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

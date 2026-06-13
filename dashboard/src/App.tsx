@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchCrmSyncRetry, fetchDashboardEventDetail, fetchDashboardEvents } from './api/dashboard'
+import {
+  fetchCrmSyncRetry,
+  fetchDashboardEventDetail,
+  fetchDashboardEvents,
+  setDashboardApiBase,
+} from './api/dashboard'
 import { EmptyState } from './components/EmptyState'
 import { ErrorState } from './components/ErrorState'
 import { EventDetailPanel } from './components/EventDetailPanel'
@@ -11,24 +16,23 @@ import {
   findSeededDashboardEvent,
   seededDashboardEvents,
 } from './data/seededDashboardEvents'
+import {
+  apiBaseForMode,
+  HOSTED_MIDDLEWARE_URL,
+  isApiDataMode,
+  isLocalDashboardHost,
+  viewModeOptions,
+} from './lib/dashboardDataMode'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
 import type {
   CheckoutEventDetail,
   CheckoutEventSummary,
+  DashboardDataMode,
   EventFilters,
-  ShellViewState,
 } from './types/dashboard'
 
-const previewOptions: { value: ShellViewState; label: string }[] = [
-  { value: 'ready', label: 'Live API' },
-  { value: 'seeded', label: 'Seeded' },
-  { value: 'loading', label: 'Loading preview' },
-  { value: 'empty', label: 'Empty preview' },
-  { value: 'error', label: 'Error preview' },
-]
-
 function App() {
-  const [viewState, setViewState] = useState<ShellViewState>('ready')
+  const [viewState, setViewState] = useState<DashboardDataMode>('hosted-api')
   const [filters, setFilters] = useState<EventFilters>(defaultFilters)
   const [liveEvents, setLiveEvents] = useState<CheckoutEventSummary[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -42,6 +46,7 @@ function App() {
   const [crmRetryError, setCrmRetryError] = useState<string | null>(null)
 
   const isSeededView = viewState === 'seeded'
+  const isApiView = isApiDataMode(viewState)
 
   const seededEvents = useMemo(
     () => filterEvents(seededDashboardEvents, filters),
@@ -62,11 +67,12 @@ function App() {
     activeSelectedId === null ? null : findSeededDashboardEvent(activeSelectedId) ?? null
 
   useEffect(() => {
-    if (viewState !== 'ready') {
+    if (!isApiView) {
       return
     }
 
     let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadEvents(): Promise<void> {
       setIsLoadingList(true)
@@ -107,14 +113,15 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, filters, reloadToken])
+  }, [viewState, filters, reloadToken, isApiView])
 
   useEffect(() => {
-    if (viewState !== 'ready' || activeSelectedId === null) {
+    if (!isApiView || activeSelectedId === null) {
       return
     }
 
     let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadDetail(): Promise<void> {
       setIsLoadingDetail(true)
@@ -145,7 +152,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, activeSelectedId])
+  }, [viewState, activeSelectedId, isApiView])
 
   async function handleCrmRetry(): Promise<void> {
     const attemptId = selectedDetail?.crm_sync.crm_sync_attempt_id
@@ -153,6 +160,7 @@ function App() {
       return
     }
 
+    setDashboardApiBase(apiBaseForMode(viewState))
     setIsCrmRetrying(true)
     setCrmRetryError(null)
 
@@ -185,7 +193,7 @@ function App() {
       <select
         value={viewState}
         onChange={(event) => {
-          const nextView = event.target.value as ShellViewState
+          const nextView = event.target.value as DashboardDataMode
           setViewState(nextView)
           setDetailError(null)
           setListError(null)
@@ -197,7 +205,7 @@ function App() {
         }}
         className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
       >
-        {previewOptions.map((option) => (
+        {viewModeOptions().map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
@@ -208,9 +216,12 @@ function App() {
 
   let content
 
-  if (viewState === 'loading' || (viewState === 'ready' && isLoadingList && liveEvents.length === 0)) {
+  if (
+    viewState === 'loading' ||
+    (isApiView && isLoadingList && liveEvents.length === 0)
+  ) {
     content = <LoadingState />
-  } else if (viewState === 'error' || (viewState === 'ready' && listError)) {
+  } else if (viewState === 'error' || (isApiView && listError)) {
     content = (
       <ErrorState
         message={
@@ -218,7 +229,7 @@ function App() {
           'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
         }
         onRetry={() => {
-          setViewState('ready')
+          setViewState('hosted-api')
           setReloadToken((token) => token + 1)
         }}
       />
@@ -255,17 +266,30 @@ function App() {
 
   const dataSourceHint = isSeededView ? (
     <>
-      Seeded demo rows covering every transaction and CRM badge state. Local API equivalent:{' '}
+      Offline preview rows with every transaction and CRM badge state. No network calls.
+    </>
+  ) : viewState === 'local-api' ? (
+    <>
+      Local middleware at{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">127.0.0.1:8000</code>. Demo fixture rows
+      appear after{' '}
       <code className="rounded bg-slate-800 px-1 py-0.5">php artisan dashboard:seed-status-demo</code>
-      .
+      . Filter ingest channel to{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code> for webhook-shaped
+      rows.
+    </>
+  ) : isLocalDashboardHost() ? (
+    <>
+      Hosted middleware at{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">{HOSTED_MIDDLEWARE_URL}</code>. Production-like
+      checkout rows usually have ingest channel{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code>.
     </>
   ) : (
     <>
-      Live data from{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code>. Use{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">npm run dev:hosted</code> for Render data
-      or <code className="rounded bg-slate-800 px-1 py-0.5">npm run dev</code> with local
-      middleware.
+      Live data from proxied{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code> on this
+      dashboard host.
     </>
   )
 

@@ -207,7 +207,7 @@ export function CrmSyncDetailSection({
         ) : null}
         {retryDisabled && retryUi.kind === 'eligible' ? (
           <p className="text-xs text-slate-500">
-            Manual retry is available in Live API view mode only.
+            Manual retry is available in API view modes only.
           </p>
         ) : null}
         {retryUi.kind === 'ineligible' &&

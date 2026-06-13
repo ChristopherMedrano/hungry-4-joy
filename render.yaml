@@ -60,6 +60,8 @@ services:
         value: file
       - key: MAIL_MAILER
         value: log
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://hungry-4-joy-dashboard.onrender.com,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:5173,http://localhost:5174
 
   - type: web
     name: hungry-4-joy-dashboard
