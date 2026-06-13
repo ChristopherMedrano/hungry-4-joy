@@ -1,6 +1,7 @@
 import type { CheckoutEventDetail, TransactionStatus } from '../types/dashboard'
 import { displayOptional } from '../lib/attemptIdMatch'
 import { CrmSyncDetailSection } from './CrmSyncDetailSection'
+import { ServerAnalyticsSummarySection } from './ServerAnalyticsSummarySection'
 import { sectionHeadingClass, StatusCallout } from './StatusCallout'
 import { TransactionStatusBadge } from './TransactionStatusBadge'
 
@@ -99,6 +100,8 @@ export function EventDetailPanel({
         retryError={crmRetryError}
         retryDisabled={crmRetryDisabled}
       />
+
+      <ServerAnalyticsSummarySection events={event.server_analytics_events ?? []} />
     </aside>
   )
 }

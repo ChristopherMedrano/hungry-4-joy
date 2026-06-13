@@ -4,6 +4,11 @@ import type {
   CheckoutEventSummary,
   EventFilters,
 } from '../types/dashboard'
+import type {
+  AnalyticsFilters,
+  ServerAnalyticsEventDetail,
+  ServerAnalyticsEventSummary,
+} from '../types/analytics'
 
 export interface DashboardListResponse {
   data: CheckoutEventSummary[]
@@ -106,4 +111,59 @@ export async function fetchCrmSyncRetry(
   const payload = await parseJsonOrThrow<DashboardDetailResponse>(response)
 
   return normalizeEventSummary(payload.data)
+}
+
+export interface DashboardAnalyticsListResponse {
+  data: ServerAnalyticsEventSummary[]
+  meta: {
+    current_page: number
+    per_page: number
+    total: number
+    last_page: number
+  }
+  filters: Record<string, string | null>
+}
+
+export interface DashboardAnalyticsDetailResponse {
+  data: ServerAnalyticsEventDetail
+}
+
+function analyticsQuery(filters: AnalyticsFilters, page = 1): string {
+  const params = new URLSearchParams()
+
+  if (filters.event) {
+    params.set('event', filters.event)
+  }
+
+  if (filters.search) {
+    params.set('search', filters.search)
+  }
+
+  params.set('page', String(page))
+  params.set('per_page', '25')
+  params.set('sort', '-created_at')
+
+  return params.toString()
+}
+
+export async function fetchDashboardAnalyticsEvents(
+  filters: AnalyticsFilters,
+  page = 1,
+): Promise<DashboardAnalyticsListResponse> {
+  const response = await fetch(
+    `${apiUrl('/api/dashboard/analytics-events')}?${analyticsQuery(filters, page)}`,
+  )
+
+  return parseJsonOrThrow<DashboardAnalyticsListResponse>(response)
+}
+
+export async function fetchDashboardAnalyticsEventDetail(
+  serverAnalyticsEventId: number,
+): Promise<ServerAnalyticsEventDetail> {
+  const response = await fetch(
+    apiUrl(`/api/dashboard/analytics-events/${serverAnalyticsEventId}`),
+  )
+  const payload = await parseJsonOrThrow<DashboardAnalyticsDetailResponse>(response)
+
+  return payload.data
 }

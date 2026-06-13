@@ -1,3 +1,5 @@
+import type { ServerAnalyticsEventSummary } from './analytics'
+
 export type CrmSyncStatus =
   | 'not_applicable'
   | 'pending'
@@ -87,6 +89,7 @@ export interface CheckoutEventDetail extends CheckoutEventSummary {
   timestamps: {
     updated_at: string
   }
+  server_analytics_events: ServerAnalyticsEventSummary[]
 }
 
 export type DashboardDataMode =

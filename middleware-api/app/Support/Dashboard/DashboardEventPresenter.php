@@ -88,6 +88,12 @@ class DashboardEventPresenter
         $summary['timestamps'] = [
             'updated_at' => $event->updated_at?->toIso8601String(),
         ];
+        $summary['server_analytics_events'] = $event->relationLoaded('serverAnalyticsEvents')
+            ? $event->serverAnalyticsEvents
+                ->map(fn ($record) => app(DashboardServerAnalyticsPresenter::class)->summary($record))
+                ->values()
+                ->all()
+            : [];
 
         return $summary;
     }

@@ -73,7 +73,7 @@ class DashboardEventController extends Controller
     public function show(int $checkoutEvent): JsonResponse
     {
         $event = CheckoutEvent::query()
-            ->with('crmSyncAttempt')
+            ->with(['crmSyncAttempt', 'serverAnalyticsEvents.checkoutEvent'])
             ->findOrFail($checkoutEvent);
 
         return response()->json([
@@ -84,7 +84,7 @@ class DashboardEventController extends Controller
     public function showByAttempt(string $donationAttemptId): JsonResponse
     {
         $event = CheckoutEvent::query()
-            ->with('crmSyncAttempt')
+            ->with(['crmSyncAttempt', 'serverAnalyticsEvents.checkoutEvent'])
             ->where('donation_attempt_id', $donationAttemptId)
             ->firstOrFail();
 

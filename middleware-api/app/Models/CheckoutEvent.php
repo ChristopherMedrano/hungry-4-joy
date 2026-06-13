@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CheckoutEvent extends Model
@@ -55,5 +56,13 @@ class CheckoutEvent extends Model
     public function crmSyncAttempt(): HasOne
     {
         return $this->hasOne(CrmSyncAttempt::class);
+    }
+
+    /**
+     * @return HasMany<ServerAnalyticsEvent, $this>
+     */
+    public function serverAnalyticsEvents(): HasMany
+    {
+        return $this->hasMany(ServerAnalyticsEvent::class);
     }
 }
