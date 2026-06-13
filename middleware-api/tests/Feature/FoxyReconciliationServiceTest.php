@@ -27,16 +27,23 @@ class FoxyReconciliationServiceTest extends TestCase
 
     public function test_reconciler_ingests_payment_failed_from_foxy_api_response(): void
     {
-        Http::fake([
-            'api.foxycart.com/token' => Http::response(['access_token' => 'test-access-token'], 200),
-            'api.foxycart.com/stores/120139/transactions*' => Http::response([
-                '_embedded' => [
-                    'fx:transactions' => [
-                        $this->declinedFoxyTransaction(),
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), '/token')) {
+                return Http::response(['access_token' => 'test-access-token'], 200);
+            }
+
+            if (str_contains($request->url(), '/transactions')) {
+                return Http::response([
+                    '_embedded' => [
+                        'fx:transactions' => [
+                            $this->declinedFoxyTransaction(),
+                        ],
                     ],
-                ],
-            ], 200),
-        ]);
+                ], 200);
+            }
+
+            return Http::response([], 404);
+        });
 
         $handoff = CheckoutHandoff::create([
             'donation_attempt_id' => 'h4j_attempt_reconcile_decline_01',
@@ -70,14 +77,21 @@ class FoxyReconciliationServiceTest extends TestCase
 
     public function test_handoff_with_no_foxy_match_schedules_retry(): void
     {
-        Http::fake([
-            'api.foxycart.com/token' => Http::response(['access_token' => 'test-access-token'], 200),
-            'api.foxycart.com/stores/120139/transactions*' => Http::response([
-                '_embedded' => [
-                    'fx:transactions' => [],
-                ],
-            ], 200),
-        ]);
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), '/token')) {
+                return Http::response(['access_token' => 'test-access-token'], 200);
+            }
+
+            if (str_contains($request->url(), '/transactions')) {
+                return Http::response([
+                    '_embedded' => [
+                        'fx:transactions' => [],
+                    ],
+                ], 200);
+            }
+
+            return Http::response([], 404);
+        });
 
         $handoff = CheckoutHandoff::create([
             'donation_attempt_id' => 'h4j_attempt_reconcile_missing_01',
