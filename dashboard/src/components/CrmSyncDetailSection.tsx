@@ -18,7 +18,7 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
       <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="break-words font-mono text-sm text-slate-200">{value ?? 'N/A'}</dd>
+      <dd className="min-w-0 break-all font-mono text-sm text-slate-200">{value ?? 'N/A'}</dd>
     </div>
   )
 }
