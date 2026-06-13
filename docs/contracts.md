@@ -665,7 +665,8 @@ Each list row represents one stored `checkout_events` record plus a derived CRM 
 | `crm_sync.next_retry_at` | `null` | Next retry eligibility time for retryable rows; otherwise `null` |
 | `crm_sync.error_code` | `null` | Safe failure category when failed or retryable; may be present on succeeded rows with list-enrollment warnings |
 | `crm_status_summary` | `synced` | CRM badge key for the CRM status column |
-| `foxy_status_summary` | `fixture` | Foxy/checkout badge key for the Foxy status column |
+
+List rows also expose `transaction_status` (`completed`, `failed`, `pending`) for the transaction status column. Ingest path remains available as `ingest.channel` in detail views.
 
 ### Checkout Event Detail Object
 
@@ -747,8 +748,6 @@ Section 2 defines cross-cutting producer vocabulary such as `crm_sync_pending` a
 
 ### Derived Status Summary Labels
 
-List rows expose two derived badge keys so checkout ingest and CRM sync can be read independently.
-
 **`crm_status_summary`** — HubSpot sync only:
 
 | `crm_status_summary` | Typical conditions |
@@ -760,14 +759,7 @@ List rows expose two derived badge keys so checkout ingest and CRM sync can be r
 | `retryable` | Eligible donation with `crm_sync.status = retryable` |
 | `not_applicable` | Donation not eligible for CRM sync |
 
-**`foxy_status_summary`** — checkout ingest and transaction state:
-
-| `foxy_status_summary` | Typical conditions |
-| --- | --- |
-| `webhook` | `ingest.channel = foxy_webhook` and transaction is not pending/failed |
-| `fixture` | `ingest.channel = fixture_receiver` and transaction is not pending/failed |
-| `pending` | `transaction_status = pending` |
-| `failed` | `event_type = payment.failed` or `transaction_status = failed` |
+The transaction status column uses the stored checkout field `transaction_status` (`completed`, `failed`, `pending`). Ingest path (`ingest.channel`: `foxy_webhook` or `fixture_receiver`) is shown in detail views only.
 
 Duplicate ingest attempts are not list rows. Support users infer duplicate protection from receiver responses and verification docs, not from dashboard list entries.
 
@@ -848,8 +840,7 @@ Lookup by `donation_attempt_id` returns the same detail object or `404` when no 
     "next_retry_at": null,
     "error_code": null
   },
-  "crm_status_summary": "synced",
-  "foxy_status_summary": "fixture"
+  "crm_status_summary": "synced"
 }
 ```
 
