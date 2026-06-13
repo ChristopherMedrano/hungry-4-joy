@@ -5,11 +5,15 @@ namespace App\Services\HubSpot;
 use App\Contracts\HubSpotClient;
 use App\Models\CheckoutEvent;
 use App\Models\CrmSyncAttempt;
+use App\Services\Analytics\ServerAnalyticsEmitter;
 use Throwable;
 
 class HubSpotDonationSyncer
 {
-    public function __construct(private readonly HubSpotClient $hubSpot) {}
+    public function __construct(
+        private readonly HubSpotClient $hubSpot,
+        private readonly ServerAnalyticsEmitter $analyticsEmitter,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -34,7 +38,7 @@ class HubSpotDonationSyncer
         }
 
         if ($attempt->status === 'succeeded' && $attempt->error_code === 'hubspot_list_warning') {
-            return $this->retryListEnrollment($attempt);
+            return $this->retryListEnrollment($event, $attempt);
         }
 
         $attempt->forceFill([
@@ -79,6 +83,8 @@ class HubSpotDonationSyncer
             'next_retry_at' => null,
         ])->save();
 
+        $this->analyticsEmitter->emitCrmSyncConversion($event, $attempt->fresh() ?? $attempt);
+
         return [
             'status' => 'synced',
             'contact_id' => $contactId,
@@ -90,7 +96,7 @@ class HubSpotDonationSyncer
     /**
      * @return array<string, mixed>
      */
-    private function retryListEnrollment(CrmSyncAttempt $attempt): array
+    private function retryListEnrollment(CheckoutEvent $event, CrmSyncAttempt $attempt): array
     {
         if (! filled($attempt->hubspot_contact_id)) {
             return [
@@ -113,6 +119,8 @@ class HubSpotDonationSyncer
             'last_attempted_at' => now(),
         ])->save();
 
+        $this->analyticsEmitter->emitCrmSyncConversion($event, $attempt->fresh() ?? $attempt);
+
         return [
             'status' => $warning === null ? 'list_enrolled' : 'already_synced',
             'contact_id' => $attempt->hubspot_contact_id,
@@ -134,6 +142,12 @@ class HubSpotDonationSyncer
             'last_attempted_at' => now(),
             'next_retry_at' => $retryable ? now()->addMinutes(15) : null,
         ])->save();
+
+        $checkoutEvent = $attempt->checkoutEvent;
+
+        if ($checkoutEvent instanceof CheckoutEvent) {
+            $this->analyticsEmitter->emitCrmSyncConversion($checkoutEvent, $attempt->fresh() ?? $attempt);
+        }
 
         return [
             'status' => $status,

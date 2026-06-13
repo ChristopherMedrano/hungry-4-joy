@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchCrmSyncRetry,
+  fetchDashboardAnalyticsEventDetail,
+  fetchDashboardAnalyticsEvents,
   fetchDashboardEventDetail,
   fetchDashboardEvents,
   setDashboardApiBase,
 } from './api/dashboard'
+import { AnalyticsEventDetailPanel } from './components/AnalyticsEventDetailPanel'
+import { AnalyticsEventTable } from './components/AnalyticsEventTable'
+import { AnalyticsFiltersBar } from './components/AnalyticsFiltersBar'
 import { EmptyState } from './components/EmptyState'
 import { ErrorState } from './components/ErrorState'
 import { EventDetailPanel } from './components/EventDetailPanel'
@@ -27,6 +32,12 @@ import {
 import type { DashboardSection } from './lib/dashboardSections'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
 import { hasRetryActivity, sortByLastCrmAttempt } from './lib/retryActivity'
+import { defaultAnalyticsFilters } from './types/analytics'
+import type {
+  AnalyticsFilters,
+  ServerAnalyticsEventDetail,
+  ServerAnalyticsEventSummary,
+} from './types/analytics'
 import type {
   CheckoutEventDetail,
   CheckoutEventSummary,
@@ -51,6 +62,15 @@ function App() {
   const [reloadToken, setReloadToken] = useState(0)
   const [isCrmRetrying, setIsCrmRetrying] = useState(false)
   const [crmRetryError, setCrmRetryError] = useState<string | null>(null)
+  const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>(defaultAnalyticsFilters)
+  const [liveAnalyticsEvents, setLiveAnalyticsEvents] = useState<ServerAnalyticsEventSummary[]>([])
+  const [selectedAnalyticsId, setSelectedAnalyticsId] = useState<number | null>(null)
+  const [selectedAnalyticsDetail, setSelectedAnalyticsDetail] =
+    useState<ServerAnalyticsEventDetail | null>(null)
+  const [analyticsListError, setAnalyticsListError] = useState<string | null>(null)
+  const [analyticsDetailError, setAnalyticsDetailError] = useState<string | null>(null)
+  const [isLoadingAnalyticsList, setIsLoadingAnalyticsList] = useState(false)
+  const [isLoadingAnalyticsDetail, setIsLoadingAnalyticsDetail] = useState(false)
 
   const isSeededView = viewState === 'seeded'
   const isApiView = isApiDataMode(viewState)
@@ -80,6 +100,117 @@ function App() {
 
   const seededDetail =
     activeSelectedId === null ? null : findSeededDashboardEvent(activeSelectedId) ?? null
+
+  const activeSelectedAnalyticsId = useMemo(() => {
+    if (
+      selectedAnalyticsId &&
+      liveAnalyticsEvents.some(
+        (event) => event.server_analytics_event_id === selectedAnalyticsId,
+      )
+    ) {
+      return selectedAnalyticsId
+    }
+
+    return liveAnalyticsEvents[0]?.server_analytics_event_id ?? null
+  }, [selectedAnalyticsId, liveAnalyticsEvents])
+
+  useEffect(() => {
+    if (!isApiView || dashboardSection !== 'analytics-events') {
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+
+    async function loadAnalyticsEvents(): Promise<void> {
+      setIsLoadingAnalyticsList(true)
+      setAnalyticsListError(null)
+
+      try {
+        const response = await fetchDashboardAnalyticsEvents(analyticsFilters)
+        if (cancelled) {
+          return
+        }
+
+        setLiveAnalyticsEvents(response.data)
+        setSelectedAnalyticsId((current) => {
+          if (
+            current &&
+            response.data.some((event) => event.server_analytics_event_id === current)
+          ) {
+            return current
+          }
+
+          return response.data[0]?.server_analytics_event_id ?? null
+        })
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setLiveAnalyticsEvents([])
+        setSelectedAnalyticsId(null)
+        setSelectedAnalyticsDetail(null)
+        setAnalyticsListError(
+          error instanceof Error ? error.message : 'Could not load server analytics events.',
+        )
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAnalyticsList(false)
+        }
+      }
+    }
+
+    void loadAnalyticsEvents()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewState, analyticsFilters, reloadToken, isApiView, dashboardSection])
+
+  useEffect(() => {
+    if (
+      !isApiView ||
+      dashboardSection !== 'analytics-events' ||
+      activeSelectedAnalyticsId === null
+    ) {
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+
+    async function loadAnalyticsDetail(): Promise<void> {
+      setIsLoadingAnalyticsDetail(true)
+      setAnalyticsDetailError(null)
+
+      try {
+        const detail = await fetchDashboardAnalyticsEventDetail(activeSelectedAnalyticsId!)
+        if (!cancelled) {
+          setSelectedAnalyticsDetail(detail)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSelectedAnalyticsDetail(null)
+          setAnalyticsDetailError(
+            error instanceof Error
+              ? error.message
+              : 'Could not load server analytics detail.',
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAnalyticsDetail(false)
+        }
+      }
+    }
+
+    void loadAnalyticsDetail()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewState, activeSelectedAnalyticsId, isApiView, dashboardSection])
 
   useEffect(() => {
     if (!isApiView || dashboardSection !== 'events') {
@@ -329,9 +460,73 @@ function App() {
     </>
   )
 
+  const analyticsHint = (
+    <>
+      Server conversion records emitted by Laravel after validated checkout ingest and CRM sync.
+      Replay fixtures with{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">npm run connect:foxy-demo</code> or post
+      to{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">/api/checkout/events</code> to populate
+      rows. Full contract payloads are available in the detail panel and Laravel logs as{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">[H4J analytics demo]</code>.
+    </>
+  )
+
   let content
 
-  if (dashboardSection === 'retry-activity') {
+  if (dashboardSection === 'analytics-events') {
+    if (isSeededView) {
+      content = (
+        <EmptyState
+          title="Server analytics needs live API data"
+          message="Switch view mode to hosted or local API, then replay checkout fixtures to populate server analytics rows."
+          onResetFilters={() => setViewState('hosted-api')}
+        />
+      )
+    } else if (
+      viewState === 'loading' ||
+      (isApiView && isLoadingAnalyticsList && liveAnalyticsEvents.length === 0)
+    ) {
+      content = <LoadingState />
+    } else if (viewState === 'error' || (isApiView && analyticsListError)) {
+      content = (
+        <ErrorState
+          message={
+            analyticsListError ??
+            'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
+          }
+          onRetry={() => {
+            setViewState('hosted-api')
+            setReloadToken((token) => token + 1)
+          }}
+        />
+      )
+    } else if (viewState === 'empty' || liveAnalyticsEvents.length === 0) {
+      content = (
+        <EmptyState onResetFilters={() => setAnalyticsFilters(defaultAnalyticsFilters)} />
+      )
+    } else {
+      content = (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+          <AnalyticsEventTable
+            events={liveAnalyticsEvents}
+            selectedId={activeSelectedAnalyticsId}
+            onSelect={setSelectedAnalyticsId}
+          />
+          {analyticsDetailError ? (
+            <ErrorState
+              message={analyticsDetailError}
+              onRetry={() => setSelectedAnalyticsId((id) => id)}
+            />
+          ) : isLoadingAnalyticsDetail ? (
+            <LoadingState />
+          ) : (
+            <AnalyticsEventDetailPanel event={selectedAnalyticsDetail} />
+          )}
+        </div>
+      )
+    }
+  } else if (dashboardSection === 'retry-activity') {
     if (viewState === 'loading' || (isApiView && isLoadingRetryActivity && displayRetryActivityEvents.length === 0)) {
       content = <LoadingState />
     } else if (viewState === 'error' || (isApiView && retryActivityError)) {
@@ -359,52 +554,54 @@ function App() {
         />
       )
     }
-  } else if (
-    viewState === 'loading' ||
-    (isApiView && isLoadingList && liveEvents.length === 0)
-  ) {
-    content = <LoadingState />
-  } else if (viewState === 'error' || (isApiView && listError)) {
-    content = (
-      <ErrorState
-        message={
-          listError ??
-          'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
-        }
-        onRetry={() => {
-          setViewState('hosted-api')
-          setReloadToken((token) => token + 1)
-        }}
-      />
-    )
-  } else if (viewState === 'empty' || displayEvents.length === 0) {
-    content = <EmptyState onResetFilters={() => setFilters(defaultFilters)} />
-  } else {
-    content = (
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-        <EventTable
-          events={displayEvents}
-          selectedId={activeSelectedId}
-          onSelect={setSelectedId}
+  } else if (dashboardSection === 'events') {
+    if (
+      viewState === 'loading' ||
+      (isApiView && isLoadingList && liveEvents.length === 0)
+    ) {
+      content = <LoadingState />
+    } else if (viewState === 'error' || (isApiView && listError)) {
+      content = (
+        <ErrorState
+          message={
+            listError ??
+            'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
+          }
+          onRetry={() => {
+            setViewState('hosted-api')
+            setReloadToken((token) => token + 1)
+          }}
         />
-        {detailError && !isSeededView ? (
-          <ErrorState
-            message={detailError}
-            onRetry={() => setSelectedId((id) => id)}
+      )
+    } else if (viewState === 'empty' || displayEvents.length === 0) {
+      content = <EmptyState onResetFilters={() => setFilters(defaultFilters)} />
+    } else {
+      content = (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+          <EventTable
+            events={displayEvents}
+            selectedId={activeSelectedId}
+            onSelect={setSelectedId}
           />
-        ) : isLoadingDetail && !isSeededView ? (
-          <LoadingState />
-        ) : (
-          <EventDetailPanel
-            event={isSeededView ? seededDetail : activeSelectedId === null ? null : selectedDetail}
-            onCrmRetry={isSeededView ? undefined : handleCrmRetry}
-            isCrmRetrying={isCrmRetrying}
-            crmRetryError={crmRetryError}
-            crmRetryDisabled={isSeededView}
-          />
-        )}
-      </div>
-    )
+          {detailError && !isSeededView ? (
+            <ErrorState
+              message={detailError}
+              onRetry={() => setSelectedId((id) => id)}
+            />
+          ) : isLoadingDetail && !isSeededView ? (
+            <LoadingState />
+          ) : (
+            <EventDetailPanel
+              event={isSeededView ? seededDetail : activeSelectedId === null ? null : selectedDetail}
+              onCrmRetry={isSeededView ? undefined : handleCrmRetry}
+              isCrmRetrying={isCrmRetrying}
+              crmRetryError={crmRetryError}
+              crmRetryDisabled={isSeededView}
+            />
+          )}
+        </div>
+      )
+    }
   }
 
   return (
@@ -414,9 +611,17 @@ function App() {
       onSectionChange={setDashboardSection}
     >
       <div className="space-y-4">
-        <EventFiltersBar filters={filters} onChange={setFilters} />
+        {dashboardSection === 'analytics-events' ? (
+          <AnalyticsFiltersBar filters={analyticsFilters} onChange={setAnalyticsFilters} />
+        ) : (
+          <EventFiltersBar filters={filters} onChange={setFilters} />
+        )}
         <p className="text-xs text-slate-500">
-          {dashboardSection === 'retry-activity' ? retryActivityHint : dataSourceHint}
+          {dashboardSection === 'retry-activity'
+            ? retryActivityHint
+            : dashboardSection === 'analytics-events'
+              ? analyticsHint
+              : dataSourceHint}
         </p>
         {content}
       </div>

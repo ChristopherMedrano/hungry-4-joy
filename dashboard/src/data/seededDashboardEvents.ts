@@ -3,7 +3,10 @@ import type { CheckoutEventDetail } from '../types/dashboard'
 const receivedAt = '2026-06-12T10:40:00+00:00'
 const attemptedAt = '2026-06-12T10:41:00+00:00'
 
-type SeededEventInput = Omit<CheckoutEventDetail, 'checkout_event_id' | 'timestamps' | 'ingest'> & {
+type SeededEventInput = Omit<
+  CheckoutEventDetail,
+  'checkout_event_id' | 'timestamps' | 'ingest' | 'server_analytics_events'
+> & {
   ingest: CheckoutEventDetail['ingest']
 }
 
@@ -13,6 +16,7 @@ function baseEvent(id: number, event: SeededEventInput): CheckoutEventDetail {
     checkout_event_id: id,
     timestamps: { updated_at: receivedAt },
     ingest: event.ingest,
+    server_analytics_events: [],
   }
 }
 

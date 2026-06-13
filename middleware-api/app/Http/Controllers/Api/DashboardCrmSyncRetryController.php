@@ -35,7 +35,7 @@ class DashboardCrmSyncRetryController extends Controller
 
         SyncDonationToHubSpot::dispatch($event->id);
 
-        $event->refresh()->load('crmSyncAttempt');
+        $event->refresh()->load(['crmSyncAttempt', 'serverAnalyticsEvents.checkoutEvent']);
 
         return response()->json([
             'data' => $this->presenter->detail($event),

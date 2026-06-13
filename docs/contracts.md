@@ -615,6 +615,9 @@ Implemented Laravel routes and the React dashboard consume these payload shapes.
 | `GET` | `/api/dashboard/events` | Paginated list of checkout events with summary CRM sync state |
 | `GET` | `/api/dashboard/events/{checkout_event_id}` | Full detail for one stored checkout event |
 | `GET` | `/api/dashboard/events/by-attempt/{donation_attempt_id}` | Lookup by canonical donation attempt id |
+| `GET` | `/api/dashboard/analytics-events` | Paginated list of server-side conversion/analytics records |
+| `GET` | `/api/dashboard/analytics-events/{server_analytics_event_id}` | Full contract payload for one server analytics record |
+| `GET` | `/api/dashboard/analytics-events/by-attempt/{donation_attempt_id}` | All server analytics records for one donation attempt |
 | `POST` | `/api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` | Trigger a safe manual CRM retry when eligible |
 
 ### Manual CRM Retry Endpoint
@@ -964,7 +967,7 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-w
 
 ## 6. Marketing Analytics Events
 
-Status: Contract defined. Browser producers are implemented in the WordPress theme.
+Status: Contract defined. Browser producers are implemented in the WordPress theme. Server producers are implemented in the Laravel middleware API.
 
 This contract defines the **event names and safe properties** for donation-journey analytics. It aligns browser-side GTM-style `dataLayer` events with server-side conversion events derived from stored checkout and CRM sync records.
 

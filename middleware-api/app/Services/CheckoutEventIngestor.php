@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CheckoutEvent;
+use App\Services\Analytics\ServerAnalyticsEmitter;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
  */
 class CheckoutEventIngestor
 {
+    public function __construct(private readonly ServerAnalyticsEmitter $analyticsEmitter) {}
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array{status: string, code: int, checkout_event: CheckoutEvent|null}
@@ -70,6 +73,8 @@ class CheckoutEventIngestor
                 'checkout_event' => null,
             ];
         }
+
+        $this->analyticsEmitter->emitCheckoutConversion($checkoutEvent);
 
         return [
             'status' => 'accepted',
