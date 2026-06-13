@@ -1,3 +1,4 @@
+import { formatAttemptId } from '../lib/formatAttemptId'
 import type { CheckoutEventSummary } from '../types/dashboard'
 import { crmErrorCodeLabel } from '../lib/crmLabels'
 import { CrmStatusBadge } from './CrmStatusBadge'
@@ -25,25 +26,25 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
         <table className="min-w-full divide-y divide-slate-800 text-sm">
           <thead className="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-400">
             <tr>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Transaction status
+              <th scope="col" className="px-3 py-3 font-medium">
+                Transaction
               </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                CRM status
+              <th scope="col" className="px-3 py-3 font-medium">
+                CRM
               </th>
-              <th scope="col" className="px-4 py-3 font-medium">
+              <th scope="col" className="px-3 py-3 font-medium">
                 Campaign
               </th>
-              <th scope="col" className="px-4 py-3 font-medium">
+              <th scope="col" className="px-3 py-3 font-medium">
                 Donor
               </th>
-              <th scope="col" className="px-4 py-3 font-medium">
+              <th scope="col" className="px-3 py-3 font-medium">
                 Amount
               </th>
-              <th scope="col" className="hidden px-4 py-3 font-medium md:table-cell">
+              <th scope="col" className="hidden px-3 py-3 font-medium lg:table-cell">
                 Attempt id
               </th>
-              <th scope="col" className="px-4 py-3 font-medium">
+              <th scope="col" className="px-3 py-3 font-medium">
                 When
               </th>
             </tr>
@@ -68,10 +69,10 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
                     selected ? 'bg-teal-500/10 ring-1 ring-inset ring-teal-500/30' : ''
                   }`}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <TransactionStatusBadge status={event.transaction_status} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <CrmStatusBadge
                       summary={event.crm_status_summary}
                       title={
@@ -80,18 +81,21 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
                       }
                     />
                   </td>
-                  <td className="px-4 py-3 text-slate-200">{event.campaign.campaign_name}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 text-slate-200">{event.campaign.campaign_name}</td>
+                  <td className="px-3 py-3">
                     <div className="font-medium text-slate-100">{event.donor.display_name}</div>
                     <div className="text-xs text-slate-400">{event.donor.email}</div>
                   </td>
-                  <td className="px-4 py-3 text-slate-200">
+                  <td className="px-3 py-3 text-slate-200">
                     ${event.donation.amount.toFixed(2)} {event.donation.currency}
                   </td>
-                  <td className="hidden max-w-[12rem] truncate px-4 py-3 font-mono text-xs text-slate-400 md:table-cell">
-                    {event.donation_attempt_id}
+                  <td
+                    className="hidden px-3 py-3 font-mono text-xs text-slate-400 lg:table-cell"
+                    title={event.donation_attempt_id ?? undefined}
+                  >
+                    {formatAttemptId(event.donation_attempt_id)}
                   </td>
-                  <td className="px-4 py-3 text-slate-400">{formatWhen(event.event_created_at)}</td>
+                  <td className="px-3 py-3 text-slate-400">{formatWhen(event.event_created_at)}</td>
                 </tr>
               )
             })}

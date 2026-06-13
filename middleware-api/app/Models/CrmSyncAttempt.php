@@ -12,6 +12,7 @@ class CrmSyncAttempt extends Model
         'status',
         'hubspot_contact_id',
         'hubspot_deal_id',
+        'hubspot_donation_attempt_id',
         'error_code',
         'error_message',
         'retry_count',

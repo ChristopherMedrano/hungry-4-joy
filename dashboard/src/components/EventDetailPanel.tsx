@@ -1,6 +1,7 @@
-import type { CheckoutEventDetail } from '../types/dashboard'
+import type { CheckoutEventDetail, TransactionStatus } from '../types/dashboard'
+import { displayOptional } from '../lib/attemptIdMatch'
 import { CrmSyncDetailSection } from './CrmSyncDetailSection'
-import { CrmStatusBadge } from './CrmStatusBadge'
+import { sectionHeadingClass, StatusCallout } from './StatusCallout'
 import { TransactionStatusBadge } from './TransactionStatusBadge'
 
 interface EventDetailPanelProps {
@@ -11,9 +12,44 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
       <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="break-all font-mono text-sm text-slate-200">{value ?? '—'}</dd>
+      <dd className="break-all font-mono text-sm text-slate-200">{displayOptional(value)}</dd>
     </div>
   )
+}
+
+function checkoutCallout(event: CheckoutEventDetail) {
+  switch (event.transaction_status as TransactionStatus) {
+    case 'completed':
+      return (
+        <StatusCallout
+          tone="emerald"
+          title="Checkout completed"
+          body="The one-time donation completed successfully through Foxy."
+        />
+      )
+    case 'pending':
+      return (
+        <StatusCallout
+          tone="sky"
+          title="Checkout pending"
+          body="The checkout has not produced a final result yet."
+        />
+      )
+    case 'failed':
+      return (
+        <StatusCallout
+          tone="rose"
+          title="Checkout failed"
+          body={
+            event.failure.failure_message ??
+            'The checkout or payment attempt did not complete successfully.'
+          }
+          code={event.failure.failure_code}
+        />
+      )
+    default:
+      return null
+  }
 }
 
 export function EventDetailPanel({ event }: EventDetailPanelProps) {
@@ -28,41 +64,27 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
 
   return (
     <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold text-white">Event detail</h2>
-        <TransactionStatusBadge status={event.transaction_status} />
-        <CrmStatusBadge summary={event.crm_status_summary} />
-      </div>
-
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-          Checkout event
-        </h3>
-        <dl className="mt-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <h3 className={sectionHeadingClass}>Foxy Checkout Event</h3>
+          <TransactionStatusBadge status={event.transaction_status} />
+        </div>
+        <dl>
           <DetailRow label="Event id" value={event.event_id} />
           <DetailRow label="Attempt id" value={event.donation_attempt_id} />
           <DetailRow label="Transaction" value={event.transaction_id} />
           <DetailRow label="Ingest channel" value={event.ingest.channel} />
           <DetailRow label="Event type" value={event.event_type} />
         </dl>
+
+        <div className="mt-4">{checkoutCallout(event)}</div>
       </section>
 
       <CrmSyncDetailSection
         crmStatusSummary={event.crm_status_summary}
         crmSync={event.crm_sync}
+        checkoutDonationAttemptId={event.donation_attempt_id}
       />
-
-      {event.failure.failure_message ? (
-        <section className="mt-4 rounded-md border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-100">
-          <p className="font-medium">Payment failure</p>
-          <p className="mt-1 break-words text-rose-200/90">{event.failure.failure_message}</p>
-          {event.failure.failure_code ? (
-            <p className="mt-2 font-mono text-xs text-rose-200/70">
-              Code: {event.failure.failure_code}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
     </aside>
   )
 }

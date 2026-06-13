@@ -100,6 +100,21 @@ class HttpHubSpotClient implements HubSpotClient
         return ['ok' => true, 'error' => null];
     }
 
+    public function getDealDonationAttemptId(string $dealId): ?string
+    {
+        $response = $this->request()->get(self::BASE_URL."/crm/v3/objects/deals/{$dealId}", [
+            'properties' => 'h4j_donation_attempt_id',
+        ]);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $attemptId = data_get($response->json(), 'properties.h4j_donation_attempt_id');
+
+        return filled($attemptId) ? (string) $attemptId : null;
+    }
+
     private function request(): PendingRequest
     {
         return Http::withToken($this->accessToken)

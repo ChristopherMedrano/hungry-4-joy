@@ -19,4 +19,6 @@ interface HubSpotClient
      * @return array{ok: bool, error: string|null}
      */
     public function addContactToList(string $contactId, string $listId): array;
+
+    public function getDealDonationAttemptId(string $dealId): ?string;
 }
