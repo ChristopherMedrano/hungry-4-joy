@@ -12,6 +12,7 @@ import { EventFiltersBar } from './components/EventFiltersBar'
 import { EventTable } from './components/EventTable'
 import { Layout } from './components/Layout'
 import { LoadingState } from './components/LoadingState'
+import { RetryActivityTable } from './components/RetryActivityTable'
 import {
   findSeededDashboardEvent,
   seededDashboardEvents,
@@ -23,7 +24,9 @@ import {
   isLocalDashboardHost,
   viewModeOptions,
 } from './lib/dashboardDataMode'
+import type { DashboardSection } from './lib/dashboardSections'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
+import { hasRetryActivity, sortByLastCrmAttempt } from './lib/retryActivity'
 import type {
   CheckoutEventDetail,
   CheckoutEventSummary,
@@ -32,14 +35,18 @@ import type {
 } from './types/dashboard'
 
 function App() {
+  const [dashboardSection, setDashboardSection] = useState<DashboardSection>('events')
   const [viewState, setViewState] = useState<DashboardDataMode>('hosted-api')
   const [filters, setFilters] = useState<EventFilters>(defaultFilters)
   const [liveEvents, setLiveEvents] = useState<CheckoutEventSummary[]>([])
+  const [retryActivityEvents, setRetryActivityEvents] = useState<CheckoutEventSummary[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<CheckoutEventDetail | null>(null)
   const [listError, setListError] = useState<string | null>(null)
+  const [retryActivityError, setRetryActivityError] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [isLoadingList, setIsLoadingList] = useState(false)
+  const [isLoadingRetryActivity, setIsLoadingRetryActivity] = useState(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
   const [isCrmRetrying, setIsCrmRetrying] = useState(false)
@@ -53,7 +60,15 @@ function App() {
     [filters],
   )
 
+  const seededRetryActivityEvents = useMemo(
+    () => sortByLastCrmAttempt(seededEvents.filter(hasRetryActivity)),
+    [seededEvents],
+  )
+
   const displayEvents = isSeededView ? seededEvents : liveEvents
+  const displayRetryActivityEvents = isSeededView
+    ? seededRetryActivityEvents
+    : retryActivityEvents
 
   const activeSelectedId = useMemo(() => {
     if (selectedId && displayEvents.some((event) => event.checkout_event_id === selectedId)) {
@@ -67,7 +82,7 @@ function App() {
     activeSelectedId === null ? null : findSeededDashboardEvent(activeSelectedId) ?? null
 
   useEffect(() => {
-    if (!isApiView) {
+    if (!isApiView || dashboardSection !== 'events') {
       return
     }
 
@@ -113,10 +128,52 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, filters, reloadToken, isApiView])
+  }, [viewState, filters, reloadToken, isApiView, dashboardSection])
 
   useEffect(() => {
-    if (!isApiView || activeSelectedId === null) {
+    if (!isApiView || dashboardSection !== 'retry-activity') {
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+
+    async function loadRetryActivity(): Promise<void> {
+      setIsLoadingRetryActivity(true)
+      setRetryActivityError(null)
+
+      try {
+        const response = await fetchDashboardEvents(filters, 1, { retryActivity: true })
+        if (cancelled) {
+          return
+        }
+
+        setRetryActivityEvents(sortByLastCrmAttempt(response.data))
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setRetryActivityEvents([])
+        setRetryActivityError(
+          error instanceof Error ? error.message : 'Could not load retry activity.',
+        )
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRetryActivity(false)
+        }
+      }
+    }
+
+    void loadRetryActivity()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewState, filters, reloadToken, isApiView, dashboardSection])
+
+  useEffect(() => {
+    if (!isApiView || dashboardSection !== 'events' || activeSelectedId === null) {
       return
     }
 
@@ -152,7 +209,29 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, activeSelectedId, isApiView])
+  }, [viewState, activeSelectedId, isApiView, dashboardSection])
+
+  function updateEventInLists(updated: CheckoutEventDetail): void {
+    const summary = {
+      ...updated,
+    }
+
+    setSelectedDetail(updated)
+    setLiveEvents((events) =>
+      events.map((event) =>
+        event.checkout_event_id === updated.checkout_event_id ? summary : event,
+      ),
+    )
+    setRetryActivityEvents((events) => {
+      const next = events.map((event) =>
+        event.checkout_event_id === updated.checkout_event_id ? summary : event,
+      )
+
+      return hasRetryActivity(summary)
+        ? sortByLastCrmAttempt(next)
+        : sortByLastCrmAttempt(next.filter((event) => event.checkout_event_id !== updated.checkout_event_id))
+    })
+  }
 
   async function handleCrmRetry(): Promise<void> {
     const attemptId = selectedDetail?.crm_sync.crm_sync_attempt_id
@@ -166,23 +245,17 @@ function App() {
 
     try {
       const updated = await fetchCrmSyncRetry(attemptId)
-      setSelectedDetail(updated)
-      setLiveEvents((events) =>
-        events.map((event) =>
-          event.checkout_event_id === updated.checkout_event_id
-            ? {
-                ...event,
-                crm_sync: updated.crm_sync,
-                crm_status_summary: updated.crm_status_summary,
-              }
-            : event,
-        ),
-      )
+      updateEventInLists(updated)
     } catch (error) {
       setCrmRetryError(error instanceof Error ? error.message : 'CRM sync retry failed.')
     } finally {
       setIsCrmRetrying(false)
     }
+  }
+
+  function openEventFromRetryActivity(checkoutEventId: number): void {
+    setSelectedId(checkoutEventId)
+    setDashboardSection('events')
   }
 
   const previewControl = (
@@ -197,6 +270,7 @@ function App() {
           setViewState(nextView)
           setDetailError(null)
           setListError(null)
+          setRetryActivityError(null)
 
           if (nextView === 'seeded') {
             const nextEvents = filterEvents(seededDashboardEvents, filters)
@@ -214,9 +288,77 @@ function App() {
     </label>
   )
 
+  const dataSourceHint = isSeededView ? (
+    <>
+      Offline preview rows with every transaction and CRM badge state. No network calls.
+    </>
+  ) : viewState === 'local-api' ? (
+    <>
+      Local middleware at{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">127.0.0.1:8000</code>. Demo fixture rows
+      appear after{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">php artisan dashboard:seed-status-demo</code>
+      . Filter ingest channel to{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code> for webhook-shaped
+      rows.
+    </>
+  ) : isLocalDashboardHost() ? (
+    <>
+      Hosted middleware at{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">{HOSTED_MIDDLEWARE_URL}</code>. Production-like
+      checkout rows usually have ingest channel{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code>.
+    </>
+  ) : (
+    <>
+      Live data from proxied{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code> on this
+      dashboard host.
+    </>
+  )
+
+  const retryActivityHint = (
+    <>
+      Retry activity lists donations whose CRM sync row shows retries, failures, retryable state, or
+      a newsletter list warning such as{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">hubspot_list_warning</code>. Rows link to
+      the checkout event by <strong className="font-medium text-slate-400">donation attempt id</strong>.
+      This is a current snapshot only — not a full retry event log. After a successful list retry
+      clears the warning, earlier 403 messages are no longer stored on the attempt row.
+    </>
+  )
+
   let content
 
-  if (
+  if (dashboardSection === 'retry-activity') {
+    if (viewState === 'loading' || (isApiView && isLoadingRetryActivity && displayRetryActivityEvents.length === 0)) {
+      content = <LoadingState />
+    } else if (viewState === 'error' || (isApiView && retryActivityError)) {
+      content = (
+        <ErrorState
+          message={
+            retryActivityError ??
+            'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
+          }
+          onRetry={() => {
+            setViewState('hosted-api')
+            setReloadToken((token) => token + 1)
+          }}
+        />
+      )
+    } else if (viewState === 'empty' || displayRetryActivityEvents.length === 0) {
+      content = (
+        <EmptyState onResetFilters={() => setFilters(defaultFilters)} />
+      )
+    } else {
+      content = (
+        <RetryActivityTable
+          events={displayRetryActivityEvents}
+          onOpenEvent={openEventFromRetryActivity}
+        />
+      )
+    }
+  } else if (
     viewState === 'loading' ||
     (isApiView && isLoadingList && liveEvents.length === 0)
   ) {
@@ -264,40 +406,17 @@ function App() {
     )
   }
 
-  const dataSourceHint = isSeededView ? (
-    <>
-      Offline preview rows with every transaction and CRM badge state. No network calls.
-    </>
-  ) : viewState === 'local-api' ? (
-    <>
-      Local middleware at{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">127.0.0.1:8000</code>. Demo fixture rows
-      appear after{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">php artisan dashboard:seed-status-demo</code>
-      . Filter ingest channel to{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code> for webhook-shaped
-      rows.
-    </>
-  ) : isLocalDashboardHost() ? (
-    <>
-      Hosted middleware at{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">{HOSTED_MIDDLEWARE_URL}</code>. Production-like
-      checkout rows usually have ingest channel{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code>.
-    </>
-  ) : (
-    <>
-      Live data from proxied{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code> on this
-      dashboard host.
-    </>
-  )
-
   return (
-    <Layout previewControl={previewControl}>
+    <Layout
+      previewControl={previewControl}
+      activeSection={dashboardSection}
+      onSectionChange={setDashboardSection}
+    >
       <div className="space-y-4">
         <EventFiltersBar filters={filters} onChange={setFilters} />
-        <p className="text-xs text-slate-500">{dataSourceHint}</p>
+        <p className="text-xs text-slate-500">
+          {dashboardSection === 'retry-activity' ? retryActivityHint : dataSourceHint}
+        </p>
         {content}
       </div>
     </Layout>

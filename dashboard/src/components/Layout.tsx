@@ -1,17 +1,20 @@
 import type { ReactNode } from 'react'
-
-const navItems = [
-  { id: 'events', label: 'Checkout events', active: true },
-  { id: 'retry', label: 'Retry history', active: false, disabled: true },
-  { id: 'incidents', label: 'Incident notes', active: false, disabled: true },
-]
+import type { DashboardSection } from '../lib/dashboardSections'
+import { dashboardSections } from '../lib/dashboardSections'
 
 interface LayoutProps {
   children: ReactNode
   previewControl?: ReactNode
+  activeSection: DashboardSection
+  onSectionChange: (section: DashboardSection) => void
 }
 
-export function Layout({ children, previewControl }: LayoutProps) {
+export function Layout({
+  children,
+  previewControl,
+  activeSection,
+  onSectionChange,
+}: LayoutProps) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur">
@@ -33,14 +36,19 @@ export function Layout({ children, previewControl }: LayoutProps) {
           aria-label="Dashboard sections"
           className="mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-3 pb-3 lg:px-4"
         >
-          {navItems.map((item) => (
+          {dashboardSections.map((item) => (
             <button
               key={item.id}
               type="button"
               disabled={item.disabled}
-              aria-current={item.active ? 'page' : undefined}
+              aria-current={activeSection === item.id ? 'page' : undefined}
+              onClick={() => {
+                if (!item.disabled) {
+                  onSectionChange(item.id)
+                }
+              }}
               className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium transition ${
-                item.active
+                activeSection === item.id
                   ? 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/40'
                   : item.disabled
                     ? 'cursor-not-allowed text-slate-600'

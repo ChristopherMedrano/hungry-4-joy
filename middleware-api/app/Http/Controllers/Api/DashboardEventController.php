@@ -47,6 +47,7 @@ class DashboardEventController extends Controller
             });
 
         $this->applyCrmSyncStatusFilter($query, $filters['crm_sync_status']);
+        $this->applyRetryActivityFilter($query, $request->boolean('retry_activity'));
 
         $paginator = $query
             ->orderBy($sort['column'], $sort['direction'])
@@ -62,7 +63,10 @@ class DashboardEventController extends Controller
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
             ],
-            'filters' => $filters + ['sort' => (string) $request->string('sort', '-event_created_at')],
+            'filters' => $filters + [
+                'sort' => (string) $request->string('sort', '-event_created_at'),
+                'retry_activity' => $request->boolean('retry_activity') ? '1' : null,
+            ],
         ]);
     }
 
@@ -167,5 +171,26 @@ class DashboardEventController extends Controller
         }
 
         $query->whereHas('crmSyncAttempt', fn (Builder $attempt) => $attempt->where('status', $crmSyncStatus));
+    }
+
+    private function applyRetryActivityFilter(Builder $query, bool $retryActivity): void
+    {
+        if (! $retryActivity) {
+            return;
+        }
+
+        $query->where('event_type', 'donation.created')
+            ->where('transaction_status', 'completed')
+            ->whereNotNull('donation_attempt_id')
+            ->where('donation_attempt_id', '!=', '')
+            ->whereNotNull('donor_email')
+            ->where('donor_email', '!=', '')
+            ->whereHas('crmSyncAttempt', function (Builder $attempt): void {
+                $attempt->where(function (Builder $inner): void {
+                    $inner->where('retry_count', '>', 0)
+                        ->orWhereIn('status', ['failed', 'retryable'])
+                        ->orWhere('error_code', 'hubspot_list_warning');
+                });
+            });
     }
 }
