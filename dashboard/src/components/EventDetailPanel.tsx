@@ -1,7 +1,7 @@
 import type { CheckoutEventDetail } from '../types/dashboard'
 import { CrmSyncDetailSection } from './CrmSyncDetailSection'
 import { CrmStatusBadge } from './CrmStatusBadge'
-import { FoxyStatusBadge } from './FoxyStatusBadge'
+import { TransactionStatusBadge } from './TransactionStatusBadge'
 
 interface EventDetailPanelProps {
   event: CheckoutEventDetail | null
@@ -30,7 +30,7 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
     <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h2 className="text-base font-semibold text-white">Event detail</h2>
-        <FoxyStatusBadge summary={event.foxy_status_summary} />
+        <TransactionStatusBadge status={event.transaction_status} />
         <CrmStatusBadge summary={event.crm_status_summary} />
       </div>
 
@@ -44,7 +44,6 @@ export function EventDetailPanel({ event }: EventDetailPanelProps) {
           <DetailRow label="Transaction" value={event.transaction_id} />
           <DetailRow label="Ingest channel" value={event.ingest.channel} />
           <DetailRow label="Event type" value={event.event_type} />
-          <DetailRow label="Transaction status" value={event.transaction_status} />
         </dl>
       </section>
 

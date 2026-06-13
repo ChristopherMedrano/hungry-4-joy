@@ -45,7 +45,6 @@ class DashboardEventPresenter
             ],
             'crm_sync' => $crmSync,
             'crm_status_summary' => $this->crmStatusSummary($event, $crmSync),
-            'foxy_status_summary' => $this->foxyStatusSummary($event),
         ];
     }
 
@@ -154,19 +153,6 @@ class DashboardEventPresenter
             'retryable' => 'retryable',
             default => 'not_applicable',
         };
-    }
-
-    public function foxyStatusSummary(CheckoutEvent $event): string
-    {
-        if ($event->event_type === 'payment.failed' || $event->transaction_status === 'failed') {
-            return 'failed';
-        }
-
-        if ($event->transaction_status === 'pending') {
-            return 'pending';
-        }
-
-        return $this->ingestChannel($event) === 'foxy_webhook' ? 'webhook' : 'fixture';
     }
 
     public function hubspotMode(): string

@@ -13,7 +13,7 @@ export type CrmStatusSummary =
   | 'retryable'
   | 'not_applicable'
 
-export type FoxyStatusSummary = 'webhook' | 'fixture' | 'pending' | 'failed'
+export type TransactionStatus = 'completed' | 'failed' | 'pending'
 
 export type IngestChannel = 'fixture_receiver' | 'foxy_webhook'
 
@@ -42,7 +42,7 @@ export interface CheckoutEventSummary {
   donation_attempt_id: string
   event_type: string
   event_created_at: string
-  transaction_status: string
+  transaction_status: TransactionStatus
   checkout_provider: string
   transaction_id: string | null
   source_page: string
@@ -67,7 +67,6 @@ export interface CheckoutEventSummary {
   }
   crm_sync: CrmSyncSummary
   crm_status_summary: CrmStatusSummary
-  foxy_status_summary: FoxyStatusSummary
 }
 
 export interface CheckoutEventDetail extends CheckoutEventSummary {
@@ -89,7 +88,7 @@ export interface CheckoutEventDetail extends CheckoutEventSummary {
   }
 }
 
-export type ShellViewState = 'ready' | 'loading' | 'empty' | 'error'
+export type ShellViewState = 'ready' | 'seeded' | 'loading' | 'empty' | 'error'
 
 export interface EventFilters {
   campaign_id: string

@@ -1,14 +1,7 @@
-import type {
-  CheckoutEventSummary,
-  CrmStatusSummary,
-  FoxyStatusSummary,
-} from '../types/dashboard'
+import type { CheckoutEventSummary, CrmStatusSummary } from '../types/dashboard'
 
-type EventStatusInput = Omit<
-  CheckoutEventSummary,
-  'crm_status_summary' | 'foxy_status_summary'
-> &
-  Partial<Pick<CheckoutEventSummary, 'crm_status_summary' | 'foxy_status_summary'>>
+type EventStatusInput = Omit<CheckoutEventSummary, 'crm_status_summary'> &
+  Partial<Pick<CheckoutEventSummary, 'crm_status_summary'>>
 
 export function deriveCrmStatusSummary(event: EventStatusInput): CrmStatusSummary {
   if (event.crm_status_summary) {
@@ -33,26 +26,9 @@ export function deriveCrmStatusSummary(event: EventStatusInput): CrmStatusSummar
   }
 }
 
-export function deriveFoxyStatusSummary(event: EventStatusInput): FoxyStatusSummary {
-  if (event.foxy_status_summary) {
-    return event.foxy_status_summary
-  }
-
-  if (event.event_type === 'payment.failed' || event.transaction_status === 'failed') {
-    return 'failed'
-  }
-
-  if (event.transaction_status === 'pending') {
-    return 'pending'
-  }
-
-  return event.ingest.channel === 'foxy_webhook' ? 'webhook' : 'fixture'
-}
-
 export function normalizeEventSummary<T extends EventStatusInput>(event: T): T & CheckoutEventSummary {
   return {
     ...event,
     crm_status_summary: deriveCrmStatusSummary(event),
-    foxy_status_summary: deriveFoxyStatusSummary(event),
   }
 }

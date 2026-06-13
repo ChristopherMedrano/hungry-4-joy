@@ -50,7 +50,7 @@ class DashboardEventApiTest extends TestCase
 
         $this->assertCount(1, $response['data']);
         $this->assertSame('synced', $response['data'][0]['crm_status_summary']);
-        $this->assertSame('fixture', $response['data'][0]['foxy_status_summary']);
+        $this->assertSame('completed', $response['data'][0]['transaction_status']);
         $this->assertSame('fixture_receiver', $response['data'][0]['ingest']['channel']);
         $this->assertSame('jordan.helper@example.test', $response['data'][0]['donor']['email']);
         $this->assertSame('succeeded', $response['data'][0]['crm_sync']['status']);
@@ -67,7 +67,7 @@ class DashboardEventApiTest extends TestCase
 
         $this->getJson('/api/dashboard/events/'.$event->id)
             ->assertOk()
-            ->assertJsonPath('data.foxy_status_summary', 'failed')
+            ->assertJsonPath('data.transaction_status', 'failed')
             ->assertJsonPath('data.crm_status_summary', 'not_applicable')
             ->assertJsonPath('data.failure.failure_code', 'card_declined')
             ->assertJsonPath('data.failure.failure_message', 'Payment was declined by the test gateway.')
@@ -132,7 +132,7 @@ class DashboardEventApiTest extends TestCase
 
         $this->getJson('/api/dashboard/events?search=riley.pending@example.test')
             ->assertOk()
-            ->assertJsonPath('data.0.foxy_status_summary', 'pending')
+            ->assertJsonPath('data.0.transaction_status', 'pending')
             ->assertJsonPath('data.0.crm_status_summary', 'not_applicable')
             ->assertJsonPath('data.0.transaction_status', 'pending')
             ->assertJsonPath('data.0.crm_sync.status', 'not_applicable')

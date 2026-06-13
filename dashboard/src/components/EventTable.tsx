@@ -1,7 +1,7 @@
 import type { CheckoutEventSummary } from '../types/dashboard'
 import { crmErrorCodeLabel } from '../lib/crmLabels'
 import { CrmStatusBadge } from './CrmStatusBadge'
-import { FoxyStatusBadge } from './FoxyStatusBadge'
+import { TransactionStatusBadge } from './TransactionStatusBadge'
 
 interface EventTableProps {
   events: CheckoutEventSummary[]
@@ -26,7 +26,7 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
           <thead className="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-400">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">
-                Foxy status
+                Transaction status
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 CRM status
@@ -69,7 +69,7 @@ export function EventTable({ events, selectedId, onSelect }: EventTableProps) {
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <FoxyStatusBadge summary={event.foxy_status_summary} />
+                    <TransactionStatusBadge status={event.transaction_status} />
                   </td>
                   <td className="px-4 py-3">
                     <CrmStatusBadge
