@@ -8,6 +8,8 @@ use RuntimeException;
 
 class FoxyApiClient
 {
+    private const API_VERSION = '1';
+
     private ?string $accessToken = null;
 
     public function configured(): bool
@@ -33,6 +35,7 @@ class FoxyApiClient
         $url = "https://api.foxycart.com/stores/{$storeId}/transactions?{$filter}&zoom={$zoom}";
 
         $response = Http::withToken($this->accessToken())
+            ->withHeaders($this->apiHeaders())
             ->acceptJson()
             ->get($url);
 
@@ -81,5 +84,15 @@ class FoxyApiClient
         $this->accessToken = $token;
 
         return $this->accessToken;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function apiHeaders(): array
+    {
+        return [
+            'FOXY-API-VERSION' => self::API_VERSION,
+        ];
     }
 }
