@@ -1,5 +1,6 @@
 import type { ServerAnalyticsEventDetail } from '../types/analytics'
 import { displayOptional } from '../lib/attemptIdMatch'
+import { condenseAnalyticsPayload } from '../lib/condenseAnalyticsPayload'
 import { sectionHeadingClass } from './StatusCallout'
 
 interface AnalyticsEventDetailPanelProps {
@@ -39,8 +40,21 @@ export function AnalyticsEventDetailPanel({ event }: AnalyticsEventDetailPanelPr
       </section>
 
       <section className="mt-6">
+        <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Analytics payload (condensed)
+        </h4>
+        <p className="mb-2 text-xs text-slate-500">
+          Emission-only fields. Campaign and checkout attribution appear in the summary above and
+          the full contract payload below.
+        </p>
+        <pre className="max-h-48 overflow-auto rounded-md border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-teal-100">
+          {JSON.stringify(condenseAnalyticsPayload(event.payload), null, 2)}
+        </pre>
+      </section>
+
+      <section className="mt-6">
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Contract payload
+          Contract payload (full)
         </h4>
         <pre className="max-h-[28rem] overflow-auto rounded-md border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-teal-100">
           {JSON.stringify(event.payload, null, 2)}

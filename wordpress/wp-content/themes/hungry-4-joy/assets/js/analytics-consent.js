@@ -64,6 +64,59 @@
     return readConsent() === CONSENT_GRANTED;
   }
 
+  function cartHostElement() {
+    return document.getElementById('h4j-analytics-consent-host');
+  }
+
+  function isFoxyCartOpen() {
+    const fc = document.getElementById('fc');
+
+    if (!fc) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(fc);
+
+    return style.display !== 'none'
+      && style.visibility !== 'hidden'
+      && fc.getClientRects().length > 0;
+  }
+
+  function syncCartOpenState() {
+    const host = cartHostElement();
+
+    if (!host) {
+      return;
+    }
+
+    host.classList.toggle('h4j-analytics-consent-host--cart-open', isFoxyCartOpen());
+  }
+
+  function watchFoxyCartState() {
+    syncCartOpenState();
+
+    if (typeof MutationObserver !== 'function' || !document.body) {
+      return;
+    }
+
+    const observer = new MutationObserver(syncCartOpenState);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    window.addEventListener('resize', syncCartOpenState);
+  }
+
+  function mountBanner(banner) {
+    let host = cartHostElement();
+
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'h4j-analytics-consent-host';
+      document.body.appendChild(host);
+    }
+
+    host.appendChild(banner);
+    watchFoxyCartState();
+  }
+
   function renderBanner() {
     if (!document.body || document.getElementById('h4j-analytics-consent')) {
       return;
@@ -80,8 +133,8 @@
       'and exposed on window.dataLayer for inspection. No production analytics providers are configured.',
       '</p>',
       '<div class="h4j-analytics-consent__actions">',
-      '<button type="button" class="h4j-button h4j-analytics-consent__accept" data-consent="granted">Allow demo analytics</button>',
-      '<button type="button" class="h4j-button h4j-analytics-consent__decline" data-consent="denied">Decline</button>',
+      '<button type="button" class="h4j-analytics-consent__accept" data-consent="granted">Allow demo analytics</button>',
+      '<button type="button" class="h4j-analytics-consent__decline" data-consent="denied">Decline</button>',
       '</div>',
     ].join('');
 
@@ -97,7 +150,7 @@
       setConsent(button.getAttribute('data-consent'));
     });
 
-    document.body.appendChild(banner);
+    mountBanner(banner);
 
     const storedConsent = readConsent();
 

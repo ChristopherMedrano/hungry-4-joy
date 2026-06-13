@@ -34,7 +34,7 @@ export function Layout({
         </div>
         <nav
           aria-label="Dashboard sections"
-          className="mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-3 pb-3 lg:px-4"
+          className="mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-3 pb-3 pt-1 lg:px-4"
         >
           {dashboardSections.map((item) => (
             <button
@@ -42,10 +42,10 @@ export function Layout({
               type="button"
               aria-current={activeSection === item.id ? 'page' : undefined}
               onClick={() => onSectionChange(item.id)}
-              className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium transition ${
+              className={`shrink-0 rounded-md border px-3 py-2 text-sm font-medium transition ${
                 activeSection === item.id
-                  ? 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/40'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  ? 'border-teal-500/40 bg-teal-500/15 text-teal-300'
+                  : 'border-transparent text-slate-400 hover:border-slate-700 hover:bg-slate-800 hover:text-slate-200'
               }`}
             >
               {item.label}

@@ -3,9 +3,9 @@ export function formatAttemptId(attemptId: string | null | undefined): string {
     return '—'
   }
 
-  if (attemptId.length <= 12) {
+  if (attemptId.length <= 6) {
     return attemptId
   }
 
-  return `...${attemptId.slice(-12)}`
+  return `...${attemptId.slice(-6)}`
 }

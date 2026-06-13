@@ -27,6 +27,77 @@ function createStorage() {
 function bootstrapAnalyticsContext() {
   const listeners = [];
   const dispatched = [];
+  const elementsById = new Map();
+
+  function registerElement(element) {
+    if (element && element.id) {
+      elementsById.set(element.id, element);
+    }
+  }
+
+  function createElement(tagName) {
+    const element = {
+      tagName,
+      id: '',
+      className: '',
+      hidden: false,
+      innerHTML: '',
+      children: [],
+      classList: {
+        toggle(name, force) {
+          if (force === undefined) {
+            if (element.className.includes(name)) {
+              element.className = element.className.replace(name, '').trim();
+            } else {
+              element.className = `${element.className} ${name}`.trim();
+            }
+
+            return;
+          }
+
+          if (force) {
+            if (!element.className.includes(name)) {
+              element.className = `${element.className} ${name}`.trim();
+            }
+          } else {
+            element.className = element.className.replace(name, '').trim();
+          }
+        },
+      },
+      setAttribute() {},
+      appendChild(child) {
+        element.children.push(child);
+        child.parentElement = element;
+        registerElement(child);
+
+        return child;
+      },
+      addEventListener(type, listener) {
+        element.listeners = element.listeners || [];
+        element.listeners.push({ type, listener });
+      },
+      querySelectorAll(selector) {
+        if (selector !== '[data-consent]') {
+          return [];
+        }
+
+        return element.children.flatMap((child) => {
+          if (child.tagName === 'BUTTON' && child.getAttribute) {
+            return [child];
+          }
+
+          return child.children || [];
+        });
+      },
+      getAttribute(name) {
+        return element.attributes?.[name] ?? null;
+      },
+    };
+
+    element.attributes = {};
+
+    return element;
+  }
 
   const context = {
     window: {
@@ -51,30 +122,19 @@ function bootstrapAnalyticsContext() {
         info() {},
         warn() {},
       },
+      addEventListener() {},
     },
     document: {
       body: {
         appendChild(node) {
+          registerElement(node);
           context.document.banner = node;
         },
       },
       banner: null,
-      createElement(tagName) {
-        return {
-          tagName,
-          id: '',
-          className: '',
-          hidden: false,
-          innerHTML: '',
-          setAttribute() {},
-          addEventListener(type, listener) {
-            this.listeners = this.listeners || [];
-            this.listeners.push({ type, listener });
-          },
-        };
-      },
-      getElementById() {
-        return context.document.banner;
+      createElement,
+      getElementById(id) {
+        return elementsById.get(id) || null;
       },
       listeners,
       readyState: 'complete',
