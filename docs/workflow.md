@@ -134,8 +134,7 @@ Scope:
 - Webhook event table.
 - HubSpot sync status.
 - Failure details.
-- Retry action.
-- Retry history and incident notes.
+- Retry activity view and safe manual retry action.
 
 Demo:
 
@@ -153,13 +152,12 @@ Scope:
 - Consent-aware event behavior.
 - HubSpot sync success/failure events.
 - Basic alert flags for repeated failures.
-- Incident notes.
 - Application-table dashboard remains the source of truth.
 - Optional later links to Sentry/OpenTelemetry can be planned but not required.
 
 Demo:
 
-- Show event tracking and a repeated-failure scenario with an incident note.
+- Show event tracking and a repeated-failure scenario with dashboard retry visibility.
 
 ### Sprint 6: CI/CD and Deployment
 
@@ -212,7 +210,7 @@ Acceptance criteria:
 - First event creates the local checkout event row.
 - Second event is ignored as a duplicate.
 - No duplicate HubSpot update occurs after CRM sync exists.
-- Dashboard shows duplicate status after dashboard work exists.
+- Duplicate ingest is excluded from dashboard list rows; verification uses receiver responses and tests.
 
 ### Campaign Launch
 
@@ -238,10 +236,9 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- Source transaction and local donation records can be compared.
-- Mismatch is visible.
-- Incident note records cause and action taken.
-- Corrected state can be verified.
+- Source transaction and local donation records can be compared by `donation_attempt_id`.
+- CRM sync status and HubSpot deal attempt id are visible in dashboard detail.
+- Manual retry can correct failed sync without duplicate donation records.
 
 ### Analytics Consent or Duplicate-Event Issue
 
@@ -256,9 +253,9 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- Repeated webhook, queue, or HubSpot failures trigger an alert flag.
-- Retry history is visible.
-- Incident note captures cause, impact, fix, and verification.
+- Repeated webhook, queue, or HubSpot failures are visible through CRM sync status and the Retry activity tab.
+- Retry count and last-attempt timestamps are visible on detail views.
+- Manual retry can recover eligible failures without duplicate donation records.
 
 ### Campaign Page Quality Issue
 

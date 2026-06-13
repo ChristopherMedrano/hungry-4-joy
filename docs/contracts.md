@@ -587,8 +587,6 @@ Laravel middleware database tables:
 
 Duplicate checkout replays that return `duplicate_ignored` do not create `checkout_events` rows. The dashboard list shows stored events only.
 
-Later dashboard milestones may add `failed_jobs`, incident notes, and reconciliation notes. Those are out of scope for this contract revision.
-
 ### Destination
 
 React or Next.js admin/status dashboard through Laravel JSON API routes.
@@ -599,7 +597,7 @@ Planned route prefix:
 /api/dashboard
 ```
 
-This issue defines payload shapes only. Route handlers, authentication, and frontend UI belong to later issues.
+Implemented Laravel routes and the React dashboard consume these payload shapes.
 
 ### API Endpoints
 
@@ -652,7 +650,7 @@ On Render and local default configs, `QUEUE_CONNECTION=sync` runs the retry inli
 | `event_created_from` | ISO 8601 datetime | `2026-05-27T00:00:00Z` | Lower bound on checkout event time |
 | `event_created_to` | ISO 8601 datetime | `2026-05-27T23:59:59Z` | Upper bound on checkout event time |
 | `search` | string | `h4j_attempt_demo_loaves_0001` | Match `donation_attempt_id`, `event_id`, `transaction_id`, or donor email |
-| `retry_activity` | boolean | `1` | When true, return only eligible donations whose CRM sync row has retry activity: `retry_count > 0`, status `failed` or `retryable`, or `error_code = hubspot_list_warning`. Snapshot fields only; not an append-only retry log. |
+| `retry_activity` | boolean | `1` | When true, return only eligible donations whose CRM sync row has retry activity: `retry_count > 0`, status `failed` or `retryable`, or `error_code = hubspot_list_warning`. |
 | `page` | integer | `1` | Page number |
 | `per_page` | integer | `25` | Page size; default `25`, max `100` |
 | `sort` | string | `-event_created_at` | Sort field; prefix `-` for descending. Allowed: `event_created_at`, `created_at`, `donation_amount`, `campaign_name` |
@@ -890,18 +888,18 @@ Lookup by `donation_attempt_id` returns the same detail object or `404` when no 
 }
 ```
 
-### Retry History Representation
+### Retry State Representation
 
-The MVP stores retry state on the current `crm_sync_attempts` row rather than a separate retry-history table.
+CRM retry state is stored on the current `crm_sync_attempts` row for each eligible checkout event.
 
-Dashboard detail views should expose:
+Dashboard list, detail, and Retry activity views expose:
 
 - `retry_count`
 - `last_attempted_at`
 - `next_retry_at`
 - current `error_code` and `error_message`
 
-Later issues may add append-only retry event history. Until then, list and detail payloads treat the attempt row as the authoritative retry snapshot. Manual retry updates the same row (`retry_count`, `last_attempted_at`, `next_retry_at`, status, and error fields). `retry_count` increments on HubSpot sync failures and on each list-enrollment retry attempt (including manual dashboard retries for `hubspot_list_warning` rows).
+Manual retry updates the same row (`retry_count`, `last_attempted_at`, `next_retry_at`, status, and error fields). `retry_count` increments on HubSpot sync failures and on each list-enrollment retry attempt (including manual dashboard retries for `hubspot_list_warning` rows).
 
 ### Environment And Platform Constraints
 
@@ -916,21 +914,8 @@ The dashboard contract must reflect how this practice app actually runs in local
 | Fixture receiver remains local/test-only | Rows with `ingest.channel = fixture_receiver` are expected in local verification; production rows should usually have `ingest.channel = foxy_webhook` |
 | Render free Postgres for middleware | Checkout and CRM sync rows persist across redeploys; this is the dashboard source of truth |
 | Render free WordPress SQLite is ephemeral | Campaign-site state is not dashboard source data; do not treat WordPress DB contents as integration status |
-| No dashboard auth yet | API routes under `/api/dashboard` require authentication and access-control work in later dashboard issues before public deployment |
 
 Expose `crm_sync.hubspot_mode` in detail responses so support users can tell whether stored HubSpot ids came from the fake client or a live portal write.
-
-### Reconciliation And Incident Notes
-
-Planned later dashboard fields, not part of the MVP payload yet:
-
-| Future field | Purpose |
-| --- | --- |
-| `reconciliation.status` | Mismatch flags between checkout, CRM, and support expectations |
-| `reconciliation.notes` | Human-written reconciliation notes |
-| `incident.note` | Support incident annotation tied to an event or attempt |
-| `observability.trace_id` | Optional link to developer traces |
-| `observability.sentry_event_id` | Optional link to Sentry errors |
 
 ### Explicitly Forbidden Dashboard Fields
 
@@ -967,7 +952,6 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-w
 - Contract covers success, failure, duplicate-ingest exclusion, retryable CRM state, and ineligible CRM cases.
 - Filter fields support campaign, status, date range, provider, source page, and free-text lookup.
 - Sensitive payment and secret fields are explicitly excluded.
-- Later API and frontend issues can implement routes and UI without changing the payload vocabulary.
 
 ## Contract Principles
 

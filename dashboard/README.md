@@ -111,10 +111,6 @@ npm run test:dashboard
 
 See [`docs/dashboard-verification-walkthrough.md`](../docs/dashboard-verification-walkthrough.md) for the full local and browser inspection path.
 
-Not included yet:
-
-- Authentication
-
 ## Stack
 
 - Vite

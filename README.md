@@ -55,15 +55,12 @@ Laravel middleware/API
   +--> Observability / logging
   |      - webhook logs
   |      - sync failures
-  |      - retry history
-  |      - incident notes
   |
   +--> Status dashboard
-         - donations
-         - webhook events
-         - CRM sync status
-         - failures and retries
-         - reconciliation notes
+         - checkout events and webhook ingest
+         - CRM sync status and failure detail
+         - retry activity and manual CRM retry
+         - filters by campaign, status, and date
 ```
 
 ## Project Progress
@@ -82,15 +79,15 @@ Current:
 - local Laravel API health endpoint at `/api/health`
 - checkout event receiver at `/api/checkout/events`
 - safe normalized checkout event storage and duplicate prevention
-- architecture and workflow documentation
+- signed Foxy JSON webhook intake and HubSpot CRM sync with local status tracking
+- Vite + React admin/status dashboard with Laravel dashboard API routes
+- architecture, contract, and verification documentation
 
 Planned:
 
-- provider signature verification for production webhook receiving
-- HubSpot CRM sync
-- marketing analytics events
-- observability and retry visibility
-- React/Next.js admin/status dashboard
+- marketing analytics events and consent-aware tracking (MVP 6)
+- operational logging, alert flags, and CI/CD workflow (MVP 6)
+- launch hardening and handoff runbooks (MVP 7)
 
 ## Project Stack
 
@@ -116,7 +113,7 @@ Backend and data:
 Dashboard:
 
 - Front end: Vite + React + Tailwind CSS status UI in `dashboard/`.
-- API backend: Laravel JSON routes (planned under `/api/dashboard`).
+- API backend: Laravel JSON routes at `/api/dashboard`.
 
 Development and deployment:
 

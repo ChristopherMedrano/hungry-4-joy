@@ -206,13 +206,7 @@ MVP responsibilities:
 - Laravel logs
 - FoxyCart webhook receipt and validation logs
 - HubSpot API request/response error logs
-- queue job success/failure records
-- retry attempt history
-- payment-status mismatch notes
-- reconciliation mismatch notes
 - health/status checks
-- simple alert conditions for repeated failures
-- incident notes with cause, impact, fix, and verification
 
 Optional later tools:
 
@@ -225,7 +219,7 @@ Optional later tools:
 
 MVP boundary:
 
-- The admin dashboard should use application-owned tables first, not OpenTelemetry as the source of truth.
+- The admin dashboard uses application-owned tables as the source of truth for donation and CRM sync status.
 - OpenTelemetry is an optional later layer for developer observability, not the business/integration dashboard itself.
 - External SaaS internals are not directly observable through OpenTelemetry; the app can only record its own webhook handling, API calls, response codes, exceptions, retries, and timings.
 
@@ -244,7 +238,7 @@ What this demonstrates:
 
 The admin dashboard is the support surface for the ecosystem.
 
-For the MVP, this dashboard should be built from application tables such as webhook events, donations, CRM sync attempts, integration failures, failed jobs, retry attempts, and incident notes.
+The dashboard reads from application tables: stored checkout events and CRM sync attempts.
 
 Implementation direction:
 
@@ -255,14 +249,11 @@ Implementation direction:
 
 MVP responsibilities:
 
-- view webhook events
-- view donations
-- view CRM sync status
-- view failures
-- retry failed syncs
-- view retry history
-- view incident notes
-- filter by campaign, status, or date
+- view checkout events and webhook ingest path
+- view CRM sync status and failure detail
+- filter by campaign, status, date, and free-text search
+- view retry activity for failed, retryable, and list-warning syncs
+- trigger safe manual CRM retries when eligible
 
 Optional later polish:
 
@@ -279,7 +270,6 @@ What this demonstrates:
 - operational workflows
 - status reporting
 - safe retries
-- reconciliation review
 - business-specific issue triage
 
 ## 9. CI/CD and Code Quality
@@ -430,9 +420,7 @@ Scenario:
 What this demonstrates:
 
 - queue failure analysis
-- retry attempt history
-- incident notes
-- alert flag behavior
+- retry activity and manual retry from the dashboard
 
 ### Reconciliation Mismatch
 
@@ -442,10 +430,9 @@ Scenario:
 
 What this demonstrates:
 
-- comparing source transaction events against local donation records
-- checking webhook receipt and queue processing
-- reviewing HubSpot sync attempts
-- recording mismatch notes
+- comparing source transaction events against local donation records by `donation_attempt_id`
+- checking webhook receipt and CRM sync status in the dashboard
+- reviewing HubSpot sync attempts and deal attempt id in detail views
 - correcting the issue without duplicating donations
 
 ### Analytics Consent or Duplicate-Event Issue
@@ -483,11 +470,9 @@ Scenario:
 
 What this demonstrates:
 
-- reviewing logs and retry history
-- identifying cause and impact
-- writing an incident note
-- verifying the fix
-- deciding whether an access-control, backup, or configuration check is needed
+- reviewing CRM sync errors and retry activity in the dashboard
+- identifying cause from stored error summaries
+- verifying recovery after manual retry
 
 ## Deployment Direction
 

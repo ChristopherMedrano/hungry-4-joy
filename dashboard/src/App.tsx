@@ -323,8 +323,9 @@ function App() {
       a newsletter list warning such as{' '}
       <code className="rounded bg-slate-800 px-1 py-0.5">hubspot_list_warning</code>. Rows link to
       the checkout event by <strong className="font-medium text-slate-400">donation attempt id</strong>.
-      This is a current snapshot only — not a full retry event log. After a successful list retry
-      clears the warning, earlier 403 messages are no longer stored on the attempt row.
+      Each row reflects the stored CRM sync attempt fields (`retry_count`, status, and error summary).
+      After a successful list retry clears a warning, earlier list-enrollment errors are no longer
+      shown on that attempt row.
     </>
   )
 
