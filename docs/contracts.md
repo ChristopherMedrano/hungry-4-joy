@@ -360,6 +360,14 @@ Content-Type: application/json
 
 Scheduled reconcile is **off by default** (`CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=false`). Enable only when a host runs `php artisan schedule:run` every minute.
 
+Foxy checkout demo banner (hosted checkout footer):
+
+```bash
+php artisan foxy:sync-checkout-demo-banner
+```
+
+Updates `template_config.custom_script_values.footer` via Foxy hAPI. Snippet source: `examples/foxy/checkout-demo-banner-footer.twig`.
+
 Debugging: when by-attempt lookup shows a handoff but no checkout event, check `handoff.reconciliation.note`. If `foxy_transaction_not_found` after a known Foxy decline, use by-cart lookup with the error-log cart id before assuming handoff or metadata failed.
 
 Current accepted checkout events must include `donation_attempt_id`. The database column is nullable for deploy safety, but application validation requires it for normalized receiver events.

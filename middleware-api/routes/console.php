@@ -88,3 +88,23 @@ Artisan::command('checkout:reconcile-handoffs {--limit= : Maximum number of due 
 if (config('checkout.handoff_scheduled_reconcile_enabled', false)) {
     Schedule::command('checkout:reconcile-handoffs')->everyMinute();
 }
+
+Artisan::command('foxy:sync-checkout-demo-banner {--path= : Optional path to the Twig footer snippet}', function () {
+    $service = app(\App\Services\Foxy\FoxyTemplateConfigService::class);
+
+    try {
+        $result = $service->syncCheckoutDemoBanner($this->option('path'));
+    } catch (\Throwable $exception) {
+        $this->error($exception->getMessage());
+
+        return self::FAILURE;
+    }
+
+    $this->info(sprintf(
+        'Foxy template config %d: demo banner %s.',
+        $result['template_config_id'],
+        $result['footer_updated'] ? 'updated' : 'already present',
+    ));
+
+    return self::SUCCESS;
+})->purpose('Inject the Hungry-4-Joy demo checkout banner into Foxy template_config footer');

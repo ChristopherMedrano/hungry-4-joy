@@ -222,6 +222,53 @@ class FoxyApiClient
         return array_values(array_unique($attemptIds));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function getResource(string $url): array
+    {
+        if (! $this->configured()) {
+            throw new RuntimeException('foxy_api_not_configured');
+        }
+
+        $response = Http::withToken($this->accessToken())
+            ->withHeaders($this->apiHeaders())
+            ->acceptJson()
+            ->get($url);
+
+        if ($response->failed()) {
+            throw new RequestException($response);
+        }
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
+    public function patchResource(string $url, array $body): array
+    {
+        if (! $this->configured()) {
+            throw new RuntimeException('foxy_api_not_configured');
+        }
+
+        $response = Http::withToken($this->accessToken())
+            ->withHeaders($this->apiHeaders())
+            ->acceptJson()
+            ->patch($url, $body);
+
+        if ($response->failed()) {
+            throw new RequestException($response);
+        }
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
     private function accessToken(): string
     {
         if ($this->accessToken !== null) {
