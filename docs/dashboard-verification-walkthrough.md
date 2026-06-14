@@ -230,6 +230,52 @@ Use **Live API** view mode. Retry activity and CRM retry require middleware rede
 
 See [`docs/render-deployment.md`](render-deployment.md).
 
+## 10. Hosted Handoff And Foxy Trace (Optional)
+
+Use this after hosted WordPress + middleware deploy when verifying checkout handoff registration and Foxy reconciliation—not required for the local demo seeder walkthrough.
+
+Related: [`docs/foxy-middleware-connection-plan.md`](foxy-middleware-connection-plan.md) Phase 1.5, [`docs/contracts.md`](contracts.md) Section 2 checkout handoff registration.
+
+### Click → handoff
+
+1. Open hosted campaign page and click a donation button.
+2. Confirm browser POST to `POST /api/checkout/handoffs` returns **202** (network tab).
+3. Note the `donation_attempt_id` in the Foxy cart item options or cart URL.
+
+### By-attempt lookup
+
+```bash
+curl -sS "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-attempt/<donation_attempt_id>" | jq .
+```
+
+Expect at minimum a `handoff` block with `status: cart_handoff_created`.
+
+### After checkout — two expected outcomes
+
+| Test | Foxy creates | By-attempt result |
+| --- | --- | --- |
+| Success or auth/incomplete shell | Transaction | `checkout_event` present (`donation.created` or `payment.failed`) |
+| Authorize.net decline (ZIP `46282`) | Cart + error log only | `handoff` present; `checkout_event` null; `reconciliation.note` = `foxy_transaction_not_found` |
+
+The decline case is **expected**. Foxy does not create a transaction for that sandbox decline path, so transaction reconcile cannot ingest `payment.failed`.
+
+### By-cart lookup (decline / error-log path)
+
+When Foxy admin shows a checkout error, copy the logged **`id`** (cart id):
+
+```bash
+curl -sS "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-cart/<foxy_cart_id>" | jq .
+```
+
+Expect:
+
+- `donation_attempt_id` resolved from cart item options
+- `foxy_cart.items[].donation_attempt_id` matching the click-time id
+- `handoff` when the donor clicked from hosted WordPress before checkout
+- `checkout_event: null` for gateway-decline cases with no Foxy transaction
+
+Example verified cart id: `2247125087` → attempt `h4j_attempt_3cadaab7-a8f2-4e55-a664-513426c7b17e`.
+
 ## Quick Reference Commands
 
 ```bash

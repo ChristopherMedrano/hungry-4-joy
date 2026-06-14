@@ -222,6 +222,8 @@ GET /api/dashboard/events/by-cart/{foxy_cart_id}
 POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry
 ```
 
+`by-cart` calls Foxy hAPI to read `donation_attempt_id` from cart item options. Use it when Foxy admin error logs show a cart id but reconcile returns `foxy_transaction_not_found` (common for Authorize.net gateway declines that never create a transaction). See `docs/contracts.md` Section 2.
+
 These routes read stored `checkout_events` and `crm_sync_attempts` rows using the payload contract in `docs/contracts.md` Section 5. Authentication is not implemented yet.
 
 Dashboard verification walkthrough: [`docs/dashboard-verification-walkthrough.md`](../docs/dashboard-verification-walkthrough.md).

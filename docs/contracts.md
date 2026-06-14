@@ -261,7 +261,7 @@ This contract defines the vocabulary. Later work decides where status records li
 
 ### Checkout handoff registration
 
-Status: Implemented producer-side registration and reconciliation.
+Status: Implemented producer-side registration, Foxy hAPI reconciliation, and dashboard support lookup.
 
 When a donor clicks a campaign donation button, the WordPress theme registers a checkout handoff at:
 
@@ -277,7 +277,23 @@ The browser sends a fire-and-forget JSON payload with the same safe metadata sha
 | `checkout_event_reconciled` | A normalized checkout event is linked to the handoff. |
 | `abandoned` | No Foxy transaction was found within the reconciliation window. |
 
-Reconciliation queries Foxy hAPI by `donation_attempt_id`, adapts the transaction through the shared mapper, and ingests via `CheckoutEventIngestor`. Signed Foxy webhooks can link the same handoff when they arrive first.
+#### Intended trace path
+
+This is the designed producer-to-dashboard flow for practice checkout:
+
+1. **Click** — WordPress generates `donation_attempt_id` and opens the Foxy cart with that value in item options.
+2. **Handoff** — The theme POSTs safe metadata to `POST /api/checkout/handoffs` so Laravel knows the attempt started before any webhook.
+3. **Checkout** — Foxy handles payment. Outcome depends on gateway behavior (see below).
+4. **Reconcile** — Laravel polls Foxy hAPI by `donation_attempt_id` (scheduled backoff + on-demand `POST /api/checkout/handoffs/reconcile`). Signed Foxy webhooks can link the same handoff when they arrive first.
+5. **Support lookup** — Dashboard/API reads join handoff + checkout event by attempt id, or resolve attempt id from a Foxy cart id when the error log is all you have.
+
+Reconciliation queries **transactions only**:
+
+```text
+GET /stores/{store_id}/transactions?items:item_options:name[donation_attempt_id]={attempt_id}&zoom=items,items:item_options,payments,custom_fields
+```
+
+When a transaction exists, the shared mapper adapts it and `CheckoutEventIngestor` stores a normalized row.
 
 | Foxy transaction status | Laravel `event_type` | Laravel `transaction_status` |
 | --- | --- | --- |
@@ -286,7 +302,48 @@ Reconciliation queries Foxy hAPI by `donation_attempt_id`, adapts the transactio
 | `declined`, `rejected`, `failed` | `payment.failed` | `failed` |
 | empty with `data_is_fed = false` | `payment.failed` | `failed` (`checkout_incomplete`) |
 
-Debugging: when dashboard by-attempt lookup shows a handoff but no checkout event, inspect `handoff.reconciliation.note`, `next_reconcile_at`, and run `php artisan checkout:reconcile-handoffs`.
+#### Foxy failure modes (why two lookup paths exist)
+
+Hosted Authorize.net sandbox testing showed two different Foxy behaviors after checkout POST. Reconciliation and support lookup are split intentionally to match what Foxy actually stores.
+
+| Outcome | What Foxy creates | Middleware reconcile | Support lookup |
+| --- | --- | --- | --- |
+| **Auth / incomplete shell** (bad or expired card, some gateway errors) | **Transaction** record (often empty `status`, `data_is_fed: false`) | Finds transaction by `donation_attempt_id`, ingests `payment.failed` | `GET /api/dashboard/events/by-attempt/{id}` |
+| **Gateway card decline** (Authorize.net sandbox ZIP `46282`) | **Cart** + **error log entry only** — no transaction | `reconciliation.note = foxy_transaction_not_found` (expected, not a bug) | `GET /api/dashboard/events/by-cart/{foxy_cart_id}` |
+
+**Why cart-id lookup:** In Foxy admin error logs, the logged **`id` is the cart id**, not a transaction id. hAPI exposes `GET /carts/{cart_id}` with `zoom=items,items:item_options`, which returns the same `donation_attempt_id` item option written at click time. That is the intended bridge when reconcile cannot run because Foxy never created a transaction.
+
+**What does not work:** `fcsid` (browser session id) is not an indexed hAPI filter on carts or transactions. Error-log `post_values` may contain `fcsid`, but the stable support key is **cart id**.
+
+Example decline trace (verified on hosted middleware):
+
+- Foxy error log id `2247125087` → cart `2247125087` → attempt `h4j_attempt_3cadaab7-…`
+- Handoff present; `checkout_event` null; reconcile note `foxy_transaction_not_found`
+
+Example auth-error trace (verified via hAPI):
+
+- Transaction `2246566861` → attempt `h4j_attempt_3ed7624c-…` → reconcile ingests `payment.failed`
+
+#### Reconciliation notes
+
+| `reconciliation.note` | Meaning |
+| --- | --- |
+| `foxy_transaction_not_found` | No Foxy transaction for this attempt yet; common for gateway declines that only create a cart |
+| `foxy_api_not_configured` | Missing `FOXY_*` OAuth env vars |
+| `foxy_api_error` | hAPI request failed (retry scheduled) |
+| `foxy_payload_invalid` | Transaction found but mapper rejected payload |
+| `no_foxy_transaction_within_window` | Terminal abandon after configured hours |
+
+On-demand reconcile:
+
+```text
+POST /api/checkout/handoffs/reconcile
+Content-Type: application/json
+
+{"donation_attempt_id": "h4j_attempt_..."}
+```
+
+Debugging: when by-attempt lookup shows a handoff but no checkout event, check `handoff.reconciliation.note`. If `foxy_transaction_not_found` after a known Foxy decline, use by-cart lookup with the error-log cart id before assuming handoff or metadata failed.
 
 Current accepted checkout events must include `donation_attempt_id`. The database column is nullable for deploy safety, but application validation requires it for normalized receiver events.
 
@@ -643,7 +700,8 @@ Implemented Laravel routes and the React dashboard consume these payload shapes.
 | --- | --- | --- |
 | `GET` | `/api/dashboard/events` | Paginated list of checkout events with summary CRM sync state |
 | `GET` | `/api/dashboard/events/{checkout_event_id}` | Full detail for one stored checkout event |
-| `GET` | `/api/dashboard/events/by-attempt/{donation_attempt_id}` | Lookup by canonical donation attempt id |
+| `GET` | `/api/dashboard/events/by-attempt/{donation_attempt_id}` | Composite lookup: handoff + checkout event for one attempt id |
+| `GET` | `/api/dashboard/events/by-cart/{foxy_cart_id}` | Resolve attempt id(s) from Foxy cart via hAPI, then same composite shape plus `foxy_cart` summary (see below) |
 | `GET` | `/api/dashboard/analytics-events` | Paginated list of server-side conversion/analytics records |
 | `GET` | `/api/dashboard/analytics-events/{server_analytics_event_id}` | Full contract payload for one server analytics record |
 | `GET` | `/api/dashboard/analytics-events/by-attempt/{donation_attempt_id}` | All server analytics records for one donation attempt |
@@ -676,6 +734,40 @@ The `data` object uses the same Checkout Event Detail shape as `GET /api/dashboa
 | 422 | Ineligible attempt or checkout event | `{ "message": "This CRM sync attempt is not eligible for manual retry." }` |
 
 On Render and local default configs, `QUEUE_CONNECTION=sync` runs the retry inline before the response returns.
+
+### By-attempt and by-cart lookup
+
+These routes support reconciliation debugging and Foxy admin cross-checks. They are **not** a substitute for the paginated events list.
+
+**`GET /api/dashboard/events/by-attempt/{donation_attempt_id}`**
+
+Returns `404` when neither a handoff nor a checkout event exists for the attempt id.
+
+```json
+{
+  "data": {
+    "donation_attempt_id": "h4j_attempt_...",
+    "handoff": { },
+    "checkout_event": { }
+  }
+}
+```
+
+Either `handoff` or `checkout_event` may be `null`. A handoff with `reconciliation.note = foxy_transaction_not_found` and `checkout_event: null` is a normal outcome for Foxy gateway declines that never create a transaction.
+
+**`GET /api/dashboard/events/by-cart/{foxy_cart_id}`**
+
+Uses Foxy hAPI `GET /carts/{id}?zoom=items,items:item_options` to read `donation_attempt_id` from cart item options, then joins middleware state. Returns `200` with Foxy cart summary even when middleware has no rows yet (unlike by-attempt).
+
+Additional fields:
+
+| Field | Purpose |
+| --- | --- |
+| `foxy_cart_id` | Numeric Foxy cart id (same value as Foxy admin error log `id` for checkout errors) |
+| `donation_attempt_ids` | All attempt ids found on cart line items |
+| `foxy_cart` | Safe summary: totals, timestamps, per-item name/price/`donation_attempt_id` |
+
+Requires configured `FOXY_*` OAuth credentials on middleware. Returns `503` when Foxy API is not configured, `404` when the cart is missing or has no `donation_attempt_id` item options.
 
 ### List Query Parameters
 
@@ -1151,7 +1243,8 @@ After CRM sync succeeds for that checkout event:
 | Symptom | Likely cause | What to inspect |
 | --- | --- | --- |
 | Duplicate `DonationCompleted` for one attempt | Browser thank-you/page reload and server conversion both fired, or duplicate page view | Compare `analytics_event_id` values; confirm one server row per stored checkout `event_id` |
-| Browser `StartDonation` without server checkout event | Donor abandoned cart, webhook delay, or ingest failure | Foxy cart URL contains `donation_attempt_id`; middleware `/api/dashboard/events/by-attempt/{id}` |
+| Browser `StartDonation` without server checkout event | Donor abandoned cart, webhook delay, gateway decline without transaction, or ingest failure | `GET /api/dashboard/events/by-attempt/{id}`; if Foxy error log shows cart id only, `GET /api/dashboard/events/by-cart/{cart_id}` |
+| Handoff present, reconcile `foxy_transaction_not_found`, no checkout event | Foxy gateway decline (cart + error log only) or checkout not finished | By-cart lookup with error-log id; confirm item option on `GET /carts/{id}` in hAPI |
 | Server checkout event without browser journey events | Consent blocked browser tags, JavaScript disabled, or direct webhook-only path | Stored checkout row ingest channel `foxy_webhook`; button metadata on campaign page |
 | Missing `donation_attempt_id` on browser events | JavaScript disabled or click handler failed before handoff | Link `dataset.donationAttemptId` and cart URL query params |
 | Missing `donation_attempt_id` on server events | Legacy/manual webhook payload without item option | `FoxyWebhookAdapter` fallback `h4j_attempt_foxy_transaction_<transaction-id>` |
