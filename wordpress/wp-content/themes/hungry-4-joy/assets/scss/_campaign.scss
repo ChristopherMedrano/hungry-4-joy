@@ -309,6 +309,64 @@ main .h4j-section:last-child {
   padding: 24px;
 }
 
+.h4j-campaign-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.86fr) minmax(190px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.h4j-donation-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.h4j-campaign-card .h4j-label {
+  margin: 0;
+}
+
+.h4j-campaign-card .h4j-donation-options {
+  display: grid;
+  gap: 12px;
+}
+
+.h4j-campaign-card .h4j-donation-button {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.h4j-campaign-image {
+  position: relative;
+  min-height: 100%;
+  margin: 0;
+  border: var(--h4j-border);
+  overflow: hidden;
+  background: var(--h4j-paper-warm);
+  box-shadow: var(--h4j-shadow-small);
+}
+
+.h4j-campaign-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(247, 241, 227, 0.18), rgba(247, 241, 227, 0.18)),
+    rgba(63, 107, 84, 0.06);
+}
+
+.h4j-campaign-image img {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  display: block;
+  object-fit: cover;
+}
+
 .h4j-grid {
   display: grid;
   gap: 18px;
@@ -419,6 +477,10 @@ main .h4j-section:last-child {
   .h4j-grid--four {
     grid-template-columns: 1fr;
   }
+
+  .h4j-campaign-card {
+    grid-template-columns: minmax(220px, 0.75fr) minmax(260px, 1fr);
+  }
 }
 
 @media (max-width: 680px) {
@@ -444,6 +506,15 @@ main .h4j-section:last-child {
   .h4j-section-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .h4j-campaign-card {
+    grid-template-columns: 1fr;
+  }
+
+  .h4j-campaign-image img {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
   }
 }
 
