@@ -31,6 +31,10 @@ import { EventTable } from './components/EventTable'
 import { Layout } from './components/Layout'
 import { LoadingState } from './components/LoadingState'
 import { CrmSyncIssuesTable } from './components/CrmSyncIssuesTable'
+import { DashboardHome } from './components/DashboardHome'
+import { Modal } from './components/Modal'
+import { TablePagination } from './components/TablePagination'
+import { usePagination } from './lib/usePagination'
 import { SystemStatusBar } from './components/SystemStatusBar'
 import { SystemStatusPanel } from './components/SystemStatusPanel'
 import {
@@ -42,14 +46,13 @@ import { findSeededIntegrationSteps } from './data/seededIntegrationSteps'
 import { seededHealthStatus } from './data/seededHealthStatus'
 import {
   apiBaseForMode,
-  HOSTED_MIDDLEWARE_URL,
   isApiDataMode,
-  isLocalDashboardHost,
+  isPreviewStateMode,
   viewModeOptions,
 } from './lib/dashboardDataMode'
 import { defaultCheckoutAttemptsFilters } from './lib/checkoutAttemptsFilters'
 import { filterCheckoutAttempts } from './lib/filterCheckoutAttempts'
-import type { DashboardSection } from './lib/dashboardSections'
+import { dashboardSections, type DashboardSection } from './lib/dashboardSections'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
 import { filterCrmSyncIssuesBySearch, hasCrmSyncIssue, sortByLastCrmAttempt } from './lib/crmSyncIssues'
 import { defaultAnalyticsFilters } from './types/analytics'
@@ -68,8 +71,14 @@ import type { AttemptTraceData, CheckoutAttemptSummary, CheckoutAttemptsFilters 
 import type { HealthReadyResponse } from './types/health'
 
 function App() {
-  const [dashboardSection, setDashboardSection] = useState<DashboardSection>('events')
+  const [dashboardSection, setDashboardSection] = useState<DashboardSection>('dashboard')
   const [viewState, setViewState] = useState<DashboardDataMode>('hosted-api')
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+  const [isAttemptModalOpen, setIsAttemptModalOpen] = useState(false)
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false)
+  const [dashboardEvents, setDashboardEvents] = useState<CheckoutEventSummary[]>([])
+  const [dashboardCrmIssuesCount, setDashboardCrmIssuesCount] = useState(0)
+  const [dashboardCartIssuesCount, setDashboardCartIssuesCount] = useState(0)
   const [filters, setFilters] = useState<EventFilters>(defaultFilters)
   const [liveEvents, setLiveEvents] = useState<CheckoutEventSummary[]>([])
   const [crmSyncIssuesEvents, setCrmSyncIssuesEvents] = useState<CheckoutEventSummary[]>([])
@@ -122,6 +131,12 @@ function App() {
   const [healthError, setHealthError] = useState<string | null>(null)
   const [isLoadingHealth, setIsLoadingHealth] = useState(false)
   const [healthReloadToken, setHealthReloadToken] = useState(0)
+  const [eventsTotal, setEventsTotal] = useState(0)
+  const [crmTotal, setCrmTotal] = useState(0)
+  const [analyticsTotal, setAnalyticsTotal] = useState(0)
+  const [attemptsTotal, setAttemptsTotal] = useState(0)
+  const [dashboardTotalEvents, setDashboardTotalEvents] = useState(0)
+  const [dashboardCompletedCount, setDashboardCompletedCount] = useState(0)
 
   const isSeededView = viewState === 'seeded'
   const isApiView = isApiDataMode(viewState)
@@ -141,9 +156,44 @@ function App() {
     [checkoutAttemptsFilters],
   )
 
+  // Seeded CRM rows get the client-side search filter; API rows arrive already
+  // filtered and paged by the server.
+  const seededCrmFiltered = useMemo(
+    () => filterCrmSyncIssuesBySearch(seededCrmSyncIssuesEvents, filters.search),
+    [seededCrmSyncIssuesEvents, filters.search],
+  )
+
+  // Totals drive the pagers: seeded knows the full client-side count, while API
+  // modes report the server `meta.total`.
+  const eventsTotalCount = isSeededView ? seededEvents.length : eventsTotal
+  const attemptsTotalCount = isSeededView
+    ? seededCheckoutAttemptsFiltered.length
+    : attemptsTotal
+  const crmTotalCount = isSeededView ? seededCrmFiltered.length : crmTotal
+  const analyticsTotalCount = isSeededView ? 0 : analyticsTotal
+
+  const eventsPagination = usePagination(eventsTotalCount)
+  const crmPagination = usePagination(crmTotalCount)
+  const analyticsPagination = usePagination(analyticsTotalCount)
+  const attemptsPagination = usePagination(attemptsTotalCount)
+
+  // Rows for the current page: API responses are already the server page; seeded
+  // data is sliced locally with the pager's offset/limit.
+  const displayEvents = isSeededView
+    ? seededEvents.slice(
+        eventsPagination.offset,
+        eventsPagination.offset + eventsPagination.limit,
+      )
+    : liveEvents
   const displayCheckoutAttempts = isSeededView
-    ? seededCheckoutAttemptsFiltered
+    ? seededCheckoutAttemptsFiltered.slice(
+        attemptsPagination.offset,
+        attemptsPagination.offset + attemptsPagination.limit,
+      )
     : liveCheckoutAttempts
+  const displayCrmSyncIssuesEvents = isSeededView
+    ? seededCrmFiltered.slice(crmPagination.offset, crmPagination.offset + crmPagination.limit)
+    : crmSyncIssuesEvents
 
   const activeSelectedAttemptId = useMemo(() => {
     if (
@@ -157,13 +207,6 @@ function App() {
 
     return displayCheckoutAttempts[0]?.donation_attempt_id ?? null
   }, [selectedAttemptId, displayCheckoutAttempts])
-
-  const displayEvents = isSeededView ? seededEvents : liveEvents
-  const displayCrmSyncIssuesEvents = useMemo(() => {
-    const base = isSeededView ? seededCrmSyncIssuesEvents : crmSyncIssuesEvents
-
-    return filterCrmSyncIssuesBySearch(base, filters.search)
-  }, [isSeededView, seededCrmSyncIssuesEvents, crmSyncIssuesEvents, filters.search])
 
   const activeSelectedId = useMemo(() => {
     if (selectedId && displayEvents.some((event) => event.checkout_event_id === selectedId)) {
@@ -231,6 +274,55 @@ function App() {
   }, [viewState, isApiView, healthReloadToken])
 
   useEffect(() => {
+    if (!isApiView || dashboardSection !== 'dashboard') {
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+
+    async function loadDashboardSummary(): Promise<void> {
+      try {
+        const [recent, completed, crm, attempts] = await Promise.all([
+          fetchDashboardEvents(defaultFilters, 1, { perPage: 50 }),
+          fetchDashboardEvents({ ...defaultFilters, transaction_status: 'completed' }, 1, {
+            perPage: 1,
+          }),
+          fetchDashboardEvents(defaultFilters, 1, { retryActivity: true, perPage: 1 }),
+          fetchDashboardCheckoutAttempts(defaultCheckoutAttemptsFilters, 1, 1),
+        ])
+
+        if (cancelled) {
+          return
+        }
+
+        // Counts come from server `meta.total`, not the loaded page, so the cards
+        // reflect the full dataset. `recent` carries the activity feed plus the
+        // amount-raised and clean-synced samples (warnings excluded).
+        setDashboardEvents(recent.data)
+        setDashboardTotalEvents(recent.meta.total)
+        setDashboardCompletedCount(completed.meta.total)
+        setDashboardCrmIssuesCount(crm.meta.total)
+        setDashboardCartIssuesCount(attempts.meta.total)
+      } catch {
+        if (!cancelled) {
+          setDashboardEvents([])
+          setDashboardTotalEvents(0)
+          setDashboardCompletedCount(0)
+          setDashboardCrmIssuesCount(0)
+          setDashboardCartIssuesCount(0)
+        }
+      }
+    }
+
+    void loadDashboardSummary()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewState, isApiView, dashboardSection, reloadToken])
+
+  useEffect(() => {
     if (!isApiView || dashboardSection !== 'analytics-events') {
       return
     }
@@ -243,12 +335,17 @@ function App() {
       setAnalyticsListError(null)
 
       try {
-        const response = await fetchDashboardAnalyticsEvents(analyticsFilters)
+        const response = await fetchDashboardAnalyticsEvents(
+          analyticsFilters,
+          analyticsPagination.page,
+          analyticsPagination.perPage,
+        )
         if (cancelled) {
           return
         }
 
         setLiveAnalyticsEvents(response.data)
+        setAnalyticsTotal(response.meta.total)
         setSelectedAnalyticsId((current) => {
           if (
             current &&
@@ -282,12 +379,21 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, analyticsFilters, reloadToken, isApiView, dashboardSection])
+  }, [
+    viewState,
+    analyticsFilters,
+    reloadToken,
+    isApiView,
+    dashboardSection,
+    analyticsPagination.page,
+    analyticsPagination.perPage,
+  ])
 
   useEffect(() => {
     if (
       !isApiView ||
       dashboardSection !== 'analytics-events' ||
+      !isAnalyticsModalOpen ||
       activeSelectedAnalyticsId === null
     ) {
       return
@@ -326,7 +432,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, activeSelectedAnalyticsId, isApiView, dashboardSection])
+  }, [viewState, activeSelectedAnalyticsId, isApiView, dashboardSection, isAnalyticsModalOpen])
 
   useEffect(() => {
     if (!isApiView || dashboardSection !== 'events') {
@@ -341,12 +447,15 @@ function App() {
       setListError(null)
 
       try {
-        const response = await fetchDashboardEvents(filters)
+        const response = await fetchDashboardEvents(filters, eventsPagination.page, {
+          perPage: eventsPagination.perPage,
+        })
         if (cancelled) {
           return
         }
 
         setLiveEvents(response.data)
+        setEventsTotal(response.meta.total)
         setSelectedId((current) => {
           if (current && response.data.some((event) => event.checkout_event_id === current)) {
             return current
@@ -375,7 +484,15 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, filters, reloadToken, isApiView, dashboardSection])
+  }, [
+    viewState,
+    filters,
+    reloadToken,
+    isApiView,
+    dashboardSection,
+    eventsPagination.page,
+    eventsPagination.perPage,
+  ])
 
   useEffect(() => {
     if (!isApiView || dashboardSection !== 'crm-sync-issues') {
@@ -390,12 +507,16 @@ function App() {
       setCrmSyncIssuesError(null)
 
       try {
-        const response = await fetchDashboardEvents(filters, 1, { retryActivity: true })
+        const response = await fetchDashboardEvents(filters, crmPagination.page, {
+          retryActivity: true,
+          perPage: crmPagination.perPage,
+        })
         if (cancelled) {
           return
         }
 
         setCrmSyncIssuesEvents(sortByLastCrmAttempt(response.data))
+        setCrmTotal(response.meta.total)
       } catch (error) {
         if (cancelled) {
           return
@@ -417,7 +538,15 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, filters, reloadToken, isApiView, dashboardSection])
+  }, [
+    viewState,
+    filters,
+    reloadToken,
+    isApiView,
+    dashboardSection,
+    crmPagination.page,
+    crmPagination.perPage,
+  ])
 
   useEffect(() => {
     if (!isApiView || dashboardSection !== 'checkout-attempts') {
@@ -432,12 +561,17 @@ function App() {
       setCheckoutAttemptsError(null)
 
       try {
-        const response = await fetchDashboardCheckoutAttempts(checkoutAttemptsFilters)
+        const response = await fetchDashboardCheckoutAttempts(
+          checkoutAttemptsFilters,
+          attemptsPagination.page,
+          attemptsPagination.perPage,
+        )
         if (cancelled) {
           return
         }
 
         setLiveCheckoutAttempts(response.data)
+        setAttemptsTotal(response.meta.total)
         setSelectedAttemptId((current) => {
           if (
             current &&
@@ -471,11 +605,20 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, checkoutAttemptsFilters, reloadToken, isApiView, dashboardSection])
+  }, [
+    viewState,
+    checkoutAttemptsFilters,
+    reloadToken,
+    isApiView,
+    dashboardSection,
+    attemptsPagination.page,
+    attemptsPagination.perPage,
+  ])
 
   useEffect(() => {
     if (
       dashboardSection !== 'checkout-attempts' ||
+      !isAttemptModalOpen ||
       activeSelectedAttemptId === null ||
       isSeededView
     ) {
@@ -488,8 +631,6 @@ function App() {
 
     let cancelled = false
     setDashboardApiBase(apiBaseForMode(viewState))
-    setAttemptLookupQuery(activeSelectedAttemptId)
-    setAttemptLookupMode('attempt')
 
     async function loadTraceForSelection(): Promise<void> {
       setIsLoadingAttemptTrace(true)
@@ -526,11 +667,12 @@ function App() {
     isApiView,
     isSeededView,
     dashboardSection,
+    isAttemptModalOpen,
     reloadToken,
   ])
 
   useEffect(() => {
-    if (!isSeededView || dashboardSection !== 'checkout-attempts') {
+    if (!isSeededView || dashboardSection !== 'checkout-attempts' || !isAttemptModalOpen) {
       return
     }
 
@@ -548,8 +690,6 @@ function App() {
       return
     }
 
-    setAttemptLookupQuery(activeSelectedAttemptId)
-    setAttemptLookupMode('attempt')
     setAttemptTrace({
       donation_attempt_id: attempt.donation_attempt_id,
       handoff: attempt.handoff,
@@ -561,12 +701,18 @@ function App() {
   }, [
     isSeededView,
     dashboardSection,
+    isAttemptModalOpen,
     activeSelectedAttemptId,
     displayCheckoutAttempts,
   ])
 
   useEffect(() => {
-    if (!isApiView || dashboardSection !== 'events' || activeSelectedId === null) {
+    if (
+      !isApiView ||
+      dashboardSection !== 'events' ||
+      !isEventModalOpen ||
+      activeSelectedId === null
+    ) {
       return
     }
 
@@ -602,7 +748,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [viewState, activeSelectedId, isApiView, dashboardSection])
+  }, [viewState, activeSelectedId, isApiView, dashboardSection, isEventModalOpen])
 
   function updateEventInLists(updated: CheckoutEventDetail): void {
     const summary = {
@@ -664,10 +810,18 @@ function App() {
 
   function handleDashboardSectionChange(section: DashboardSection): void {
     setDashboardSection(section)
+    resetAllPagination()
 
     if (section !== 'crm-sync-issues') {
       setCrmSyncIssuesFocusAttemptId(null)
     }
+  }
+
+  function resetAllPagination(): void {
+    eventsPagination.reset()
+    crmPagination.reset()
+    analyticsPagination.reset()
+    attemptsPagination.reset()
   }
 
   function refreshHealthStatus(): void {
@@ -694,11 +848,13 @@ function App() {
           : await fetchDashboardEventByAttempt(query)
       setAttemptTrace(trace)
       setSelectedAttemptId(trace.donation_attempt_id)
+      setIsAttemptModalOpen(true)
     } catch (error) {
       setAttemptTrace(null)
       setAttemptTraceError(
         error instanceof Error ? error.message : 'Could not load attempt trace.',
       )
+      setIsAttemptModalOpen(true)
     } finally {
       setIsLoadingAttemptTrace(false)
     }
@@ -800,11 +956,43 @@ function App() {
     setSelectedId(checkoutEventId)
     setCrmSyncIssuesFocusAttemptId(null)
     setDashboardSection('events')
+    setIsEventModalOpen(true)
+  }
+
+  function handleViewEvent(checkoutEventId: number): void {
+    setSelectedId(checkoutEventId)
+    setIsEventModalOpen(true)
+  }
+
+  function handleViewAttempt(donationAttemptId: string): void {
+    setSelectedAttemptId(donationAttemptId)
+    setIsAttemptModalOpen(true)
+  }
+
+  function handleAttemptsFilterChange(next: CheckoutAttemptsFilters): void {
+    setCheckoutAttemptsFilters(next)
+    attemptsPagination.reset()
+  }
+
+  function handleEventFiltersChange(next: EventFilters): void {
+    setFilters(next)
+    eventsPagination.reset()
+    crmPagination.reset()
+  }
+
+  function handleAnalyticsFiltersChange(next: AnalyticsFilters): void {
+    setAnalyticsFilters(next)
+    analyticsPagination.reset()
+  }
+
+  function handleViewAnalytics(analyticsId: number): void {
+    setSelectedAnalyticsId(analyticsId)
+    setIsAnalyticsModalOpen(true)
   }
 
   const previewControl = (
-    <label className="text-sm text-slate-400">
-      <span className="mb-1 block text-xs font-medium uppercase tracking-wide">
+    <label className="flex items-center gap-2 text-sm text-slate-400">
+      <span className="hidden text-xs font-medium uppercase tracking-wide lg:inline">
         View mode
       </span>
       <select
@@ -815,88 +1003,92 @@ function App() {
           setDetailError(null)
           setListError(null)
           setCrmSyncIssuesError(null)
+          resetAllPagination()
 
           if (nextView === 'seeded') {
             const nextEvents = filterEvents(seededDashboardEvents, filters)
             setSelectedId(nextEvents[0]?.checkout_event_id ?? null)
           }
         }}
-        className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+        className="rounded-md border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-sm text-slate-100 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
       >
-        {viewModeOptions().map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        <optgroup label="Data source">
+          {viewModeOptions()
+            .filter((option) => !isPreviewStateMode(option.value))
+            .map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+        </optgroup>
+        <optgroup label="Preview states">
+          {viewModeOptions()
+            .filter((option) => isPreviewStateMode(option.value))
+            .map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+        </optgroup>
       </select>
     </label>
   )
 
-  const dataSourceHint = isSeededView ? (
-    <>
-      Offline preview rows with every transaction and CRM badge state. No network calls.
-    </>
-  ) : viewState === 'local-api' ? (
-    <>
-      Local middleware at{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">127.0.0.1:8000</code>. Demo fixture rows
-      appear after{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">php artisan dashboard:seed-status-demo</code>
-      . Filter ingest channel to{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code> for webhook-shaped
-      rows.
-    </>
-  ) : isLocalDashboardHost() ? (
-    <>
-      Hosted middleware at{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">{HOSTED_MIDDLEWARE_URL}</code>. Production-like
-      checkout rows usually have ingest channel{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">foxy_webhook</code>.
-    </>
-  ) : (
-    <>
-      Live data from proxied{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">/api/dashboard/events</code> on this
-      dashboard host.
-    </>
-  )
+  const dataSourceHint = isSeededView
+    ? 'Offline preview rows covering every transaction and CRM badge state — no network calls.'
+    : 'Checkout events ingested from Foxy, with each donation’s transaction and CRM sync state.'
 
-  const crmSyncIssuesHint = (
-    <>
-      CRM sync issues lists completed donations whose HubSpot sync row shows failures, retryable
-      errors, prior retries, or a newsletter list warning such as{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">hubspot_list_warning</code>. Use{' '}
-      <strong className="font-medium text-slate-400">Retry</strong> here to run manual CRM sync
-      actions. Rows link to the checkout event by{' '}
-      <strong className="font-medium text-slate-400">donation attempt id</strong> or{' '}
-      <strong className="font-medium text-slate-400">View event</strong>.
-    </>
-  )
+  const crmSyncIssuesHint =
+    'Completed donations whose HubSpot sync failed, is retryable, or raised a list warning. Retry here, or open the linked checkout event.'
 
-  const analyticsHint = (
-    <>
-      Server conversion records emitted by Laravel after validated checkout ingest and CRM sync.
-      Replay fixtures with{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">npm run connect:foxy-demo</code> or post
-      to{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">/api/checkout/events</code> to populate
-      rows. Full contract payloads are available in the detail panel and Laravel logs as{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">[H4J analytics demo]</code>.
-    </>
-  )
+  const analyticsHint =
+    'Server-side conversion records Laravel emits after checkout ingest and CRM sync. Open a row for the full contract payload.'
 
-  const checkoutAttemptsHint = (
-    <>
-      Lists click-time handoffs with no linked checkout event yet — common for pending checkouts,
-      gateway declines, and abandoned attempts. Use batch actions to reconcile open handoffs or sweep
-      unfed Foxy transactions for the demo (no background scheduler required). Trace lookup still
-      works for a specific attempt id or Foxy cart id from the error log.
-    </>
-  )
+  const checkoutAttemptsHint =
+    'Donation handoffs that registered at click time but aren’t yet linked to a checkout event — typically pending checkouts, gateway declines, or abandoned carts.'
+
+  const dashboardHomeEvents = isSeededView ? seededDashboardEvents : dashboardEvents
+  const dashboardHomeTotalEvents = isSeededView
+    ? seededDashboardEvents.length
+    : dashboardTotalEvents
+  const dashboardHomeCompleted = isSeededView
+    ? seededDashboardEvents.filter((event) => event.transaction_status === 'completed').length
+    : dashboardCompletedCount
+  // "Synced" means the clean synced summary — warnings (e.g. list-enrollment
+  // failures) are sync issues, not synced. Counted from the loaded sample so
+  // warnings are excluded the same way in seeded and API modes.
+  const dashboardHomeSynced = dashboardHomeEvents.filter(
+    (event) => event.crm_status_summary === 'synced',
+  ).length
+  const dashboardHomeCrmIssues = isSeededView
+    ? seededDashboardEvents.filter(hasCrmSyncIssue).length
+    : dashboardCrmIssuesCount
+  const dashboardHomeCartIssues = isSeededView
+    ? seededCheckoutAttempts.length
+    : dashboardCartIssuesCount
 
   let content
 
-  if (dashboardSection === 'system-status') {
+  if (dashboardSection === 'dashboard') {
+    content = (
+      <DashboardHome
+        isPreview={isSeededView}
+        health={displayHealth}
+        events={dashboardHomeEvents}
+        totalEvents={dashboardHomeTotalEvents}
+        donationsCaptured={dashboardHomeCompleted}
+        syncedCount={dashboardHomeSynced}
+        crmSyncIssuesCount={dashboardHomeCrmIssues}
+        cartSyncIssuesCount={dashboardHomeCartIssues}
+        onNavigate={handleDashboardSectionChange}
+        onViewEvent={(id) => {
+          setSelectedId(id)
+          setDashboardSection('events')
+          setIsEventModalOpen(true)
+        }}
+      />
+    )
+  } else if (dashboardSection === 'system-status') {
     if (viewState === 'loading') {
       content = <LoadingState />
     } else if (viewState === 'error') {
@@ -968,22 +1160,20 @@ function App() {
       )
     } else {
       content = (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+        <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
           <AnalyticsEventTable
             events={liveAnalyticsEvents}
-            selectedId={activeSelectedAnalyticsId}
-            onSelect={setSelectedAnalyticsId}
+            selectedId={isAnalyticsModalOpen ? activeSelectedAnalyticsId : null}
+            onView={handleViewAnalytics}
+            embedded
           />
-          {analyticsDetailError ? (
-            <ErrorState
-              message={analyticsDetailError}
-              onRetry={() => setSelectedAnalyticsId((id) => id)}
-            />
-          ) : isLoadingAnalyticsDetail ? (
-            <LoadingState />
-          ) : (
-            <AnalyticsEventDetailPanel event={selectedAnalyticsDetail} />
-          )}
+          <TablePagination
+            total={analyticsPagination.total}
+            page={analyticsPagination.page}
+            pageSize={analyticsPagination.pageSize}
+            onPageChange={analyticsPagination.setPage}
+            onPageSizeChange={analyticsPagination.setPageSize}
+          />
         </div>
       )
     }
@@ -1009,9 +1199,12 @@ function App() {
       )
     } else {
       content = (
-        <div className="space-y-3">
+        <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
           {crmRetryError ? (
-            <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200" role="alert">
+            <p
+              className="border-b border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+              role="alert"
+            >
               {crmRetryError}
             </p>
           ) : null}
@@ -1022,6 +1215,14 @@ function App() {
             onRetry={handleCrmSyncIssueRetry}
             retryingEventId={crmRetryingEventId}
             retryDisabled={isSeededView}
+            embedded
+          />
+          <TablePagination
+            total={crmPagination.total}
+            page={crmPagination.page}
+            pageSize={crmPagination.pageSize}
+            onPageChange={crmPagination.setPage}
+            onPageSizeChange={crmPagination.setPageSize}
           />
         </div>
       )
@@ -1048,103 +1249,76 @@ function App() {
     } else if (viewState === 'empty' || displayCheckoutAttempts.length === 0) {
       content = (
         <div className="space-y-4">
-          <EmptyState
-            title="No unlinked checkout attempts"
-            message="Handoffs appear here when a donation click registered but no checkout event is linked yet. Try a donation from the campaign site or search by attempt id below."
-            onResetFilters={() => setCheckoutAttemptsFilters(defaultCheckoutAttemptsFilters)}
+          <AttemptLookupBar
+            query={attemptLookupQuery}
+            mode={attemptLookupMode}
+            onQueryChange={setAttemptLookupQuery}
+            onModeChange={setAttemptLookupMode}
+            onLookup={() => void handleAttemptLookup()}
+            isLoading={isLoadingAttemptTrace}
+            disabled={isSeededView}
           />
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-            <div />
-            <div className="space-y-4">
-              <AttemptLookupBar
-                query={attemptLookupQuery}
-                mode={attemptLookupMode}
-                onQueryChange={setAttemptLookupQuery}
-                onModeChange={setAttemptLookupMode}
-                onLookup={() => void handleAttemptLookup()}
-                isLoading={isLoadingAttemptTrace}
-                disabled={isSeededView}
+          <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
+            <CheckoutAttemptsFiltersBar
+              filters={checkoutAttemptsFilters}
+              onChange={handleAttemptsFilterChange}
+              onReconcileOpen={handleReconcileOpenHandoffs}
+              onSweepUnfed={handleSweepUnfedTransactions}
+              isReconcilingOpen={isReconcilingOpenHandoffs}
+              isSweepingUnfed={isSweepingUnfedTransactions}
+              batchActionsDisabled={isSeededView}
+              batchSummary={handoffBatchSummary}
+              batchSummaryKind={handoffBatchSummaryKind}
+              batchError={handoffBatchError}
+            />
+            <div className="p-4">
+              <EmptyState
+                title="No unlinked attempts"
+                message="Run a donation from the campaign site, use a bulk action above, or trace a specific id at the top."
+                onResetFilters={() => handleAttemptsFilterChange(defaultCheckoutAttemptsFilters)}
               />
-              {attemptTraceError ? (
-                <ErrorState
-                  message={attemptTraceError}
-                  onRetry={() => void handleAttemptLookup()}
-                />
-              ) : (
-                <AttemptTracePanel
-                  trace={attemptTrace}
-                  onReconcile={
-                    attemptTrace
-                      ? async () => {
-                          await handleHandoffReconcile(attemptTrace.donation_attempt_id)
-                        }
-                      : undefined
-                  }
-                  isReconciling={isHandoffReconciling}
-                  reconcileError={handoffReconcileError}
-                  reconcileDisabled={isSeededView}
-                  onOpenCrmSyncIssues={
-                    attemptTrace?.checkout_event?.donation_attempt_id
-                      ? () =>
-                          openCrmSyncIssuesFromEvent(
-                            attemptTrace?.checkout_event?.donation_attempt_id,
-                          )
-                      : undefined
-                  }
-                />
-              )}
             </div>
           </div>
         </div>
       )
     } else {
       content = (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-          <CheckoutAttemptsTable
-            attempts={displayCheckoutAttempts}
-            selectedAttemptId={activeSelectedAttemptId}
-            onSelect={setSelectedAttemptId}
+        <div className="space-y-4">
+          <AttemptLookupBar
+            query={attemptLookupQuery}
+            mode={attemptLookupMode}
+            onQueryChange={setAttemptLookupQuery}
+            onModeChange={setAttemptLookupMode}
+            onLookup={() => void handleAttemptLookup()}
+            isLoading={isLoadingAttemptTrace}
+            disabled={isSeededView}
           />
-          <div className="space-y-4">
-            <AttemptLookupBar
-              query={attemptLookupQuery}
-              mode={attemptLookupMode}
-              onQueryChange={setAttemptLookupQuery}
-              onModeChange={setAttemptLookupMode}
-              onLookup={() => void handleAttemptLookup()}
-              isLoading={isLoadingAttemptTrace}
-              disabled={isSeededView}
+          <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
+            <CheckoutAttemptsFiltersBar
+              filters={checkoutAttemptsFilters}
+              onChange={handleAttemptsFilterChange}
+              onReconcileOpen={handleReconcileOpenHandoffs}
+              onSweepUnfed={handleSweepUnfedTransactions}
+              isReconcilingOpen={isReconcilingOpenHandoffs}
+              isSweepingUnfed={isSweepingUnfedTransactions}
+              batchActionsDisabled={isSeededView}
+              batchSummary={handoffBatchSummary}
+              batchSummaryKind={handoffBatchSummaryKind}
+              batchError={handoffBatchError}
             />
-            {attemptTraceError ? (
-              <ErrorState
-                message={attemptTraceError}
-                onRetry={() => void handleAttemptLookup()}
-              />
-            ) : isLoadingAttemptTrace && isApiView ? (
-              <LoadingState />
-            ) : (
-              <AttemptTracePanel
-                trace={attemptTrace}
-                onReconcile={
-                  attemptTrace
-                    ? async () => {
-                        await handleHandoffReconcile(attemptTrace.donation_attempt_id)
-                      }
-                    : undefined
-                }
-                isReconciling={isHandoffReconciling}
-                reconcileError={handoffReconcileError}
-                reconcileDisabled={isSeededView}
-                onOpenCrmSyncIssues={
-                  attemptTrace?.checkout_event?.donation_attempt_id
-                    ? () =>
-                        openCrmSyncIssuesFromEvent(
-                          attemptTrace?.checkout_event?.donation_attempt_id,
-                        )
-                    : undefined
-                }
-              />
-            )}
+            <CheckoutAttemptsTable
+              attempts={displayCheckoutAttempts}
+              selectedAttemptId={isAttemptModalOpen ? activeSelectedAttemptId : null}
+              onView={handleViewAttempt}
+              embedded
+            />
+            <TablePagination
+              total={attemptsPagination.total}
+              page={attemptsPagination.page}
+              pageSize={attemptsPagination.pageSize}
+              onPageChange={attemptsPagination.setPage}
+              onPageSizeChange={attemptsPagination.setPageSize}
+            />
           </div>
         </div>
       )
@@ -1172,46 +1346,31 @@ function App() {
       content = <EmptyState onResetFilters={() => setFilters(defaultFilters)} />
     } else {
       content = (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+        <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
           <EventTable
             events={displayEvents}
-            selectedId={activeSelectedId}
-            onSelect={setSelectedId}
+            selectedId={isEventModalOpen ? activeSelectedId : null}
+            onView={handleViewEvent}
+            embedded
           />
-          {detailError && !isSeededView ? (
-            <ErrorState
-              message={detailError}
-              onRetry={() => setSelectedId((id) => id)}
-            />
-          ) : isLoadingDetail && !isSeededView ? (
-            <LoadingState />
-          ) : (
-            <EventDetailPanel
-              event={isSeededView ? seededDetail : activeSelectedId === null ? null : selectedDetail}
-              onOpenCrmSyncIssues={
-                (isSeededView ? seededDetail : selectedDetail)?.donation_attempt_id
-                  ? () =>
-                      openCrmSyncIssuesFromEvent(
-                        (isSeededView ? seededDetail : selectedDetail)?.donation_attempt_id,
-                      )
-                  : undefined
-              }
-              onHandoffReconcile={
-                isSeededView || !selectedDetail?.donation_attempt_id
-                  ? undefined
-                  : async () => {
-                      await handleHandoffReconcile(selectedDetail.donation_attempt_id!)
-                    }
-              }
-              isHandoffReconciling={isHandoffReconciling}
-              handoffReconcileError={handoffReconcileError}
-              handoffReconcileDisabled={isSeededView}
-            />
-          )}
+          <TablePagination
+            total={eventsPagination.total}
+            page={eventsPagination.page}
+            pageSize={eventsPagination.pageSize}
+            onPageChange={eventsPagination.setPage}
+            onPageSizeChange={eventsPagination.setPageSize}
+          />
         </div>
       )
     }
   }
+
+  const activeSectionLabel =
+    dashboardSections.find((section) => section.id === dashboardSection)?.label ?? ''
+
+  const seededEventForModal = isSeededView ? seededDetail : null
+  const liveEventForModal = activeSelectedId === null ? null : selectedDetail
+  const modalEvent = isSeededView ? seededEventForModal : liveEventForModal
 
   return (
     <Layout
@@ -1230,41 +1389,123 @@ function App() {
       onSectionChange={handleDashboardSectionChange}
     >
       <div className="space-y-4">
-        {dashboardSection === 'analytics-events' ? (
-          <AnalyticsFiltersBar filters={analyticsFilters} onChange={setAnalyticsFilters} />
-        ) : dashboardSection === 'checkout-attempts' ? (
-          <CheckoutAttemptsFiltersBar
-            filters={checkoutAttemptsFilters}
-            onChange={setCheckoutAttemptsFilters}
-            onReconcileOpen={handleReconcileOpenHandoffs}
-            onSweepUnfed={handleSweepUnfedTransactions}
-            isReconcilingOpen={isReconcilingOpenHandoffs}
-            isSweepingUnfed={isSweepingUnfedTransactions}
-            batchActionsDisabled={isSeededView}
-            batchSummary={handoffBatchSummary}
-            batchSummaryKind={handoffBatchSummaryKind}
-          />
-        ) : dashboardSection === 'system-status' ? null : (
-          <EventFiltersBar filters={filters} onChange={setFilters} />
+        <h1 className="text-xl font-semibold text-white">{activeSectionLabel}</h1>
+
+        {dashboardSection === 'dashboard' ? (
+          content
+        ) : (
+          <>
+            {dashboardSection === 'analytics-events' ? (
+              <AnalyticsFiltersBar
+                filters={analyticsFilters}
+                onChange={handleAnalyticsFiltersChange}
+              />
+            ) : dashboardSection === 'checkout-attempts' ? null : dashboardSection ===
+              'system-status' ? null : (
+              <EventFiltersBar filters={filters} onChange={handleEventFiltersChange} />
+            )}
+            <p className="text-xs text-slate-500">
+              {dashboardSection === 'system-status'
+                ? 'Middleware readiness from GET /api/health/ready. Liveness probe stays at GET /api/health for deploy checks.'
+                : dashboardSection === 'crm-sync-issues'
+                ? crmSyncIssuesHint
+                : dashboardSection === 'analytics-events'
+                  ? analyticsHint
+                  : dashboardSection === 'checkout-attempts'
+                    ? checkoutAttemptsHint
+                    : dataSourceHint}
+            </p>
+            {content}
+          </>
         )}
-        <p className="text-xs text-slate-500">
-          {dashboardSection === 'system-status'
-            ? 'Middleware readiness from GET /api/health/ready. Liveness probe stays at GET /api/health for deploy checks.'
-            : dashboardSection === 'crm-sync-issues'
-            ? crmSyncIssuesHint
-            : dashboardSection === 'analytics-events'
-              ? analyticsHint
-              : dashboardSection === 'checkout-attempts'
-                ? checkoutAttemptsHint
-                : dataSourceHint}
-        </p>
-        {handoffBatchError && dashboardSection === 'checkout-attempts' ? (
-          <p className="text-xs text-rose-300" role="alert">
-            {handoffBatchError}
-          </p>
-        ) : null}
-        {content}
       </div>
+
+      <Modal
+        open={isEventModalOpen}
+        title="Checkout event"
+        onClose={() => setIsEventModalOpen(false)}
+      >
+        {detailError && !isSeededView ? (
+          <ErrorState message={detailError} onRetry={() => setSelectedId((id) => id)} />
+        ) : isLoadingDetail && !isSeededView ? (
+          <LoadingState />
+        ) : (
+          <EventDetailPanel
+            event={modalEvent}
+            embedded
+            onOpenCrmSyncIssues={
+              modalEvent?.donation_attempt_id
+                ? () => {
+                    setIsEventModalOpen(false)
+                    openCrmSyncIssuesFromEvent(modalEvent.donation_attempt_id)
+                  }
+                : undefined
+            }
+            onHandoffReconcile={
+              isSeededView || !selectedDetail?.donation_attempt_id
+                ? undefined
+                : async () => {
+                    await handleHandoffReconcile(selectedDetail.donation_attempt_id!)
+                  }
+            }
+            isHandoffReconciling={isHandoffReconciling}
+            handoffReconcileError={handoffReconcileError}
+            handoffReconcileDisabled={isSeededView}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        open={isAttemptModalOpen}
+        title="Attempt trace"
+        onClose={() => setIsAttemptModalOpen(false)}
+      >
+        {attemptTraceError ? (
+          <ErrorState message={attemptTraceError} onRetry={() => void handleAttemptLookup()} />
+        ) : isLoadingAttemptTrace && isApiView ? (
+          <LoadingState />
+        ) : (
+          <AttemptTracePanel
+            embedded
+            trace={attemptTrace}
+            onReconcile={
+              attemptTrace
+                ? async () => {
+                    await handleHandoffReconcile(attemptTrace.donation_attempt_id)
+                  }
+                : undefined
+            }
+            isReconciling={isHandoffReconciling}
+            reconcileError={handoffReconcileError}
+            reconcileDisabled={isSeededView}
+            onOpenCrmSyncIssues={
+              attemptTrace?.checkout_event?.donation_attempt_id
+                ? () => {
+                    setIsAttemptModalOpen(false)
+                    openCrmSyncIssuesFromEvent(attemptTrace?.checkout_event?.donation_attempt_id)
+                  }
+                : undefined
+            }
+          />
+        )}
+      </Modal>
+
+      <Modal
+        open={isAnalyticsModalOpen}
+        title="Server analytics event"
+        onClose={() => setIsAnalyticsModalOpen(false)}
+      >
+        {analyticsDetailError ? (
+          <ErrorState
+            message={analyticsDetailError}
+            onRetry={() => setSelectedAnalyticsId((id) => id)}
+          />
+        ) : isLoadingAnalyticsDetail ? (
+          <LoadingState />
+        ) : (
+          <AnalyticsEventDetailPanel event={selectedAnalyticsDetail} embedded />
+        )}
+      </Modal>
     </Layout>
   )
 }

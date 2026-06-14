@@ -7,6 +7,7 @@ import { sectionHeadingClass } from './StatusCallout'
 
 interface AttemptTracePanelProps {
   trace: AttemptTraceData | null
+  embedded?: boolean
   onReconcile?: () => Promise<void>
   isReconciling?: boolean
   reconcileError?: string | null
@@ -50,6 +51,7 @@ function FoxyCartSummary({ trace }: { trace: AttemptTraceData }) {
 
 export function AttemptTracePanel({
   trace,
+  embedded = false,
   onReconcile,
   isReconciling = false,
   reconcileError = null,
@@ -57,6 +59,14 @@ export function AttemptTracePanel({
   onOpenCrmSyncIssues,
 }: AttemptTracePanelProps) {
   if (!trace) {
+    if (embedded) {
+      return (
+        <div className="text-sm text-slate-400">
+          Look up a donation attempt id or Foxy cart id to inspect handoff reconciliation state when
+          no checkout event appears in the list.
+        </div>
+      )
+    }
     return (
       <aside className="rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-sm text-slate-400">
         Look up a donation attempt id or Foxy cart id to inspect handoff reconciliation state when
@@ -67,8 +77,8 @@ export function AttemptTracePanel({
 
   const eventDetail: CheckoutEventDetail | null = trace.checkout_event
 
-  return (
-    <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+  const inner = (
+    <>
       <section>
         <h3 className={sectionHeadingClass}>Attempt trace</h3>
         <p className="mt-2 break-all font-mono text-sm text-slate-300">{trace.donation_attempt_id}</p>
@@ -109,6 +119,14 @@ export function AttemptTracePanel({
       <FoxyCartSummary trace={trace} />
 
       <IntegrationTimeline steps={trace.integration_steps ?? []} />
-    </aside>
+    </>
+  )
+
+  if (embedded) {
+    return <div>{inner}</div>
+  }
+
+  return (
+    <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">{inner}</aside>
   )
 }

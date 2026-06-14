@@ -37,19 +37,12 @@ export function SystemStatusPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-white">System status</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Readiness checks for middleware API, database, migrations, and integration
-            configuration.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={onRefresh}
           disabled={isRefreshing || isPreview}
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isRefreshing ? 'Refreshing…' : 'Refresh'}
         </button>

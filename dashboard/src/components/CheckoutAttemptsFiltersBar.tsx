@@ -3,6 +3,7 @@ import type {
   HandoffBatchReconcileSummary,
   HandoffSweepUnfedSummary,
 } from '../api/dashboard'
+import { fieldClass } from '../lib/formStyles'
 
 interface CheckoutAttemptsFiltersBarProps {
   filters: CheckoutAttemptsFilters
@@ -14,13 +15,13 @@ interface CheckoutAttemptsFiltersBarProps {
   batchActionsDisabled?: boolean
   batchSummary?: HandoffBatchReconcileSummary | HandoffSweepUnfedSummary | null
   batchSummaryKind?: 'reconcile-open' | 'sweep-unfed' | null
+  batchError?: string | null
 }
 
-const inputClass =
-  'w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500'
+const inputClass = `${fieldClass} sm:max-w-xs`
 
 const actionButtonClass =
-  'rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition hover:border-teal-500 hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-50'
+  'rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-teal-500 hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-50'
 
 function formatReconcileOpenSummary(summary: HandoffBatchReconcileSummary): string {
   return `Processed ${summary.processed} handoff(s): ${summary.linked} linked, ${summary.still_open} still open, ${summary.abandoned} abandoned.`
@@ -43,65 +44,78 @@ export function CheckoutAttemptsFiltersBar({
   batchActionsDisabled = false,
   batchSummary = null,
   batchSummaryKind = null,
+  batchError = null,
 }: CheckoutAttemptsFiltersBarProps) {
+  const showReconcileSummary = Boolean(batchSummary && batchSummaryKind === 'reconcile-open')
+  const showSweepSummary = Boolean(batchSummary && batchSummaryKind === 'sweep-unfed')
+  const hasMessages =
+    batchActionsDisabled || showReconcileSummary || showSweepSummary || Boolean(batchError)
+
   return (
-    <section
-      aria-label="Checkout attempt filters"
-      className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-4"
-    >
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
-          Search unlinked attempts
-        </span>
+    <div aria-label="Unlinked attempts toolbar" className="border-b border-slate-800 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <input
           type="search"
           value={filters.search}
           onChange={(event) => onChange({ ...filters, search: event.target.value })}
-          placeholder="Attempt id, campaign, reconcile note…"
+          placeholder="Filter by attempt id, campaign, or status…"
+          aria-label="Filter unlinked attempts"
           className={inputClass}
         />
-      </label>
 
-      <div className="flex flex-wrap gap-2">
-        {onReconcileOpen ? (
-          <button
-            type="button"
-            className={actionButtonClass}
-            disabled={batchActionsDisabled || isReconcilingOpen || isSweepingUnfed}
-            onClick={() => void onReconcileOpen()}
-          >
-            {isReconcilingOpen ? 'Reconciling open handoffs…' : 'Reconcile open handoffs'}
-          </button>
-        ) : null}
-        {onSweepUnfed ? (
-          <button
-            type="button"
-            className={actionButtonClass}
-            disabled={batchActionsDisabled || isReconcilingOpen || isSweepingUnfed}
-            onClick={() => void onSweepUnfed()}
-          >
-            {isSweepingUnfed ? 'Sweeping unfed transactions…' : 'Sweep unfed transactions'}
-          </button>
+        {onReconcileOpen || onSweepUnfed ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="hidden text-xs uppercase tracking-wide text-slate-500 lg:inline">
+              Bulk
+            </span>
+            {onReconcileOpen ? (
+              <button
+                type="button"
+                className={actionButtonClass}
+                disabled={batchActionsDisabled || isReconcilingOpen || isSweepingUnfed}
+                onClick={() => void onReconcileOpen()}
+              >
+                {isReconcilingOpen ? 'Reconciling…' : 'Reconcile open handoffs'}
+              </button>
+            ) : null}
+            {onSweepUnfed ? (
+              <button
+                type="button"
+                className={actionButtonClass}
+                disabled={batchActionsDisabled || isReconcilingOpen || isSweepingUnfed}
+                onClick={() => void onSweepUnfed()}
+              >
+                {isSweepingUnfed ? 'Sweeping…' : 'Sweep unfed transactions'}
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
-      {batchActionsDisabled ? (
-        <p className="text-xs text-slate-500">
-          Batch reconcile actions are available in API view modes only.
-        </p>
+      {hasMessages ? (
+        <div className="mt-2 space-y-1">
+          {batchActionsDisabled ? (
+            <p className="text-xs text-slate-500">
+              Bulk reconcile actions are available in API view modes only.
+            </p>
+          ) : null}
+          {showReconcileSummary ? (
+            <p className="text-xs text-teal-200" role="status">
+              {formatReconcileOpenSummary(batchSummary as HandoffBatchReconcileSummary)}
+            </p>
+          ) : null}
+          {showSweepSummary ? (
+            <p className="text-xs text-teal-200" role="status">
+              {formatSweepUnfedSummary(batchSummary as HandoffSweepUnfedSummary)}
+            </p>
+          ) : null}
+          {batchError ? (
+            <p className="text-xs text-rose-300" role="alert">
+              {batchError}
+            </p>
+          ) : null}
+        </div>
       ) : null}
-
-      {batchSummary && batchSummaryKind === 'reconcile-open' ? (
-        <p className="text-xs text-teal-200" role="status">
-          {formatReconcileOpenSummary(batchSummary as HandoffBatchReconcileSummary)}
-        </p>
-      ) : null}
-
-      {batchSummary && batchSummaryKind === 'sweep-unfed' ? (
-        <p className="text-xs text-teal-200" role="status">
-          {formatSweepUnfedSummary(batchSummary as HandoffSweepUnfedSummary)}
-        </p>
-      ) : null}
-    </section>
+    </div>
   )
 }

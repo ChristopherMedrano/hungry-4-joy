@@ -53,7 +53,7 @@ function apiUrl(path: string): string {
   return `${dashboardApiBase}${path}`
 }
 
-function toQuery(filters: EventFilters, page = 1): string {
+function toQuery(filters: EventFilters, page = 1, perPage = 25): string {
   const params = new URLSearchParams()
 
   for (const [key, value] of Object.entries(filters)) {
@@ -63,7 +63,7 @@ function toQuery(filters: EventFilters, page = 1): string {
   }
 
   params.set('page', String(page))
-  params.set('per_page', '25')
+  params.set('per_page', String(perPage))
   params.set('sort', '-event_created_at')
 
   return params.toString()
@@ -87,9 +87,9 @@ async function parseJsonOrThrow<T>(response: Response): Promise<T> {
 export async function fetchDashboardEvents(
   filters: EventFilters,
   page = 1,
-  options?: { retryActivity?: boolean },
+  options?: { retryActivity?: boolean; perPage?: number },
 ): Promise<DashboardListResponse> {
-  const params = toQuery(filters, page)
+  const params = toQuery(filters, page, options?.perPage ?? 25)
   const query = options?.retryActivity ? `${params}&retry_activity=1` : params
   const response = await fetch(`${apiUrl('/api/dashboard/events')}?${query}`)
 
@@ -156,13 +156,14 @@ export interface CheckoutAttemptsListResponse {
 export async function fetchDashboardCheckoutAttempts(
   filters: import('../types/handoff').CheckoutAttemptsFilters,
   page = 1,
+  perPage = 25,
 ): Promise<CheckoutAttemptsListResponse> {
   const params = new URLSearchParams()
   if (filters.search) {
     params.set('search', filters.search)
   }
   params.set('page', String(page))
-  params.set('per_page', '25')
+  params.set('per_page', String(perPage))
   params.set('sort', '-handoff_at')
 
   const response = await fetch(`${apiUrl('/api/dashboard/handoffs')}?${params}`)
@@ -263,7 +264,7 @@ export interface DashboardAnalyticsDetailResponse {
   data: ServerAnalyticsEventDetail
 }
 
-function analyticsQuery(filters: AnalyticsFilters, page = 1): string {
+function analyticsQuery(filters: AnalyticsFilters, page = 1, perPage = 25): string {
   const params = new URLSearchParams()
 
   if (filters.event) {
@@ -275,7 +276,7 @@ function analyticsQuery(filters: AnalyticsFilters, page = 1): string {
   }
 
   params.set('page', String(page))
-  params.set('per_page', '25')
+  params.set('per_page', String(perPage))
   params.set('sort', '-created_at')
 
   return params.toString()
@@ -289,9 +290,10 @@ export async function fetchHealthReady(): Promise<HealthReadyResponse> {
 export async function fetchDashboardAnalyticsEvents(
   filters: AnalyticsFilters,
   page = 1,
+  perPage = 25,
 ): Promise<DashboardAnalyticsListResponse> {
   const response = await fetch(
-    `${apiUrl('/api/dashboard/analytics-events')}?${analyticsQuery(filters, page)}`,
+    `${apiUrl('/api/dashboard/analytics-events')}?${analyticsQuery(filters, page, perPage)}`,
   )
 
   return parseJsonOrThrow<DashboardAnalyticsListResponse>(response)

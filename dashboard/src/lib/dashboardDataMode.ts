@@ -25,6 +25,11 @@ export function isApiDataMode(mode: DashboardDataMode): boolean {
   return mode === 'hosted-api' || mode === 'local-api'
 }
 
+/** Debug-only view states that fake a loading/empty/error UI rather than a data source. */
+export function isPreviewStateMode(mode: DashboardDataMode): boolean {
+  return mode === 'loading' || mode === 'empty' || mode === 'error'
+}
+
 export function viewModeOptions(): { value: DashboardDataMode; label: string }[] {
   const options: { value: DashboardDataMode; label: string }[] = [
     {

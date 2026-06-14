@@ -4,7 +4,7 @@ import { formatDashboardTimestamp } from './crmLabels'
 export { formatDashboardTimestamp }
 
 export const handoffStatusLabels: Record<HandoffStatus, string> = {
-  cart_handoff_created: 'Handoff registered',
+  cart_handoff_created: 'Registered',
   checkout_event_reconciled: 'Reconciled',
   abandoned: 'Abandoned',
 }
@@ -27,6 +27,17 @@ export function reconciliationNoteLabel(note: ReconciliationNote): string | null
   }
 
   return reconciliationNoteLabels[note] ?? note
+}
+
+/** First sentence of the reconcile note explanation — for compact table rows. */
+export function reconciliationNoteShortLabel(note: ReconciliationNote): string | null {
+  const full = reconciliationNoteLabel(note)
+  if (!full) {
+    return null
+  }
+
+  const boundary = full.indexOf('. ')
+  return boundary === -1 ? full : full.slice(0, boundary + 1)
 }
 
 /** Muted explanatory text under reconcile note codes in tables and detail rows. */

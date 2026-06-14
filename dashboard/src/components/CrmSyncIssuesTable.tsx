@@ -11,6 +11,8 @@ interface CrmSyncIssuesTableProps {
   onRetry: (event: CheckoutEventSummary) => Promise<void>
   retryingEventId: number | null
   retryDisabled?: boolean
+  /** Render without the outer card border (when nested inside another card). */
+  embedded?: boolean
 }
 
 export function CrmSyncIssuesTable({
@@ -20,23 +22,30 @@ export function CrmSyncIssuesTable({
   onRetry,
   retryingEventId,
   retryDisabled = false,
+  embedded = false,
 }: CrmSyncIssuesTableProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
+    <div
+      className={
+        embedded
+          ? 'overflow-hidden'
+          : 'overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40'
+      }
+    >
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-800 text-sm">
           <thead className="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-400">
             <tr>
-              <th scope="col" className="px-3 py-3 font-medium">
+              <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">
                 Attempt id
               </th>
-              <th scope="col" className="px-3 py-3 font-medium">
+              <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">
                 CRM
               </th>
-              <th scope="col" className="px-3 py-3 font-medium">
+              <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">
                 Retries
               </th>
-              <th scope="col" className="px-3 py-3 font-medium">
+              <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">
                 Last CRM attempt
               </th>
               <th scope="col" className="hidden px-3 py-3 font-medium md:table-cell">
@@ -69,7 +78,7 @@ export function CrmSyncIssuesTable({
                       : 'hover:bg-slate-800/40'
                   }
                 >
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3">
                     <button
                       type="button"
                       onClick={() => onOpenEvent(event.checkout_event_id)}
@@ -79,13 +88,13 @@ export function CrmSyncIssuesTable({
                       {formatAttemptId(event.donation_attempt_id)}
                     </button>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3">
                     <CrmStatusBadge summary={event.crm_status_summary} title={errorLabel ?? undefined} />
                   </td>
-                  <td className="px-3 py-3 font-mono text-slate-200">
+                  <td className="whitespace-nowrap px-3 py-3 font-mono text-slate-200">
                     {event.crm_sync.retry_count}
                   </td>
-                  <td className="px-3 py-3 text-slate-400">
+                  <td className="whitespace-nowrap px-3 py-3 text-slate-400">
                     {formatDashboardTimestamp(event.crm_sync.last_attempted_at)}
                   </td>
                   <td className="hidden px-3 py-3 md:table-cell">
