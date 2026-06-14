@@ -56,6 +56,84 @@ class FoxyApiClient
         return is_array($transaction) ? $transaction : null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findCartById(string $cartId): ?array
+    {
+        if (! $this->configured()) {
+            return null;
+        }
+
+        $zoom = 'items,items:item_options';
+        $url = "https://api.foxycart.com/carts/{$cartId}?zoom={$zoom}";
+
+        $response = Http::withToken($this->accessToken())
+            ->withHeaders($this->apiHeaders())
+            ->acceptJson()
+            ->get($url);
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        if ($response->failed()) {
+            throw new RequestException($response);
+        }
+
+        $cart = $response->json();
+
+        return is_array($cart) ? $cart : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $cart
+     * @return list<string>
+     */
+    public function donationAttemptIdsFromCart(array $cart): array
+    {
+        $items = $cart['_embedded']['fx:items']
+            ?? $cart['_embedded']['items']
+            ?? $cart['items']
+            ?? [];
+
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $attemptIds = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $options = $item['options']
+                ?? $item['_embedded']['fx:item_options']
+                ?? $item['_embedded']['fx:options']
+                ?? [];
+
+            if (! is_array($options)) {
+                continue;
+            }
+
+            foreach ($options as $option) {
+                if (! is_array($option)) {
+                    continue;
+                }
+
+                $name = $option['name'] ?? $option['code'] ?? null;
+                $value = $option['value'] ?? $option['display_value'] ?? null;
+
+                if ($name === 'donation_attempt_id' && is_string($value) && $value !== '') {
+                    $attemptIds[] = $value;
+                }
+            }
+        }
+
+        return array_values(array_unique($attemptIds));
+    }
+
     private function accessToken(): string
     {
         if ($this->accessToken !== null) {

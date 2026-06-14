@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CheckoutEvent;
 use App\Models\CheckoutHandoff;
+use App\Services\Foxy\FoxyApiClient;
 use App\Support\Dashboard\DashboardEventPresenter;
 use App\Support\Dashboard\DashboardHandoffPresenter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,6 +18,7 @@ class DashboardEventController extends Controller
     public function __construct(
         private readonly DashboardEventPresenter $presenter,
         private readonly DashboardHandoffPresenter $handoffPresenter,
+        private readonly FoxyApiClient $foxyApi,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -88,6 +91,54 @@ class DashboardEventController extends Controller
 
     public function showByAttempt(string $donationAttemptId): JsonResponse
     {
+        return response()->json([
+            'data' => $this->compositeByAttempt($donationAttemptId),
+        ]);
+    }
+
+    public function showByCart(int $cartId): JsonResponse
+    {
+        if (! $this->foxyApi->configured()) {
+            return response()->json([
+                'message' => 'foxy_api_not_configured',
+            ], 503);
+        }
+
+        try {
+            $cart = $this->foxyApi->findCartById((string) $cartId);
+        } catch (RequestException) {
+            return response()->json([
+                'message' => 'foxy_api_error',
+            ], 502);
+        }
+
+        if ($cart === null) {
+            abort(404);
+        }
+
+        $attemptIds = $this->foxyApi->donationAttemptIdsFromCart($cart);
+
+        if ($attemptIds === []) {
+            abort(404, 'foxy_cart_missing_attempt_id');
+        }
+
+        $donationAttemptId = $this->resolveAttemptIdForCart($attemptIds);
+        $composite = $this->compositeByAttempt($donationAttemptId, requireMiddlewareRecord: false);
+
+        return response()->json([
+            'data' => $composite + [
+                'foxy_cart_id' => (string) $cartId,
+                'donation_attempt_ids' => $attemptIds,
+                'foxy_cart' => $this->foxyCartSummary($cart, $attemptIds),
+            ],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function compositeByAttempt(string $donationAttemptId, bool $requireMiddlewareRecord = true): array
+    {
         $handoff = CheckoutHandoff::query()
             ->where('donation_attempt_id', $donationAttemptId)
             ->first();
@@ -97,17 +148,91 @@ class DashboardEventController extends Controller
             ->where('donation_attempt_id', $donationAttemptId)
             ->first();
 
-        if ($handoff === null && $event === null) {
+        if ($requireMiddlewareRecord && $handoff === null && $event === null) {
             abort(404);
         }
 
-        return response()->json([
-            'data' => [
-                'donation_attempt_id' => $donationAttemptId,
-                'handoff' => $handoff ? $this->handoffPresenter->summary($handoff) : null,
-                'checkout_event' => $event ? $this->presenter->detail($event) : null,
-            ],
-        ]);
+        return [
+            'donation_attempt_id' => $donationAttemptId,
+            'handoff' => $handoff ? $this->handoffPresenter->summary($handoff) : null,
+            'checkout_event' => $event ? $this->presenter->detail($event) : null,
+        ];
+    }
+
+    /**
+     * @param  list<string>  $attemptIds
+     */
+    private function resolveAttemptIdForCart(array $attemptIds): string
+    {
+        foreach ($attemptIds as $attemptId) {
+            $hasHandoff = CheckoutHandoff::query()
+                ->where('donation_attempt_id', $attemptId)
+                ->exists();
+
+            $hasEvent = CheckoutEvent::query()
+                ->where('donation_attempt_id', $attemptId)
+                ->exists();
+
+            if ($hasHandoff || $hasEvent) {
+                return $attemptId;
+            }
+        }
+
+        return $attemptIds[0];
+    }
+
+    /**
+     * @param  array<string, mixed>  $cart
+     * @param  list<string>  $attemptIds
+     * @return array<string, mixed>
+     */
+    private function foxyCartSummary(array $cart, array $attemptIds): array
+    {
+        $items = $cart['_embedded']['fx:items'] ?? [];
+        $summarizedItems = [];
+
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                $itemAttemptId = null;
+                $options = $item['_embedded']['fx:item_options'] ?? $item['options'] ?? [];
+
+                if (is_array($options)) {
+                    foreach ($options as $option) {
+                        if (! is_array($option)) {
+                            continue;
+                        }
+
+                        if (($option['name'] ?? null) === 'donation_attempt_id') {
+                            $value = $option['value'] ?? null;
+                            $itemAttemptId = is_string($value) && $value !== '' ? $value : null;
+                            break;
+                        }
+                    }
+                }
+
+                $summarizedItems[] = [
+                    'name' => (string) ($item['name'] ?? ''),
+                    'price' => $item['price'] ?? null,
+                    'quantity' => $item['quantity'] ?? null,
+                    'donation_attempt_id' => $itemAttemptId,
+                ];
+            }
+        }
+
+        return [
+            'total_order' => $cart['total_order'] ?? null,
+            'total_item_price' => $cart['total_item_price'] ?? null,
+            'customer_email' => $cart['customer_email'] ?? null,
+            'date_created' => $cart['date_created'] ?? null,
+            'date_modified' => $cart['date_modified'] ?? null,
+            'item_count' => count($summarizedItems),
+            'donation_attempt_ids' => $attemptIds,
+            'items' => $summarizedItems,
+        ];
     }
 
     /**

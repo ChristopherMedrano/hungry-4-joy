@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CheckoutEvent;
 use App\Models\CrmSyncAttempt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class DashboardEventApiTest extends TestCase
@@ -130,6 +131,145 @@ class DashboardEventApiTest extends TestCase
     public function test_dashboard_event_lookup_by_attempt_returns_404_when_neither_exists(): void
     {
         $this->getJson('/api/dashboard/events/by-attempt/h4j_attempt_missing_both')
+            ->assertNotFound();
+    }
+
+    public function test_dashboard_event_lookup_by_foxy_cart_id_resolves_attempt_and_handoff(): void
+    {
+        config([
+            'services.foxy.client_id' => 'test-client',
+            'services.foxy.client_secret' => 'test-secret',
+            'services.foxy.refresh_token' => 'test-refresh',
+            'services.foxy.store_id' => '120139',
+        ]);
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), '/token')) {
+                return Http::response(['access_token' => 'test-access-token'], 200);
+            }
+
+            if (str_contains($request->url(), '/carts/2247125087')) {
+                return Http::response([
+                    'total_order' => 0,
+                    'total_item_price' => 0,
+                    'customer_email' => 'toast@example.com',
+                    'date_created' => '2026-06-13T17:09:46-0700',
+                    'date_modified' => '2026-06-13T17:10:42-0700',
+                    '_embedded' => [
+                        'fx:items' => [
+                            [
+                                'name' => 'Fish 4 Joy',
+                                'price' => 25,
+                                'quantity' => 1,
+                                '_embedded' => [
+                                    'fx:item_options' => [
+                                        [
+                                            'name' => 'donation_attempt_id',
+                                            'value' => 'h4j_attempt_foxy_cart_lookup_01',
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ], 200);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->postJson('/api/checkout/handoffs', [
+            'donation_attempt_id' => 'h4j_attempt_foxy_cart_lookup_01',
+            'checkout_provider' => 'foxy',
+            'source_page' => 'home',
+            'campaign_id' => 'fish-campaign-01',
+            'campaign_name' => 'Fish 4 Joy',
+            'donation_amount' => 25,
+            'donation_label' => '3 fish',
+            'donation_type' => 'one_time',
+        ])->assertAccepted();
+
+        $this->getJson('/api/dashboard/events/by-cart/2247125087')
+            ->assertOk()
+            ->assertJsonPath('data.foxy_cart_id', '2247125087')
+            ->assertJsonPath('data.donation_attempt_id', 'h4j_attempt_foxy_cart_lookup_01')
+            ->assertJsonPath('data.donation_attempt_ids', ['h4j_attempt_foxy_cart_lookup_01'])
+            ->assertJsonPath('data.foxy_cart.items.0.name', 'Fish 4 Joy')
+            ->assertJsonPath('data.foxy_cart.items.0.donation_attempt_id', 'h4j_attempt_foxy_cart_lookup_01')
+            ->assertJsonPath('data.handoff.status', 'cart_handoff_created')
+            ->assertJsonPath('data.checkout_event', null);
+    }
+
+    public function test_dashboard_event_lookup_by_foxy_cart_id_returns_foxy_data_without_middleware_rows(): void
+    {
+        config([
+            'services.foxy.client_id' => 'test-client',
+            'services.foxy.client_secret' => 'test-secret',
+            'services.foxy.refresh_token' => 'test-refresh',
+            'services.foxy.store_id' => '120139',
+        ]);
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), '/token')) {
+                return Http::response(['access_token' => 'test-access-token'], 200);
+            }
+
+            if (str_contains($request->url(), '/carts/2247125087')) {
+                return Http::response([
+                    'total_order' => 0,
+                    'total_item_price' => 0,
+                    '_embedded' => [
+                        'fx:items' => [
+                            [
+                                'name' => 'Fish 4 Joy',
+                                'price' => 25,
+                                'quantity' => 1,
+                                '_embedded' => [
+                                    'fx:item_options' => [
+                                        [
+                                            'name' => 'donation_attempt_id',
+                                            'value' => 'h4j_attempt_foxy_cart_only',
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ], 200);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->getJson('/api/dashboard/events/by-cart/2247125087')
+            ->assertOk()
+            ->assertJsonPath('data.donation_attempt_id', 'h4j_attempt_foxy_cart_only')
+            ->assertJsonPath('data.handoff', null)
+            ->assertJsonPath('data.checkout_event', null);
+    }
+
+    public function test_dashboard_event_lookup_by_foxy_cart_id_returns_404_when_cart_missing(): void
+    {
+        config([
+            'services.foxy.client_id' => 'test-client',
+            'services.foxy.client_secret' => 'test-secret',
+            'services.foxy.refresh_token' => 'test-refresh',
+            'services.foxy.store_id' => '120139',
+        ]);
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), '/token')) {
+                return Http::response(['access_token' => 'test-access-token'], 200);
+            }
+
+            if (str_contains($request->url(), '/carts/999')) {
+                return Http::response([], 404);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->getJson('/api/dashboard/events/by-cart/999')
             ->assertNotFound();
     }
 
