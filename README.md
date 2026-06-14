@@ -16,7 +16,7 @@ Hosted demo services:
 | Integration status dashboard | [hungry-4-joy-dashboard.onrender.com](https://hungry-4-joy-dashboard.onrender.com) |
 | Middleware API health | [hungry-4-joy-middleware.onrender.com/api/health](https://hungry-4-joy-middleware.onrender.com/api/health) |
 
-Start on the **campaign site** for the donation flow. Open the **dashboard** to inspect checkout events, CRM sync status, and retry activity from live webhook ingest.
+Start on the **campaign site** for the donation flow. Open the **dashboard** to inspect checkout events, CRM sync status, and CRM sync issues from live webhook ingest.
 
 ## Planned Ecosystem
 
@@ -71,7 +71,7 @@ Laravel middleware/API
   +--> Status dashboard
          - checkout events and webhook ingest
          - CRM sync status and failure detail
-         - retry activity and manual CRM retry
+         - CRM sync issues and manual CRM retry
          - filters by campaign, status, and date
 ```
 

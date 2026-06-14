@@ -114,6 +114,7 @@ class DashboardEventPresenter
             return [
                 'eligible' => false,
                 'status' => 'not_applicable',
+                'crm_sync_attempt_id' => null,
                 'retry_count' => 0,
                 'last_attempted_at' => null,
                 'next_retry_at' => null,
@@ -129,6 +130,7 @@ class DashboardEventPresenter
             return [
                 'eligible' => true,
                 'status' => 'pending',
+                'crm_sync_attempt_id' => null,
                 'retry_count' => 0,
                 'last_attempted_at' => null,
                 'next_retry_at' => null,
@@ -139,6 +141,7 @@ class DashboardEventPresenter
         return [
             'eligible' => true,
             'status' => $attempt->status,
+            'crm_sync_attempt_id' => $attempt->id,
             'retry_count' => $attempt->retry_count,
             'last_attempted_at' => $attempt->last_attempted_at?->toIso8601String(),
             'next_retry_at' => $attempt->next_retry_at?->toIso8601String(),

@@ -24,6 +24,7 @@ export type HubSpotMode = 'fake' | 'live'
 export interface CrmSyncSummary {
   eligible: boolean
   status: CrmSyncStatus
+  crm_sync_attempt_id: number | null
   retry_count: number
   last_attempted_at: string | null
   next_retry_at: string | null
@@ -90,6 +91,7 @@ export interface CheckoutEventDetail extends CheckoutEventSummary {
     updated_at: string
   }
   server_analytics_events: ServerAnalyticsEventSummary[]
+  handoff?: import('./handoff').HandoffSummary | null
 }
 
 export type DashboardDataMode =

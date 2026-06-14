@@ -1,4 +1,4 @@
-import type { CrmStatusSummary, CrmSyncDetail } from '../types/dashboard'
+import type { CrmStatusSummary, CrmSyncSummary } from '../types/dashboard'
 
 export type CrmRetryUiState =
   | { kind: 'eligible'; label: string }
@@ -6,7 +6,7 @@ export type CrmRetryUiState =
 
 export function crmRetryUiState(
   summary: CrmStatusSummary,
-  crmSync: CrmSyncDetail,
+  crmSync: CrmSyncSummary,
 ): CrmRetryUiState {
   if (!crmSync.eligible || crmSync.crm_sync_attempt_id === null) {
     return { kind: 'ineligible', reason: 'CRM sync does not apply to this event.' }
