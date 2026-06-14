@@ -1,13 +1,22 @@
 import type { CheckoutEventDetail, TransactionStatus } from '../types/dashboard'
+import type { HandoffSummary } from '../types/handoff'
 import { displayOptional } from '../lib/attemptIdMatch'
 import { CrmSyncDetailSection } from './CrmSyncDetailSection'
+import { HandoffDetailSection } from './HandoffDetailSection'
 import { ServerAnalyticsSummarySection } from './ServerAnalyticsSummarySection'
 import { sectionHeadingClass, StatusCallout } from './StatusCallout'
 import { TransactionStatusBadge } from './TransactionStatusBadge'
 
 interface EventDetailPanelProps {
   event: CheckoutEventDetail | null
+  handoff?: HandoffSummary | null
   onOpenCrmSyncIssues?: () => void
+  onHandoffReconcile?: () => Promise<void>
+  isHandoffReconciling?: boolean
+  handoffReconcileError?: string | null
+  handoffReconcileDisabled?: boolean
+  embedded?: boolean
+  omitHandoff?: boolean
 }
 
 function DetailRow({ label, value }: { label: string; value: string | null }) {
@@ -56,9 +65,25 @@ function checkoutCallout(event: CheckoutEventDetail) {
 
 export function EventDetailPanel({
   event,
+  handoff = null,
   onOpenCrmSyncIssues,
+  onHandoffReconcile,
+  isHandoffReconciling = false,
+  handoffReconcileError = null,
+  handoffReconcileDisabled = false,
+  embedded = false,
+  omitHandoff = false,
 }: EventDetailPanelProps) {
+  const Wrapper = embedded ? 'div' : 'aside'
+  const wrapperClass = embedded
+    ? ''
+    : 'rounded-lg border border-slate-800 bg-slate-900/60 p-5'
+
   if (!event) {
+    if (embedded) {
+      return null
+    }
+
     return (
       <aside className="rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-sm text-slate-400">
         Select a checkout event to inspect ingest details and CRM sync state.
@@ -66,9 +91,23 @@ export function EventDetailPanel({
     )
   }
 
+  const resolvedHandoff = handoff ?? event.handoff ?? null
+
   return (
-    <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-      <section>
+    <Wrapper className={wrapperClass}>
+      {!omitHandoff && resolvedHandoff ? (
+        <HandoffDetailSection
+          handoff={resolvedHandoff}
+          donationAttemptId={event.donation_attempt_id}
+          onReconcile={onHandoffReconcile}
+          isReconciling={isHandoffReconciling}
+          reconcileError={handoffReconcileError}
+          reconcileDisabled={handoffReconcileDisabled}
+          lead
+        />
+      ) : null}
+
+      <section className={resolvedHandoff && !omitHandoff ? 'mt-6 border-t border-slate-800 pt-5' : ''}>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <h3 className={sectionHeadingClass}>Foxy Checkout Event</h3>
           <TransactionStatusBadge status={event.transaction_status} />
@@ -92,6 +131,6 @@ export function EventDetailPanel({
       />
 
       <ServerAnalyticsSummarySection events={event.server_analytics_events ?? []} />
-    </aside>
+    </Wrapper>
   )
 }

@@ -151,6 +151,7 @@ Scope:
 - Donation journey events.
 - Consent-aware event behavior.
 - HubSpot sync success/failure events.
+- Integration step log on checkout attempt trace.
 - Basic alert flags for repeated failures.
 - Application-table dashboard remains the source of truth.
 - Optional later links to Sentry/OpenTelemetry can be planned but not required.

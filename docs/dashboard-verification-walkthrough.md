@@ -18,6 +18,8 @@ Related docs:
 - Demo seeder loads one row per transaction and CRM badge state.
 - Duplicate checkout replays do not create extra dashboard rows.
 - CRM sync issues lists CRM sync rows with failures, retries, retryable state, or list warnings from stored attempt data.
+- Checkout attempt trace shows chronological integration steps for one `donation_attempt_id`.
+- System status tab and header strip show middleware readiness from `GET /api/health/ready`.
 - Frontend lint, typecheck, and production build succeed.
 - Browser UI renders expected badges and detail callouts without payment or secret fields.
 
@@ -52,6 +54,8 @@ Key test classes:
 | `DashboardStatusDemoSeederTest` | Demo seeder badge matrix |
 | `DashboardCrmSyncRetryTest` | Manual CRM retry endpoint |
 | `DashboardVerificationTest` | Walkthrough acceptance checks (duplicate exclusion, safety fields, badge matrix) |
+| `DashboardIntegrationStepApiTest` | Integration step log list and by-attempt `integration_steps` |
+| `HealthReadyTest` | Readiness endpoint checks and secret exclusion |
 
 ## 2. Prepare Local API Data
 
@@ -95,7 +99,43 @@ View modes:
 
 For this walkthrough, use **Local API (demo fixtures)** after step 2.
 
-## 4. Browser Inspection — Checkout Events Tab
+## 4. Browser Inspection — System Status
+
+Open the **System status** tab (first nav item). The header strip above the nav mirrors the same checks in compact badges.
+
+Contract reference: readiness vocabulary in [`docs/contracts.md`](contracts.md) — Section 5 Health And Readiness Endpoints.
+
+### Seeded preview
+
+With **Seeded preview** selected:
+
+- Header shows a preview hint instead of live checks.
+- Tab shows static demo readiness (`degraded`: DB ok, Foxy webhook configured, hAPI not configured, HubSpot disabled).
+
+### Local API
+
+With **Local API (demo fixtures)** selected:
+
+- Header badges and tab cards load from `GET /api/health/ready`.
+- Expect `database` and `migrations` = OK after `php artisan migrate`.
+- Foxy and HubSpot checks reflect your local middleware `.env` (often `degraded` until credentials are set).
+- **Refresh** re-fetches readiness without reloading the page.
+
+API check:
+
+```bash
+PORT=8001  # example — use your `php artisan serve` port
+
+curl -sS "http://127.0.0.1:${PORT}/api/health/ready" | jq .
+```
+
+Liveness (Render probe) stays separate:
+
+```bash
+curl -sS "http://127.0.0.1:${PORT}/api/health" | jq .
+```
+
+## 5. Browser Inspection — Checkout Events Tab
 
 Open **Checkout events** with **Local API (demo fixtures)** selected.
 
@@ -149,7 +189,7 @@ For a clean **8-row** list during walkthrough, run `php artisan migrate:fresh` t
 
 Contract reference: CRM badge derivation rules in [`docs/contracts.md`](contracts.md) — Section 5 CRM status summary.
 
-## 5. Browser Inspection — CRM Sync Issues Tab
+## 6. Browser Inspection — CRM Sync Issues Tab
 
 Open the **CRM sync issues** tab.
 
@@ -163,7 +203,44 @@ Expected:
 
 Filter **CRM sync → retryable** on the checkout events tab and confirm the same retryable row appears in both places.
 
-## 6. Duplicate Ingest Exclusion
+## 7. Browser Inspection — Checkout Attempts And Integration Timeline
+
+Open the **Checkout attempts** tab.
+
+Contract reference: integration step vocabulary in [`docs/contracts.md`](contracts.md) — Section 7 Integration Step Log.
+
+### Seeded preview
+
+With **Seeded preview** selected, open an attempt trace (for example `h4j_attempt_demo_unlinked_decline`).
+
+Expected:
+
+- **Integration timeline** lists steps in chronological order (oldest first).
+- Decline fixture shows `handoff_registered` then `handoff_reconcile_attempted` with `foxy_transaction_not_found`.
+- Step summaries are human-readable and omit secrets or payment data.
+
+### Local API (after handoff or webhook activity)
+
+When middleware has written `integration_step_logs` rows for an attempt:
+
+```bash
+curl -sS "http://127.0.0.1:${PORT}/api/dashboard/events/by-attempt/<donation_attempt_id>" | jq '.data.integration_steps'
+```
+
+Or query the step list directly:
+
+```bash
+curl -sS "http://127.0.0.1:${PORT}/api/dashboard/integration-events?donation_attempt_id=<donation_attempt_id>" | jq .
+```
+
+Expected for a completed synced donation:
+
+- `foxy_webhook_received` or `checkout_event_ingested`
+- `crm_sync_dispatched` and `crm_sync_completed` when HubSpot sync ran
+
+The integration timeline on the attempt trace panel should match the API order. There is no top-level integration-events table in the dashboard MVP.
+
+## 8. Duplicate Ingest Exclusion
 
 Duplicate checkout replays return `duplicate_ignored` and **do not** appear as extra dashboard rows.
 
@@ -199,7 +276,7 @@ Expected responses:
 
 Either way, `.meta.total` must **not increase** on the second POST. With demo seeder + contract replay already loaded, expect total **11**, not 12.
 
-## 7. Manual CRM Retry (Optional)
+## 9. Manual CRM Retry (Optional)
 
 Requires **Local API** or **Hosted API** mode — not Seeded preview.
 
@@ -210,7 +287,7 @@ Requires **Local API** or **Hosted API** mode — not Seeded preview.
 
 List-warning retry follows the same pattern with **Retry list enrollment**.
 
-## 8. Safety Checks
+## 10. Safety Checks
 
 During browser inspection, confirm the UI does **not** show:
 
@@ -220,7 +297,7 @@ During browser inspection, confirm the UI does **not** show:
 
 List responses omit HubSpot ids; detail responses include safe external references only. Automated scan: `DashboardVerificationTest::test_dashboard_list_and_detail_payloads_exclude_forbidden_payment_fields`.
 
-## 9. Hosted Dashboard (Optional)
+## 11. Hosted Dashboard (Optional)
 
 After Render Blueprint sync:
 
@@ -232,7 +309,7 @@ Use **Live API** view mode. CRM sync issues and CRM retry require middleware red
 
 See [`docs/render-deployment.md`](render-deployment.md).
 
-## 10. Hosted Handoff And Foxy Trace (Optional)
+## 12. Hosted Handoff And Foxy Trace (Optional)
 
 Use this after hosted WordPress + middleware deploy when verifying checkout handoff registration and Foxy reconciliation—not required for the local demo seeder walkthrough.
 
@@ -250,7 +327,7 @@ Related: [`docs/foxy-middleware-connection-plan.md`](foxy-middleware-connection-
 curl -sS "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-attempt/<donation_attempt_id>" | jq .
 ```
 
-Expect at minimum a `handoff` block with `status: cart_handoff_created`.
+Expect at minimum a `handoff` block with `status: cart_handoff_created` and an `integration_steps` array when step logs exist for the attempt.
 
 ### After checkout — two expected outcomes
 

@@ -49,6 +49,11 @@ class CheckoutHandoff extends Model
         ], true);
     }
 
+    public function manualReconcileEligible(): bool
+    {
+        return ! $this->isTerminal();
+    }
+
     /**
      * @return BelongsTo<CheckoutEvent, $this>
      */

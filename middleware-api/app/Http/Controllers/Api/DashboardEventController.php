@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CheckoutEvent;
 use App\Models\CheckoutHandoff;
+use App\Models\IntegrationStepLog;
 use App\Services\Foxy\FoxyApiClient;
 use App\Support\Dashboard\DashboardEventPresenter;
 use App\Support\Dashboard\DashboardHandoffPresenter;
+use App\Support\Dashboard\DashboardIntegrationStepPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +20,7 @@ class DashboardEventController extends Controller
     public function __construct(
         private readonly DashboardEventPresenter $presenter,
         private readonly DashboardHandoffPresenter $handoffPresenter,
+        private readonly DashboardIntegrationStepPresenter $integrationStepPresenter,
         private readonly FoxyApiClient $foxyApi,
     ) {}
 
@@ -84,8 +87,18 @@ class DashboardEventController extends Controller
             ->with(['crmSyncAttempt', 'serverAnalyticsEvents.checkoutEvent'])
             ->findOrFail($checkoutEvent);
 
+        $handoff = null;
+
+        if (filled($event->donation_attempt_id)) {
+            $handoff = CheckoutHandoff::query()
+                ->where('donation_attempt_id', $event->donation_attempt_id)
+                ->first();
+        }
+
         return response()->json([
-            'data' => $this->presenter->detail($event),
+            'data' => $this->presenter->detail($event) + [
+                'handoff' => $handoff ? $this->handoffPresenter->summary($handoff) : null,
+            ],
         ]);
     }
 
@@ -156,6 +169,14 @@ class DashboardEventController extends Controller
             'donation_attempt_id' => $donationAttemptId,
             'handoff' => $handoff ? $this->handoffPresenter->summary($handoff) : null,
             'checkout_event' => $event ? $this->presenter->detail($event) : null,
+            'integration_steps' => IntegrationStepLog::query()
+                ->where('donation_attempt_id', $donationAttemptId)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (IntegrationStepLog $log) => $this->integrationStepPresenter->summary($log))
+                ->values()
+                ->all(),
         ];
     }
 

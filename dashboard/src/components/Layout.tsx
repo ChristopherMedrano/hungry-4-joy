@@ -5,6 +5,7 @@ import { dashboardSections } from '../lib/dashboardSections'
 interface LayoutProps {
   children: ReactNode
   previewControl?: ReactNode
+  systemStatusBar?: ReactNode
   activeSection: DashboardSection
   onSectionChange: (section: DashboardSection) => void
 }
@@ -12,6 +13,7 @@ interface LayoutProps {
 export function Layout({
   children,
   previewControl,
+  systemStatusBar,
   activeSection,
   onSectionChange,
 }: LayoutProps) {
@@ -32,6 +34,7 @@ export function Layout({
           </div>
           {previewControl}
         </div>
+        {systemStatusBar}
         <nav
           aria-label="Dashboard sections"
           className="mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-3 pb-3 pt-1 lg:px-4"

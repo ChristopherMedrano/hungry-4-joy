@@ -54,7 +54,8 @@ Render resources:
 - Postgres database: `hungry-4-joy-middleware-db`
 - Runtime: Docker
 - Docker root: `middleware-api/`
-- Health check: `/api/health`
+- Health check (liveness): `/api/health`
+- Readiness check (ops UI): `/api/health/ready`
 
 Set these secrets during Blueprint creation:
 
@@ -86,9 +87,10 @@ After the service is live, verify:
 
 ```bash
 curl https://<middleware-render-host>/api/health
+curl https://<middleware-render-host>/api/health/ready
 ```
 
-Expected response:
+Liveness response:
 
 ```json
 {
@@ -96,6 +98,8 @@ Expected response:
   "status": "ok"
 }
 ```
+
+Readiness returns database, migration, Foxy, HubSpot, and queue flags for the dashboard **System status** tab. Expect `degraded` when optional integration env vars are not set; `503` only when the database is unreachable.
 
 The Foxy JSON webhook target is:
 
@@ -170,10 +174,11 @@ After deploy, verify:
 ```bash
 curl -I https://hungry-4-joy-dashboard.onrender.com
 curl https://hungry-4-joy-dashboard.onrender.com/api/health
+curl https://hungry-4-joy-dashboard.onrender.com/api/health/ready
 curl https://hungry-4-joy-dashboard.onrender.com/api/dashboard/events
 ```
 
-Open the dashboard in a browser and confirm checkout events load in **Live API** view mode. Manual CRM retry actions call through the same proxied `/api` path.
+Open the dashboard in a browser and confirm **System status** and checkout events load in **Live API** view mode. Manual CRM retry actions call through the same proxied `/api` path.
 
 **Blueprint sync:** If the dashboard service is new, open the Render Blueprint for this repo and sync so `hungry-4-joy-dashboard` is created. Existing WordPress and middleware services are unchanged.
 

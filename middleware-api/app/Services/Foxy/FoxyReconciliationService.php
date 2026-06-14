@@ -4,8 +4,10 @@ namespace App\Services\Foxy;
 
 use App\Models\CheckoutEvent;
 use App\Models\CheckoutHandoff;
+use App\Models\IntegrationStepLog;
 use App\Services\CheckoutEventIngestor;
 use App\Services\CheckoutHandoffLinker;
+use App\Services\Integration\IntegrationStepLogger;
 use Illuminate\Support\Carbon;
 
 class FoxyReconciliationService
@@ -15,6 +17,7 @@ class FoxyReconciliationService
         private readonly FoxyTransactionMapper $mapper,
         private readonly CheckoutEventIngestor $ingestor,
         private readonly CheckoutHandoffLinker $linker,
+        private readonly IntegrationStepLogger $stepLogger,
     ) {}
 
     public function reconcile(CheckoutHandoff $handoff): CheckoutHandoff
@@ -41,7 +44,7 @@ class FoxyReconciliationService
         if ($existingEvent instanceof CheckoutEvent) {
             $this->linker->linkHandoff($handoff, $existingEvent, $existingEvent->transaction_id, 'existing_checkout_event');
 
-            return $handoff->fresh();
+            return $this->finishReconcile($handoff);
         }
 
         if ($this->shouldAbandon($handoff)) {
@@ -51,13 +54,13 @@ class FoxyReconciliationService
                 'next_reconcile_at' => null,
             ]);
 
-            return $handoff->fresh();
+            return $this->finishReconcile($handoff);
         }
 
         if (! $this->foxyApi->configured()) {
             $this->scheduleRetry($handoff, 'foxy_api_not_configured');
 
-            return $handoff->fresh();
+            return $this->finishReconcile($handoff);
         }
 
         try {
@@ -65,13 +68,13 @@ class FoxyReconciliationService
         } catch (\Throwable) {
             $this->scheduleRetry($handoff, 'foxy_api_error');
 
-            return $handoff->fresh();
+            return $this->finishReconcile($handoff);
         }
 
         if ($transaction === null) {
             $this->scheduleRetry($handoff, 'foxy_transaction_not_found');
 
-            return $handoff->fresh();
+            return $this->finishReconcile($handoff);
         }
 
         try {
@@ -79,10 +82,11 @@ class FoxyReconciliationService
         } catch (\InvalidArgumentException) {
             $this->scheduleRetry($handoff, 'foxy_payload_invalid');
 
-            return $handoff->fresh();
+            return $this->finishReconcile($handoff);
         }
 
         $result = $this->ingestor->ingest($normalized);
+        $this->logIngestResult($result, $handoff->donation_attempt_id, IntegrationStepLog::PRODUCER_LARAVEL_RECONCILE);
         $checkoutEvent = $result['checkout_event'];
 
         if (! $checkoutEvent instanceof CheckoutEvent) {
@@ -103,7 +107,7 @@ class FoxyReconciliationService
             $this->scheduleRetry($handoff, 'checkout_event_missing_after_ingest');
         }
 
-        return $handoff->fresh();
+        return $this->finishReconcile($handoff);
     }
 
     /**
@@ -157,5 +161,72 @@ class FoxyReconciliationService
             'next_reconcile_at' => now()->addMinutes($delayMinutes),
             'reconciliation_note' => $note,
         ]);
+    }
+
+    private function finishReconcile(CheckoutHandoff $handoff): CheckoutHandoff
+    {
+        $handoff = $handoff->fresh();
+
+        $status = match ($handoff->handoff_status) {
+            CheckoutHandoff::STATUS_CHECKOUT_EVENT_RECONCILED => IntegrationStepLog::STATUS_SUCCEEDED,
+            CheckoutHandoff::STATUS_ABANDONED => IntegrationStepLog::STATUS_FAILED,
+            default => $handoff->reconciliation_note !== null
+                ? IntegrationStepLog::STATUS_RETRYABLE
+                : IntegrationStepLog::STATUS_SUCCEEDED,
+        };
+
+        $summary = match ($handoff->handoff_status) {
+            CheckoutHandoff::STATUS_CHECKOUT_EVENT_RECONCILED => 'Handoff linked to checkout event.',
+            CheckoutHandoff::STATUS_ABANDONED => 'Handoff abandoned after reconciliation window.',
+            default => $handoff->reconciliation_note !== null
+                ? 'Reconcile attempt scheduled: '.$handoff->reconciliation_note
+                : 'Reconcile attempt completed.',
+        };
+
+        $this->stepLogger->record(
+            IntegrationStepLog::STEP_HANDOFF_RECONCILE_ATTEMPTED,
+            $status,
+            IntegrationStepLog::PRODUCER_LARAVEL_RECONCILE,
+            $summary,
+            $handoff->donation_attempt_id,
+            $handoff->reconciliation_note,
+            $handoff->checkout_event_id,
+            $handoff->id,
+        );
+
+        return $handoff;
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function logIngestResult(array $result, string $donationAttemptId, string $producer): void
+    {
+        $checkoutEvent = $result['checkout_event'] ?? null;
+        $checkoutEventId = $checkoutEvent instanceof CheckoutEvent ? $checkoutEvent->id : null;
+
+        if (($result['status'] ?? '') === 'accepted') {
+            $this->stepLogger->record(
+                IntegrationStepLog::STEP_CHECKOUT_EVENT_INGESTED,
+                IntegrationStepLog::STATUS_SUCCEEDED,
+                $producer,
+                'Checkout event ingested into middleware.',
+                $donationAttemptId,
+                checkoutEventId: $checkoutEventId,
+            );
+
+            return;
+        }
+
+        if (($result['status'] ?? '') === 'duplicate_ignored') {
+            $this->stepLogger->record(
+                IntegrationStepLog::STEP_CHECKOUT_EVENT_DUPLICATE,
+                IntegrationStepLog::STATUS_SKIPPED,
+                $producer,
+                'Duplicate checkout event ignored.',
+                $donationAttemptId,
+                checkoutEventId: $checkoutEventId,
+            );
+        }
     }
 }

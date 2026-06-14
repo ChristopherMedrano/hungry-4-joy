@@ -206,9 +206,11 @@ Observability tracks whether the system is healthy, where failures happen, and w
 MVP responsibilities:
 
 - Laravel logs
+- `integration_step_logs` pipeline step records (see `docs/contracts.md` Section 7)
 - FoxyCart webhook receipt and validation logs
 - HubSpot API request/response error logs
-- health/status checks
+- health/status checks (`GET /api/health` liveness, `GET /api/health/ready` readiness)
+- dashboard **System status** tab and header strip backed by readiness checks
 
 Optional later tools:
 
@@ -221,7 +223,7 @@ Optional later tools:
 
 MVP boundary:
 
-- The admin dashboard uses application-owned tables as the source of truth for donation and CRM sync status.
+- The admin dashboard uses application-owned tables as the source of truth for donation, CRM sync, and integration step status.
 - OpenTelemetry is an optional later layer for developer observability, not the business/integration dashboard itself.
 - External SaaS internals are not directly observable through OpenTelemetry; the app can only record its own webhook handling, API calls, response codes, exceptions, retries, and timings.
 
@@ -253,6 +255,8 @@ MVP responsibilities:
 
 - view checkout events and webhook ingest path
 - view CRM sync status and failure detail
+- view integration step timeline on checkout attempt trace
+- view middleware readiness (database, migrations, Foxy, HubSpot, queue) on System status tab
 - filter by campaign, status, date, and free-text search
 - view CRM sync issues for failed, retryable, and list-warning syncs
 - trigger safe manual CRM retries when eligible

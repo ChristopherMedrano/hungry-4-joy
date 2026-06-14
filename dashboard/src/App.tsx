@@ -3,10 +3,19 @@ import {
   fetchCrmSyncRetry,
   fetchDashboardAnalyticsEventDetail,
   fetchDashboardAnalyticsEvents,
+  fetchDashboardCheckoutAttempts,
+  fetchDashboardEventByAttempt,
+  fetchDashboardEventByCart,
   fetchDashboardEventDetail,
   fetchDashboardEvents,
+  fetchHandoffReconcile,
+  fetchHealthReady,
   setDashboardApiBase,
 } from './api/dashboard'
+import { AttemptLookupBar, type AttemptLookupMode } from './components/AttemptLookupBar'
+import { AttemptTracePanel } from './components/AttemptTracePanel'
+import { CheckoutAttemptsFiltersBar } from './components/CheckoutAttemptsFiltersBar'
+import { CheckoutAttemptsTable } from './components/CheckoutAttemptsTable'
 import { AnalyticsEventDetailPanel } from './components/AnalyticsEventDetailPanel'
 import { AnalyticsEventTable } from './components/AnalyticsEventTable'
 import { AnalyticsFiltersBar } from './components/AnalyticsFiltersBar'
@@ -18,10 +27,15 @@ import { EventTable } from './components/EventTable'
 import { Layout } from './components/Layout'
 import { LoadingState } from './components/LoadingState'
 import { CrmSyncIssuesTable } from './components/CrmSyncIssuesTable'
+import { SystemStatusBar } from './components/SystemStatusBar'
+import { SystemStatusPanel } from './components/SystemStatusPanel'
 import {
   findSeededDashboardEvent,
   seededDashboardEvents,
 } from './data/seededDashboardEvents'
+import { seededCheckoutAttempts } from './data/seededCheckoutAttempts'
+import { findSeededIntegrationSteps } from './data/seededIntegrationSteps'
+import { seededHealthStatus } from './data/seededHealthStatus'
 import {
   apiBaseForMode,
   HOSTED_MIDDLEWARE_URL,
@@ -29,6 +43,8 @@ import {
   isLocalDashboardHost,
   viewModeOptions,
 } from './lib/dashboardDataMode'
+import { defaultCheckoutAttemptsFilters } from './lib/checkoutAttemptsFilters'
+import { filterCheckoutAttempts } from './lib/filterCheckoutAttempts'
 import type { DashboardSection } from './lib/dashboardSections'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
 import { filterCrmSyncIssuesBySearch, hasCrmSyncIssue, sortByLastCrmAttempt } from './lib/crmSyncIssues'
@@ -44,6 +60,8 @@ import type {
   DashboardDataMode,
   EventFilters,
 } from './types/dashboard'
+import type { AttemptTraceData, CheckoutAttemptSummary, CheckoutAttemptsFilters } from './types/handoff'
+import type { HealthReadyResponse } from './types/health'
 
 function App() {
   const [dashboardSection, setDashboardSection] = useState<DashboardSection>('events')
@@ -65,6 +83,19 @@ function App() {
   const [crmSyncIssuesFocusAttemptId, setCrmSyncIssuesFocusAttemptId] = useState<string | null>(
     null,
   )
+  const [attemptLookupQuery, setAttemptLookupQuery] = useState('')
+  const [attemptLookupMode, setAttemptLookupMode] = useState<AttemptLookupMode>('attempt')
+  const [attemptTrace, setAttemptTrace] = useState<AttemptTraceData | null>(null)
+  const [attemptTraceError, setAttemptTraceError] = useState<string | null>(null)
+  const [isLoadingAttemptTrace, setIsLoadingAttemptTrace] = useState(false)
+  const [isHandoffReconciling, setIsHandoffReconciling] = useState(false)
+  const [handoffReconcileError, setHandoffReconcileError] = useState<string | null>(null)
+  const [checkoutAttemptsFilters, setCheckoutAttemptsFilters] =
+    useState<CheckoutAttemptsFilters>(defaultCheckoutAttemptsFilters)
+  const [liveCheckoutAttempts, setLiveCheckoutAttempts] = useState<CheckoutAttemptSummary[]>([])
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
+  const [checkoutAttemptsError, setCheckoutAttemptsError] = useState<string | null>(null)
+  const [isLoadingCheckoutAttempts, setIsLoadingCheckoutAttempts] = useState(false)
   const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>(defaultAnalyticsFilters)
   const [liveAnalyticsEvents, setLiveAnalyticsEvents] = useState<ServerAnalyticsEventSummary[]>([])
   const [selectedAnalyticsId, setSelectedAnalyticsId] = useState<number | null>(null)
@@ -74,6 +105,10 @@ function App() {
   const [analyticsDetailError, setAnalyticsDetailError] = useState<string | null>(null)
   const [isLoadingAnalyticsList, setIsLoadingAnalyticsList] = useState(false)
   const [isLoadingAnalyticsDetail, setIsLoadingAnalyticsDetail] = useState(false)
+  const [healthReady, setHealthReady] = useState<HealthReadyResponse | null>(null)
+  const [healthError, setHealthError] = useState<string | null>(null)
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false)
+  const [healthReloadToken, setHealthReloadToken] = useState(0)
 
   const isSeededView = viewState === 'seeded'
   const isApiView = isApiDataMode(viewState)
@@ -87,6 +122,28 @@ function App() {
     () => sortByLastCrmAttempt(seededEvents.filter(hasCrmSyncIssue)),
     [seededEvents],
   )
+
+  const seededCheckoutAttemptsFiltered = useMemo(
+    () => filterCheckoutAttempts(seededCheckoutAttempts, checkoutAttemptsFilters),
+    [checkoutAttemptsFilters],
+  )
+
+  const displayCheckoutAttempts = isSeededView
+    ? seededCheckoutAttemptsFiltered
+    : liveCheckoutAttempts
+
+  const activeSelectedAttemptId = useMemo(() => {
+    if (
+      selectedAttemptId &&
+      displayCheckoutAttempts.some(
+        (attempt) => attempt.donation_attempt_id === selectedAttemptId,
+      )
+    ) {
+      return selectedAttemptId
+    }
+
+    return displayCheckoutAttempts[0]?.donation_attempt_id ?? null
+  }, [selectedAttemptId, displayCheckoutAttempts])
 
   const displayEvents = isSeededView ? seededEvents : liveEvents
   const displayCrmSyncIssuesEvents = useMemo(() => {
@@ -118,6 +175,47 @@ function App() {
 
     return liveAnalyticsEvents[0]?.server_analytics_event_id ?? null
   }, [selectedAnalyticsId, liveAnalyticsEvents])
+
+  useEffect(() => {
+    if (!isApiView) {
+      setHealthReady(null)
+      setHealthError(null)
+      setIsLoadingHealth(false)
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+
+    async function loadHealth(): Promise<void> {
+      setIsLoadingHealth(true)
+      setHealthError(null)
+
+      try {
+        const response = await fetchHealthReady()
+        if (!cancelled) {
+          setHealthReady(response)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setHealthReady(null)
+          setHealthError(
+            error instanceof Error ? error.message : 'Could not load system health status.',
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingHealth(false)
+        }
+      }
+    }
+
+    void loadHealth()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewState, isApiView, healthReloadToken])
 
   useEffect(() => {
     if (!isApiView || dashboardSection !== 'analytics-events') {
@@ -309,6 +407,152 @@ function App() {
   }, [viewState, filters, reloadToken, isApiView, dashboardSection])
 
   useEffect(() => {
+    if (!isApiView || dashboardSection !== 'checkout-attempts') {
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+
+    async function loadCheckoutAttempts(): Promise<void> {
+      setIsLoadingCheckoutAttempts(true)
+      setCheckoutAttemptsError(null)
+
+      try {
+        const response = await fetchDashboardCheckoutAttempts(checkoutAttemptsFilters)
+        if (cancelled) {
+          return
+        }
+
+        setLiveCheckoutAttempts(response.data)
+        setSelectedAttemptId((current) => {
+          if (
+            current &&
+            response.data.some((attempt) => attempt.donation_attempt_id === current)
+          ) {
+            return current
+          }
+
+          return response.data[0]?.donation_attempt_id ?? null
+        })
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setLiveCheckoutAttempts([])
+        setSelectedAttemptId(null)
+        setAttemptTrace(null)
+        setCheckoutAttemptsError(
+          error instanceof Error ? error.message : 'Could not load checkout attempts.',
+        )
+      } finally {
+        if (!cancelled) {
+          setIsLoadingCheckoutAttempts(false)
+        }
+      }
+    }
+
+    void loadCheckoutAttempts()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewState, checkoutAttemptsFilters, reloadToken, isApiView, dashboardSection])
+
+  useEffect(() => {
+    if (
+      dashboardSection !== 'checkout-attempts' ||
+      activeSelectedAttemptId === null ||
+      isSeededView
+    ) {
+      return
+    }
+
+    if (!isApiView) {
+      return
+    }
+
+    let cancelled = false
+    setDashboardApiBase(apiBaseForMode(viewState))
+    setAttemptLookupQuery(activeSelectedAttemptId)
+    setAttemptLookupMode('attempt')
+
+    async function loadTraceForSelection(): Promise<void> {
+      setIsLoadingAttemptTrace(true)
+      setAttemptTraceError(null)
+      setHandoffReconcileError(null)
+
+      try {
+        const trace = await fetchDashboardEventByAttempt(activeSelectedAttemptId!)
+        if (!cancelled) {
+          setAttemptTrace(trace)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAttemptTrace(null)
+          setAttemptTraceError(
+            error instanceof Error ? error.message : 'Could not load attempt trace.',
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAttemptTrace(false)
+        }
+      }
+    }
+
+    void loadTraceForSelection()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    viewState,
+    activeSelectedAttemptId,
+    isApiView,
+    isSeededView,
+    dashboardSection,
+    reloadToken,
+  ])
+
+  useEffect(() => {
+    if (!isSeededView || dashboardSection !== 'checkout-attempts') {
+      return
+    }
+
+    if (activeSelectedAttemptId === null) {
+      setAttemptTrace(null)
+      return
+    }
+
+    const attempt = displayCheckoutAttempts.find(
+      (row) => row.donation_attempt_id === activeSelectedAttemptId,
+    )
+
+    if (!attempt) {
+      setAttemptTrace(null)
+      return
+    }
+
+    setAttemptLookupQuery(activeSelectedAttemptId)
+    setAttemptLookupMode('attempt')
+    setAttemptTrace({
+      donation_attempt_id: attempt.donation_attempt_id,
+      handoff: attempt.handoff,
+      checkout_event: null,
+      integration_steps: findSeededIntegrationSteps(attempt.donation_attempt_id),
+    })
+    setAttemptTraceError(null)
+    setHandoffReconcileError(null)
+  }, [
+    isSeededView,
+    dashboardSection,
+    activeSelectedAttemptId,
+    displayCheckoutAttempts,
+  ])
+
+  useEffect(() => {
     if (!isApiView || dashboardSection !== 'events' || activeSelectedId === null) {
       return
     }
@@ -413,6 +657,82 @@ function App() {
     }
   }
 
+  function refreshHealthStatus(): void {
+    setHealthReloadToken((token) => token + 1)
+  }
+
+  const displayHealth = isSeededView ? seededHealthStatus : healthReady
+
+  async function handleAttemptLookup(): Promise<void> {
+    const query = attemptLookupQuery.trim()
+    if (!query || isSeededView) {
+      return
+    }
+
+    setDashboardApiBase(apiBaseForMode(viewState))
+    setIsLoadingAttemptTrace(true)
+    setAttemptTraceError(null)
+    setHandoffReconcileError(null)
+
+    try {
+      const trace =
+        attemptLookupMode === 'cart'
+          ? await fetchDashboardEventByCart(query)
+          : await fetchDashboardEventByAttempt(query)
+      setAttemptTrace(trace)
+      setSelectedAttemptId(trace.donation_attempt_id)
+    } catch (error) {
+      setAttemptTrace(null)
+      setAttemptTraceError(
+        error instanceof Error ? error.message : 'Could not load attempt trace.',
+      )
+    } finally {
+      setIsLoadingAttemptTrace(false)
+    }
+  }
+
+  async function handleHandoffReconcile(donationAttemptId: string): Promise<void> {
+    if (isSeededView) {
+      return
+    }
+
+    setDashboardApiBase(apiBaseForMode(viewState))
+    setIsHandoffReconciling(true)
+    setHandoffReconcileError(null)
+
+    try {
+      const trace = await fetchHandoffReconcile(donationAttemptId)
+      setAttemptTrace(trace)
+
+      if (trace.checkout_event) {
+        updateEventInLists(trace.checkout_event)
+        setSelectedId(trace.checkout_event.checkout_event_id)
+        setSelectedDetail(trace.checkout_event)
+        setLiveCheckoutAttempts((attempts) =>
+          attempts.filter((attempt) => attempt.donation_attempt_id !== donationAttemptId),
+        )
+        setSelectedAttemptId((current) =>
+          current === donationAttemptId ? null : current,
+        )
+        setReloadToken((token) => token + 1)
+      } else {
+        setLiveCheckoutAttempts((attempts) =>
+          attempts.map((attempt) =>
+            attempt.donation_attempt_id === donationAttemptId && trace.handoff
+              ? { ...attempt, handoff: trace.handoff }
+              : attempt,
+          ),
+        )
+      }
+    } catch (error) {
+      setHandoffReconcileError(
+        error instanceof Error ? error.message : 'Handoff reconcile failed.',
+      )
+    } finally {
+      setIsHandoffReconciling(false)
+    }
+  }
+
   function openEventFromCrmSyncIssues(checkoutEventId: number): void {
     setSelectedId(checkoutEventId)
     setCrmSyncIssuesFocusAttemptId(null)
@@ -502,9 +822,56 @@ function App() {
     </>
   )
 
+  const checkoutAttemptsHint = (
+    <>
+      Lists click-time handoffs with no linked checkout event yet — common for pending checkouts,
+      gateway declines, and abandoned attempts. Use trace lookup for a specific attempt id or Foxy
+      cart id from the error log.
+    </>
+  )
+
   let content
 
-  if (dashboardSection === 'analytics-events') {
+  if (dashboardSection === 'system-status') {
+    if (viewState === 'loading') {
+      content = <LoadingState />
+    } else if (viewState === 'error') {
+      content = (
+        <ErrorState
+          message="Preview error state for the dashboard shell."
+          onRetry={() => setViewState('hosted-api')}
+        />
+      )
+    } else if (viewState === 'empty') {
+      content = (
+        <EmptyState
+          title="No system status preview"
+          message="Switch to seeded, local API, or hosted API view mode."
+          onResetFilters={() => setViewState('seeded')}
+        />
+      )
+    } else if (isApiView && isLoadingHealth && !healthReady) {
+      content = <LoadingState />
+    } else if (isApiView && healthError && !healthReady) {
+      content = (
+        <ErrorState
+          message={healthError}
+          onRetry={refreshHealthStatus}
+        />
+      )
+    } else if (displayHealth) {
+      content = (
+        <SystemStatusPanel
+          health={displayHealth}
+          isRefreshing={isLoadingHealth}
+          onRefresh={refreshHealthStatus}
+          isPreview={isSeededView}
+        />
+      )
+    } else {
+      content = <LoadingState />
+    }
+  } else if (dashboardSection === 'analytics-events') {
     if (isSeededView) {
       content = (
         <EmptyState
@@ -595,6 +962,129 @@ function App() {
         </div>
       )
     }
+  } else if (dashboardSection === 'checkout-attempts') {
+    if (
+      viewState === 'loading' ||
+      (isApiView && isLoadingCheckoutAttempts && displayCheckoutAttempts.length === 0)
+    ) {
+      content = <LoadingState />
+    } else if (viewState === 'error' || (isApiView && checkoutAttemptsError)) {
+      content = (
+        <ErrorState
+          message={
+            checkoutAttemptsError ??
+            'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
+          }
+          onRetry={() => {
+            setViewState('hosted-api')
+            setReloadToken((token) => token + 1)
+          }}
+        />
+      )
+    } else if (viewState === 'empty' || displayCheckoutAttempts.length === 0) {
+      content = (
+        <div className="space-y-4">
+          <EmptyState
+            title="No unlinked checkout attempts"
+            message="Handoffs appear here when a donation click registered but no checkout event is linked yet. Try a donation from the campaign site or search by attempt id below."
+            onResetFilters={() => setCheckoutAttemptsFilters(defaultCheckoutAttemptsFilters)}
+          />
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+            <div />
+            <div className="space-y-4">
+              <AttemptLookupBar
+                query={attemptLookupQuery}
+                mode={attemptLookupMode}
+                onQueryChange={setAttemptLookupQuery}
+                onModeChange={setAttemptLookupMode}
+                onLookup={() => void handleAttemptLookup()}
+                isLoading={isLoadingAttemptTrace}
+                disabled={isSeededView}
+              />
+              {attemptTraceError ? (
+                <ErrorState
+                  message={attemptTraceError}
+                  onRetry={() => void handleAttemptLookup()}
+                />
+              ) : (
+                <AttemptTracePanel
+                  trace={attemptTrace}
+                  onReconcile={
+                    attemptTrace
+                      ? async () => {
+                          await handleHandoffReconcile(attemptTrace.donation_attempt_id)
+                        }
+                      : undefined
+                  }
+                  isReconciling={isHandoffReconciling}
+                  reconcileError={handoffReconcileError}
+                  reconcileDisabled={isSeededView}
+                  onOpenCrmSyncIssues={
+                    attemptTrace?.checkout_event?.donation_attempt_id
+                      ? () =>
+                          openCrmSyncIssuesFromEvent(
+                            attemptTrace?.checkout_event?.donation_attempt_id,
+                          )
+                      : undefined
+                  }
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    } else {
+      content = (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+          <CheckoutAttemptsTable
+            attempts={displayCheckoutAttempts}
+            selectedAttemptId={activeSelectedAttemptId}
+            onSelect={setSelectedAttemptId}
+          />
+          <div className="space-y-4">
+            <AttemptLookupBar
+              query={attemptLookupQuery}
+              mode={attemptLookupMode}
+              onQueryChange={setAttemptLookupQuery}
+              onModeChange={setAttemptLookupMode}
+              onLookup={() => void handleAttemptLookup()}
+              isLoading={isLoadingAttemptTrace}
+              disabled={isSeededView}
+            />
+            {attemptTraceError ? (
+              <ErrorState
+                message={attemptTraceError}
+                onRetry={() => void handleAttemptLookup()}
+              />
+            ) : isLoadingAttemptTrace && isApiView ? (
+              <LoadingState />
+            ) : (
+              <AttemptTracePanel
+                trace={attemptTrace}
+                onReconcile={
+                  attemptTrace
+                    ? async () => {
+                        await handleHandoffReconcile(attemptTrace.donation_attempt_id)
+                      }
+                    : undefined
+                }
+                isReconciling={isHandoffReconciling}
+                reconcileError={handoffReconcileError}
+                reconcileDisabled={isSeededView}
+                onOpenCrmSyncIssues={
+                  attemptTrace?.checkout_event?.donation_attempt_id
+                    ? () =>
+                        openCrmSyncIssuesFromEvent(
+                          attemptTrace?.checkout_event?.donation_attempt_id,
+                        )
+                    : undefined
+                }
+              />
+            )}
+          </div>
+        </div>
+      )
+    }
   } else if (dashboardSection === 'events') {
     if (
       viewState === 'loading' ||
@@ -642,6 +1132,16 @@ function App() {
                       )
                   : undefined
               }
+              onHandoffReconcile={
+                isSeededView || !selectedDetail?.donation_attempt_id
+                  ? undefined
+                  : async () => {
+                      await handleHandoffReconcile(selectedDetail.donation_attempt_id!)
+                    }
+              }
+              isHandoffReconciling={isHandoffReconciling}
+              handoffReconcileError={handoffReconcileError}
+              handoffReconcileDisabled={isSeededView}
             />
           )}
         </div>
@@ -652,21 +1152,40 @@ function App() {
   return (
     <Layout
       previewControl={previewControl}
+      systemStatusBar={
+        <SystemStatusBar
+          health={displayHealth}
+          isLoading={isLoadingHealth}
+          error={healthError}
+          isPreview={isSeededView}
+          onOpenDetails={() => setDashboardSection('system-status')}
+          onRefresh={isApiView ? refreshHealthStatus : undefined}
+        />
+      }
       activeSection={dashboardSection}
       onSectionChange={handleDashboardSectionChange}
     >
       <div className="space-y-4">
         {dashboardSection === 'analytics-events' ? (
           <AnalyticsFiltersBar filters={analyticsFilters} onChange={setAnalyticsFilters} />
-        ) : (
+        ) : dashboardSection === 'checkout-attempts' ? (
+          <CheckoutAttemptsFiltersBar
+            filters={checkoutAttemptsFilters}
+            onChange={setCheckoutAttemptsFilters}
+          />
+        ) : dashboardSection === 'system-status' ? null : (
           <EventFiltersBar filters={filters} onChange={setFilters} />
         )}
         <p className="text-xs text-slate-500">
-          {dashboardSection === 'crm-sync-issues'
+          {dashboardSection === 'system-status'
+            ? 'Middleware readiness from GET /api/health/ready. Liveness probe stays at GET /api/health for deploy checks.'
+            : dashboardSection === 'crm-sync-issues'
             ? crmSyncIssuesHint
             : dashboardSection === 'analytics-events'
               ? analyticsHint
-              : dataSourceHint}
+              : dashboardSection === 'checkout-attempts'
+                ? checkoutAttemptsHint
+                : dataSourceHint}
         </p>
         {content}
       </div>

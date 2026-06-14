@@ -12,6 +12,7 @@ Contract sections:
 4. CRM / marketing sync payload
 5. Dashboard status payload
 6. Marketing analytics events
+7. Integration step log
 
 These contracts should avoid sensitive payment data. Card numbers, CVV values, raw payment credentials, and payment method secrets do not belong in WordPress, Laravel, HubSpot, logs, or the dashboard.
 
@@ -679,6 +680,7 @@ Laravel middleware database tables:
 | --- | --- |
 | `checkout_events` | Stored checkout/webhook events after validation and ingest |
 | `crm_sync_attempts` | One CRM sync lifecycle row per eligible checkout event |
+| `integration_step_logs` | Pipeline step audit rows keyed by `donation_attempt_id` when known |
 
 Duplicate checkout replays that return `duplicate_ignored` do not create `checkout_events` rows. The dashboard list shows stored events only.
 
@@ -705,7 +707,49 @@ Implemented Laravel routes and the React dashboard consume these payload shapes.
 | `GET` | `/api/dashboard/analytics-events` | Paginated list of server-side conversion/analytics records |
 | `GET` | `/api/dashboard/analytics-events/{server_analytics_event_id}` | Full contract payload for one server analytics record |
 | `GET` | `/api/dashboard/analytics-events/by-attempt/{donation_attempt_id}` | All server analytics records for one donation attempt |
+| `GET` | `/api/dashboard/integration-events` | Paginated integration step logs for one `donation_attempt_id` (query param required) |
 | `POST` | `/api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` | Trigger a safe manual CRM retry when eligible |
+
+### Health And Readiness Endpoints
+
+These routes are outside `/api/dashboard` but are consumed by the dashboard **System status** tab and always-visible header strip (WordPress, HubSpot, Foxy, and Laravel logos with healthy / error / disabled badges).
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Liveness probe only — process responds. Render deploy health check uses this path. |
+| `GET` | `/api/health/ready` | Readiness and integration configuration flags for ops UI |
+
+**`GET /api/health/ready`**
+
+Returns `200` when the database is reachable; `503` when the database check fails. Overall `status` may still be `degraded` with HTTP `200` when optional integrations are not configured.
+
+```json
+{
+  "service": "hungry-4-joy-middleware-api",
+  "status": "ok",
+  "checked_at": "2026-06-13T12:00:00Z",
+  "checks": {
+    "api": { "status": "ok", "label": "Middleware API", "summary": "API process is responding." },
+    "database": { "status": "ok", "label": "Database", "summary": "Database connection succeeded." },
+    "migrations": { "status": "ok", "label": "Migrations", "summary": "Required tables are present." },
+    "foxy_webhook": { "status": "configured", "label": "Foxy webhook", "summary": "Webhook encryption key is set." },
+    "foxy_api": { "status": "not_configured", "label": "Foxy hAPI", "summary": "OAuth credentials are not fully set." },
+    "hubspot": { "status": "disabled", "label": "HubSpot sync", "summary": "HubSpot sync is disabled for this environment." },
+    "wordpress": { "status": "disabled", "label": "WordPress", "summary": "WordPress site URL is not configured for readiness checks." },
+    "queue": { "status": "ok", "label": "Queue", "summary": "Queue driver: sync.", "driver": "sync", "failed_jobs": 0 }
+  }
+}
+```
+
+**Overall `status`**
+
+| Value | When |
+| --- | --- |
+| `ok` | Database and required tables are healthy |
+| `degraded` | Database ok but migrations missing, Foxy not configured, HubSpot enabled without token, or WordPress probe failed |
+| `down` | Database connection failed |
+
+Responses must not include secrets, tokens, or raw env values.
 
 ### Manual CRM Retry Endpoint
 
@@ -748,12 +792,13 @@ Returns `404` when neither a handoff nor a checkout event exists for the attempt
   "data": {
     "donation_attempt_id": "h4j_attempt_...",
     "handoff": { },
-    "checkout_event": { }
+    "checkout_event": { },
+    "integration_steps": [ ]
   }
 }
 ```
 
-Either `handoff` or `checkout_event` may be `null`. A handoff with `reconciliation.note = foxy_transaction_not_found` and `checkout_event: null` is a normal outcome for Foxy gateway declines that never create a transaction.
+`integration_steps` is chronological (oldest first). Either `handoff` or `checkout_event` may be `null`. A handoff with `reconciliation.note = foxy_transaction_not_found` and `checkout_event: null` is a normal outcome for Foxy gateway declines that never create a transaction.
 
 **`GET /api/dashboard/events/by-cart/{foxy_cart_id}`**
 
@@ -1080,7 +1125,7 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-w
 - Error messages exposed to the dashboard must remain redacted summaries safe for support display.
 - Manual retry actions must only target `failed`, `retryable`, or list-warning `succeeded` attempts and must not replay clean succeeded events.
 - Dashboard routes must not expose the local fixture receiver behavior as production ingest status.
-- Analytics event emission, alerting, and observability dashboards remain out of scope for this contract.
+- Analytics vendor writes and alert-flag dashboards remain out of scope for this contract section. Integration step logs are defined in Section 7.
 
 ### Dashboard Payload Acceptance Criteria
 
@@ -1273,6 +1318,81 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md).
 - Property shapes align with campaign button metadata and checkout event fixtures.
 - Duplicate, missing-event, and missing-identity debugging notes are documented.
 - Production analytics vendor writes remain out of scope.
+
+## 7. Integration Step Log
+
+Status: Implemented in middleware API and dashboard attempt trace; not a top-level dashboard table.
+
+This contract defines **pipeline audit rows** for operational support: what Laravel did while moving a donation attempt through Foxy webhook ingest, handoff reconcile, and HubSpot sync. It is **not** the marketing analytics catalog in Section 6.
+
+### Purpose
+
+- Record safe, ordered integration steps per `donation_attempt_id` when known.
+- Support checkout attempt trace debugging (handoff without checkout event, reconcile retries, CRM dispatch).
+- Keep application-owned tables as the source of truth (not Sentry, OpenTelemetry, or raw Laravel log files).
+
+### Source
+
+Laravel middleware table `integration_step_logs`, written by `IntegrationStepLogger` at producer boundaries.
+
+### Destination
+
+- Dashboard **Checkout attempts** trace panel: **Integration timeline** (chronological list for one attempt).
+- Optional direct API read: `GET /api/dashboard/integration-events?donation_attempt_id=…`.
+- Included on `GET /api/dashboard/events/by-attempt/{donation_attempt_id}` as `integration_steps`.
+
+There is **no** paginated cross-attempt integration table in the dashboard MVP.
+
+### Step Vocabulary (slice 1)
+
+| Step | Typical producer | Meaning |
+| --- | --- | --- |
+| `foxy_webhook_received` | `foxy_webhook` | Signed webhook parsed and normalized. |
+| `foxy_webhook_rejected` | `foxy_webhook` | Webhook failed configuration, signature, or payload validation. |
+| `checkout_event_ingested` | `foxy_webhook`, `laravel_reconcile` | Normalized checkout row stored. |
+| `checkout_event_duplicate` | `foxy_webhook`, `laravel_reconcile` | Duplicate ingest ignored. |
+| `handoff_registered` | `laravel_handoff` | Click-time handoff stored. |
+| `handoff_reconcile_attempted` | `laravel_reconcile` | Reconcile pass finished or scheduled retry. |
+| `crm_sync_dispatched` | `laravel_queue` | HubSpot sync job queued. |
+| `crm_sync_completed` | `laravel_crm` | HubSpot sync job finished (succeeded, failed, retryable, or skipped). |
+
+### Step Log Summary Object
+
+| Field | Example | Purpose |
+| --- | --- | --- |
+| `integration_step_log_id` | `12` | Local primary key |
+| `donation_attempt_id` | `h4j_attempt_...` | Canonical attempt identity when known |
+| `step` | `handoff_reconcile_attempted` | Step name from vocabulary |
+| `status` | `retryable` | `succeeded`, `failed`, `skipped`, or `retryable` |
+| `producer` | `laravel_reconcile` | Owning integration component |
+| `summary` | `Reconcile attempt scheduled: foxy_transaction_not_found` | Safe human-readable line (max 500 chars) |
+| `error_code` | `foxy_transaction_not_found` | Machine-readable note when applicable |
+| `occurrence_count` | `3` | Deduped repeats of same attempt+step+error within 5 minutes |
+| `checkout_event_id` | `8` | Optional FK to stored checkout row |
+| `checkout_handoff_id` | `4` | Optional FK to handoff row |
+| `crm_sync_attempt_id` | `2` | Optional FK to CRM sync row |
+| `recorded_at` | `2026-06-13T10:36:00Z` | Last update time for this log row |
+
+### Dedupe Rule
+
+When the same `donation_attempt_id`, `step`, and `error_code` occur within five minutes, Laravel increments `occurrence_count` on the existing row instead of inserting a duplicate. This keeps reconcile retry noise readable.
+
+### Distinction From Server Analytics (Section 6)
+
+| | Integration step log | Server analytics |
+| --- | --- | --- |
+| Question | What did the pipeline do, in order? | What conversion outcomes occurred? |
+| Event names | `handoff_reconcile_attempted`, `crm_sync_dispatched`, … | `DonationCompleted`, `HubSpotSyncSucceeded`, … |
+| Rows per attempt | Many | Few (0–4) |
+| Dashboard surface | Integration timeline on attempt trace | Server analytics tab |
+
+A completed donation may produce both `checkout_event_ingested` (step log) and `DonationCompleted` (analytics). They are parallel recordings, not duplicates.
+
+### Validation And Safety Rules
+
+- Step summaries must exclude secrets, raw payment data, and full provider payloads.
+- `donation_attempt_id` follows Section 2 when present.
+- External observability SaaS (Sentry, OpenTelemetry) remains optional and deferred.
 
 ## Contract Principles
 

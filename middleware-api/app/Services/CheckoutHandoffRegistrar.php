@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\CheckoutHandoff;
+use App\Models\IntegrationStepLog;
 use App\Services\Foxy\FoxyReconciliationService;
+use App\Services\Integration\IntegrationStepLogger;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
@@ -11,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutHandoffRegistrar
 {
-    public function __construct(private readonly FoxyReconciliationService $reconciler) {}
+    public function __construct(
+        private readonly FoxyReconciliationService $reconciler,
+        private readonly IntegrationStepLogger $stepLogger,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -67,6 +72,15 @@ class CheckoutHandoffRegistrar
                 'handoff' => $handoff,
             ];
         }
+
+        $this->stepLogger->record(
+            IntegrationStepLog::STEP_HANDOFF_REGISTERED,
+            IntegrationStepLog::STATUS_SUCCEEDED,
+            IntegrationStepLog::PRODUCER_LARAVEL_HANDOFF,
+            'Checkout handoff registered at donate click.',
+            $handoff->donation_attempt_id,
+            checkoutHandoffId: $handoff->id,
+        );
 
         $this->reconciler->reconcile($handoff);
 
