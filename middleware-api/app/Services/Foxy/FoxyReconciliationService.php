@@ -141,6 +141,44 @@ class FoxyReconciliationService
         return $processed;
     }
 
+    /**
+     * @return array{processed: int, linked: int, still_open: int, abandoned: int}
+     */
+    public function reconcileOpenHandoffs(?int $limit = null): array
+    {
+        $query = CheckoutHandoff::query()
+            ->whereNotIn('handoff_status', [
+                CheckoutHandoff::STATUS_CHECKOUT_EVENT_RECONCILED,
+                CheckoutHandoff::STATUS_ABANDONED,
+            ])
+            ->orderBy('handoff_at')
+            ->orderBy('id');
+
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        $summary = [
+            'processed' => 0,
+            'linked' => 0,
+            'still_open' => 0,
+            'abandoned' => 0,
+        ];
+
+        foreach ($query->cursor() as $handoff) {
+            $handoff = $this->reconcile($handoff);
+            $summary['processed']++;
+
+            match ($handoff->handoff_status) {
+                CheckoutHandoff::STATUS_CHECKOUT_EVENT_RECONCILED => $summary['linked']++,
+                CheckoutHandoff::STATUS_ABANDONED => $summary['abandoned']++,
+                default => $summary['still_open']++,
+            };
+        }
+
+        return $summary;
+    }
+
     private function shouldAbandon(CheckoutHandoff $handoff): bool
     {
         $abandonAfterHours = (int) config('checkout.handoff_abandon_after_hours', 24);

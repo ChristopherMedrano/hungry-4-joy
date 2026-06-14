@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\CheckoutHandoffController;
 use App\Http\Controllers\Api\DashboardCrmSyncRetryController;
 use App\Http\Controllers\Api\DashboardHandoffController;
+use App\Http\Controllers\Api\DashboardHandoffBatchController;
 use App\Http\Controllers\Api\DashboardHandoffReconcileController;
 use App\Http\Controllers\Api\DashboardEventController;
 use App\Http\Controllers\Api\DashboardIntegrationStepController;
@@ -214,6 +215,10 @@ Route::prefix('dashboard')->group(function () {
         ->name('dashboard.handoffs.index');
     Route::post('/handoffs/reconcile', [DashboardHandoffReconcileController::class, 'store'])
         ->name('dashboard.handoffs.reconcile');
+    Route::post('/handoffs/reconcile-open', [DashboardHandoffBatchController::class, 'reconcileOpen'])
+        ->name('dashboard.handoffs.reconcile-open');
+    Route::post('/handoffs/sweep-unfed', [DashboardHandoffBatchController::class, 'sweepUnfed'])
+        ->name('dashboard.handoffs.sweep-unfed');
     Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
         ->name('dashboard.events.by-attempt');
     Route::get('/events/by-cart/{cartId}', [DashboardEventController::class, 'showByCart'])
