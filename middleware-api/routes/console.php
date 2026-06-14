@@ -85,4 +85,6 @@ Artisan::command('checkout:reconcile-handoffs {--limit= : Maximum number of due 
     return self::SUCCESS;
 })->purpose('Reconcile registered checkout handoffs against Foxy transactions');
 
-Schedule::command('checkout:reconcile-handoffs')->everyMinute();
+if (config('checkout.handoff_scheduled_reconcile_enabled', false)) {
+    Schedule::command('checkout:reconcile-handoffs')->everyMinute();
+}

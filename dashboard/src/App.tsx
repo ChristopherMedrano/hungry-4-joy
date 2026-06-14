@@ -9,8 +9,12 @@ import {
   fetchDashboardEventDetail,
   fetchDashboardEvents,
   fetchHandoffReconcile,
+  fetchHandoffReconcileOpen,
+  fetchHandoffSweepUnfed,
   fetchHealthReady,
   setDashboardApiBase,
+  type HandoffBatchReconcileSummary,
+  type HandoffSweepUnfedSummary,
 } from './api/dashboard'
 import { AttemptLookupBar, type AttemptLookupMode } from './components/AttemptLookupBar'
 import { AttemptTracePanel } from './components/AttemptTracePanel'
@@ -90,6 +94,15 @@ function App() {
   const [isLoadingAttemptTrace, setIsLoadingAttemptTrace] = useState(false)
   const [isHandoffReconciling, setIsHandoffReconciling] = useState(false)
   const [handoffReconcileError, setHandoffReconcileError] = useState<string | null>(null)
+  const [isReconcilingOpenHandoffs, setIsReconcilingOpenHandoffs] = useState(false)
+  const [isSweepingUnfedTransactions, setIsSweepingUnfedTransactions] = useState(false)
+  const [handoffBatchSummary, setHandoffBatchSummary] = useState<
+    HandoffBatchReconcileSummary | HandoffSweepUnfedSummary | null
+  >(null)
+  const [handoffBatchSummaryKind, setHandoffBatchSummaryKind] = useState<
+    'reconcile-open' | 'sweep-unfed' | null
+  >(null)
+  const [handoffBatchError, setHandoffBatchError] = useState<string | null>(null)
   const [checkoutAttemptsFilters, setCheckoutAttemptsFilters] =
     useState<CheckoutAttemptsFilters>(defaultCheckoutAttemptsFilters)
   const [liveCheckoutAttempts, setLiveCheckoutAttempts] = useState<CheckoutAttemptSummary[]>([])
@@ -733,6 +746,56 @@ function App() {
     }
   }
 
+  async function handleReconcileOpenHandoffs(): Promise<void> {
+    if (isSeededView) {
+      return
+    }
+
+    setDashboardApiBase(apiBaseForMode(viewState))
+    setIsReconcilingOpenHandoffs(true)
+    setHandoffBatchError(null)
+    setHandoffBatchSummary(null)
+    setHandoffBatchSummaryKind(null)
+
+    try {
+      const summary = await fetchHandoffReconcileOpen()
+      setHandoffBatchSummary(summary)
+      setHandoffBatchSummaryKind('reconcile-open')
+      setReloadToken((token) => token + 1)
+    } catch (error) {
+      setHandoffBatchError(
+        error instanceof Error ? error.message : 'Open handoff reconcile failed.',
+      )
+    } finally {
+      setIsReconcilingOpenHandoffs(false)
+    }
+  }
+
+  async function handleSweepUnfedTransactions(): Promise<void> {
+    if (isSeededView) {
+      return
+    }
+
+    setDashboardApiBase(apiBaseForMode(viewState))
+    setIsSweepingUnfedTransactions(true)
+    setHandoffBatchError(null)
+    setHandoffBatchSummary(null)
+    setHandoffBatchSummaryKind(null)
+
+    try {
+      const summary = await fetchHandoffSweepUnfed()
+      setHandoffBatchSummary(summary)
+      setHandoffBatchSummaryKind('sweep-unfed')
+      setReloadToken((token) => token + 1)
+    } catch (error) {
+      setHandoffBatchError(
+        error instanceof Error ? error.message : 'Unfed transaction sweep failed.',
+      )
+    } finally {
+      setIsSweepingUnfedTransactions(false)
+    }
+  }
+
   function openEventFromCrmSyncIssues(checkoutEventId: number): void {
     setSelectedId(checkoutEventId)
     setCrmSyncIssuesFocusAttemptId(null)
@@ -825,8 +888,9 @@ function App() {
   const checkoutAttemptsHint = (
     <>
       Lists click-time handoffs with no linked checkout event yet — common for pending checkouts,
-      gateway declines, and abandoned attempts. Use trace lookup for a specific attempt id or Foxy
-      cart id from the error log.
+      gateway declines, and abandoned attempts. Use batch actions to reconcile open handoffs or sweep
+      unfed Foxy transactions for the demo (no background scheduler required). Trace lookup still
+      works for a specific attempt id or Foxy cart id from the error log.
     </>
   )
 
@@ -1172,6 +1236,13 @@ function App() {
           <CheckoutAttemptsFiltersBar
             filters={checkoutAttemptsFilters}
             onChange={setCheckoutAttemptsFilters}
+            onReconcileOpen={handleReconcileOpenHandoffs}
+            onSweepUnfed={handleSweepUnfedTransactions}
+            isReconcilingOpen={isReconcilingOpenHandoffs}
+            isSweepingUnfed={isSweepingUnfedTransactions}
+            batchActionsDisabled={isSeededView}
+            batchSummary={handoffBatchSummary}
+            batchSummaryKind={handoffBatchSummaryKind}
           />
         ) : dashboardSection === 'system-status' ? null : (
           <EventFiltersBar filters={filters} onChange={setFilters} />
@@ -1187,6 +1258,11 @@ function App() {
                 ? checkoutAttemptsHint
                 : dataSourceHint}
         </p>
+        {handoffBatchError && dashboardSection === 'checkout-attempts' ? (
+          <p className="text-xs text-rose-300" role="alert">
+            {handoffBatchError}
+          </p>
+        ) : null}
         {content}
       </div>
     </Layout>

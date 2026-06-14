@@ -285,7 +285,7 @@ This is the designed producer-to-dashboard flow for practice checkout:
 1. **Click** — WordPress generates `donation_attempt_id` and opens the Foxy cart with that value in item options.
 2. **Handoff** — The theme POSTs safe metadata to `POST /api/checkout/handoffs` so Laravel knows the attempt started before any webhook.
 3. **Checkout** — Foxy handles payment. Outcome depends on gateway behavior (see below).
-4. **Reconcile** — Laravel polls Foxy hAPI by `donation_attempt_id` (scheduled backoff + on-demand `POST /api/checkout/handoffs/reconcile`). Signed Foxy webhooks can link the same handoff when they arrive first.
+4. **Reconcile** — Laravel polls Foxy hAPI by `donation_attempt_id` (on-demand dashboard actions, optional scheduled backoff when `CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=true`, or `POST /api/checkout/handoffs/reconcile`). Signed Foxy webhooks can link the same handoff when they arrive first.
 5. **Support lookup** — Dashboard/API reads join handoff + checkout event by attempt id, or resolve attempt id from a Foxy cart id when the error log is all you have.
 
 Reconciliation queries **transactions only**:
@@ -343,6 +343,22 @@ Content-Type: application/json
 
 {"donation_attempt_id": "h4j_attempt_..."}
 ```
+
+Dashboard batch actions (demo-friendly; no scheduler required):
+
+```text
+POST /api/dashboard/handoffs/reconcile-open
+POST /api/dashboard/handoffs/sweep-unfed
+Content-Type: application/json
+
+{"limit": 25}
+{"hours": 24, "limit": 50}
+```
+
+- **`reconcile-open`** — Reconciles every non-terminal handoff in Laravel, ignoring `next_reconcile_at` backoff. Returns counts: `processed`, `linked`, `still_open`, `abandoned`.
+- **`sweep-unfed`** — Queries Foxy hAPI for recent transactions with `data_is_fed=false`, keeps rows whose item options include a canonical `donation_attempt_id`, ingests safe checkout events, and creates/links handoffs when missing. Returns counts: `scanned`, `ingested`, `linked`, `skipped_existing`, `skipped_no_attempt_id`, `errors`.
+
+Scheduled reconcile is **off by default** (`CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=false`). Enable only when a host runs `php artisan schedule:run` every minute.
 
 Debugging: when by-attempt lookup shows a handoff but no checkout event, check `handoff.reconciliation.note`. If `foxy_transaction_not_found` after a known Foxy decline, use by-cart lookup with the error-log cart id before assuming handoff or metadata failed.
 
@@ -708,6 +724,10 @@ Implemented Laravel routes and the React dashboard consume these payload shapes.
 | `GET` | `/api/dashboard/analytics-events/{server_analytics_event_id}` | Full contract payload for one server analytics record |
 | `GET` | `/api/dashboard/analytics-events/by-attempt/{donation_attempt_id}` | All server analytics records for one donation attempt |
 | `GET` | `/api/dashboard/integration-events` | Paginated integration step logs for one `donation_attempt_id` (query param required) |
+| `GET` | `/api/dashboard/handoffs` | Paginated list of unlinked checkout handoffs (Checkout attempts tab) |
+| `POST` | `/api/dashboard/handoffs/reconcile` | Manual reconcile for one `donation_attempt_id` |
+| `POST` | `/api/dashboard/handoffs/reconcile-open` | Reconcile all open handoffs (demo batch action) |
+| `POST` | `/api/dashboard/handoffs/sweep-unfed` | Sweep recent Foxy transactions with `data_is_fed=false` |
 | `POST` | `/api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` | Trigger a safe manual CRM retry when eligible |
 
 ### Health And Readiness Endpoints

@@ -190,6 +190,52 @@ export async function fetchHandoffReconcile(
   }
 }
 
+export interface HandoffBatchReconcileSummary {
+  processed: number
+  linked: number
+  still_open: number
+  abandoned: number
+}
+
+export interface HandoffSweepUnfedSummary {
+  scanned: number
+  ingested: number
+  linked: number
+  skipped_existing: number
+  skipped_no_attempt_id: number
+  errors: string[]
+}
+
+export async function fetchHandoffReconcileOpen(): Promise<HandoffBatchReconcileSummary> {
+  const response = await fetch(apiUrl('/api/dashboard/handoffs/reconcile-open'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+  })
+  const payload = await parseJsonOrThrow<{ data: HandoffBatchReconcileSummary }>(response)
+
+  return payload.data
+}
+
+export async function fetchHandoffSweepUnfed(
+  hours = 24,
+): Promise<HandoffSweepUnfedSummary> {
+  const response = await fetch(apiUrl('/api/dashboard/handoffs/sweep-unfed'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ hours }),
+  })
+  const payload = await parseJsonOrThrow<{ data: HandoffSweepUnfedSummary }>(response)
+
+  return payload.data
+}
+
 export async function fetchCrmSyncRetry(
   crmSyncAttemptId: number,
 ): Promise<CheckoutEventDetail> {

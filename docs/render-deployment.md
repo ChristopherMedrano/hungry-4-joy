@@ -73,7 +73,7 @@ WordPress receives `MIDDLEWARE_API_URL` from the middleware service URL via Blue
 
 Render injects the Postgres connection string into `DB_URL` from the Blueprint database reference.
 
-Schedule reconciliation on hosted middleware by ensuring a cron job runs `php artisan schedule:run` every minute, or run `php artisan checkout:reconcile-handoffs` manually during verification.
+Reconciliation for the hosted demo is **manual by default**. Use the dashboard **Checkout attempts** tab buttons **Reconcile open handoffs** and **Sweep unfed transactions**, or run `php artisan checkout:reconcile-handoffs` from a shell during verification. Background scheduling is disabled unless `CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=true` and a cron job runs `php artisan schedule:run` every minute.
 
 Support lookup when Foxy error logs show a cart id but no transaction:
 

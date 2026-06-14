@@ -329,6 +329,15 @@ curl -sS "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-a
 
 Expect at minimum a `handoff` block with `status: cart_handoff_created` and an `integration_steps` array when step logs exist for the attempt.
 
+### Dashboard batch actions (demo)
+
+On the hosted dashboard **Checkout attempts** tab (Live API mode):
+
+1. **Reconcile open handoffs** — runs Foxy hAPI lookup for every non-terminal handoff.
+2. **Sweep unfed transactions** — queries recent Foxy transactions with `data_is_fed=false` and backfills safe checkout events when `donation_attempt_id` item options are present.
+
+No Render cron worker is required for the demo when these buttons are used after donate clicks or sandbox checkouts.
+
 ### After checkout — two expected outcomes
 
 | Test | Foxy creates | By-attempt result |

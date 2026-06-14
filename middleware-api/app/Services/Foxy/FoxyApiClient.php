@@ -87,6 +87,94 @@ class FoxyApiClient
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    public function listUnfedTransactions(\DateTimeInterface $since, int $limit = 50): array
+    {
+        if (! $this->configured()) {
+            return [];
+        }
+
+        $storeId = (string) config('services.foxy.store_id');
+        $sinceIso = $since->format('c');
+        $untilIso = now()->format('c');
+        $transactionDate = rawurlencode("{$sinceIso}..{$untilIso}");
+        $zoom = 'items,items:item_options,payments,custom_fields';
+        $url = "https://api.foxycart.com/stores/{$storeId}/transactions?data_is_fed=false&transaction_date={$transactionDate}&zoom={$zoom}&limit={$limit}";
+
+        $response = Http::withToken($this->accessToken())
+            ->withHeaders($this->apiHeaders())
+            ->acceptJson()
+            ->get($url);
+
+        if ($response->failed()) {
+            throw new RequestException($response);
+        }
+
+        $transactions = $response->json('_embedded.fx:transactions')
+            ?? $response->json('_embedded.transactions')
+            ?? [];
+
+        if (! is_array($transactions)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $transactions,
+            static fn (mixed $transaction): bool => is_array($transaction),
+        ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $transaction
+     */
+    public function donationAttemptIdFromTransaction(array $transaction): ?string
+    {
+        $items = $transaction['_embedded']['fx:items']
+            ?? $transaction['_embedded']['items']
+            ?? $transaction['items']
+            ?? [];
+
+        if (! is_array($items)) {
+            return null;
+        }
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $options = $item['options']
+                ?? $item['_embedded']['fx:item_options']
+                ?? $item['_embedded']['fx:options']
+                ?? [];
+
+            if (! is_array($options)) {
+                continue;
+            }
+
+            foreach ($options as $option) {
+                if (! is_array($option)) {
+                    continue;
+                }
+
+                $name = $option['name'] ?? $option['code'] ?? null;
+                $value = $option['value'] ?? $option['display_value'] ?? null;
+
+                if (
+                    $name === 'donation_attempt_id'
+                    && is_string($value)
+                    && preg_match('/^h4j_attempt_[A-Za-z0-9_-]+$/', $value) === 1
+                ) {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<string, mixed>  $cart
      * @return list<string>
      */
