@@ -1,12 +1,10 @@
 import type { EventFilters } from '../types/dashboard'
+import { fieldClass as selectClass } from '../lib/formStyles'
 
 interface EventFiltersBarProps {
   filters: EventFilters
   onChange: (filters: EventFilters) => void
 }
-
-const selectClass =
-  'w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500'
 
 export function EventFiltersBar({ filters, onChange }: EventFiltersBarProps) {
   const update = (key: keyof EventFilters, value: string) => {

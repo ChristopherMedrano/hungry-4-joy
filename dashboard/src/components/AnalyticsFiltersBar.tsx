@@ -1,4 +1,5 @@
 import type { AnalyticsFilters } from '../types/analytics'
+import { fieldClass } from '../lib/formStyles'
 
 interface AnalyticsFiltersBarProps {
   filters: AnalyticsFilters
@@ -23,7 +24,7 @@ export function AnalyticsFiltersBar({ filters, onChange }: AnalyticsFiltersBarPr
         <select
           value={filters.event}
           onChange={(event) => onChange({ ...filters, event: event.target.value })}
-          className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+          className={fieldClass}
         >
           {eventOptions.map((option) => (
             <option key={option.value || 'all'} value={option.value}>
@@ -41,7 +42,7 @@ export function AnalyticsFiltersBar({ filters, onChange }: AnalyticsFiltersBarPr
           value={filters.search}
           onChange={(event) => onChange({ ...filters, search: event.target.value })}
           placeholder="Attempt id, checkout event id, analytics id"
-          className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+          className={fieldClass}
         />
       </label>
     </div>

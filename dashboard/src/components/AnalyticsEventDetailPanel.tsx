@@ -5,6 +5,7 @@ import { sectionHeadingClass } from './StatusCallout'
 
 interface AnalyticsEventDetailPanelProps {
   event: ServerAnalyticsEventDetail | null
+  embedded?: boolean
 }
 
 function DetailRow({ label, value }: { label: string; value: string | null }) {
@@ -16,8 +17,15 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
   )
 }
 
-export function AnalyticsEventDetailPanel({ event }: AnalyticsEventDetailPanelProps) {
+export function AnalyticsEventDetailPanel({ event, embedded = false }: AnalyticsEventDetailPanelProps) {
   if (!event) {
+    if (embedded) {
+      return (
+        <div className="text-sm text-slate-400">
+          Select a server analytics record to inspect the contract payload emitted by Laravel.
+        </div>
+      )
+    }
     return (
       <aside className="rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-sm text-slate-400">
         Select a server analytics record to inspect the contract payload emitted by Laravel.
@@ -25,8 +33,8 @@ export function AnalyticsEventDetailPanel({ event }: AnalyticsEventDetailPanelPr
     )
   }
 
-  return (
-    <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+  const inner = (
+    <>
       <section>
         <h3 className={sectionHeadingClass}>Server analytics event</h3>
         <dl className="mt-4">
@@ -60,6 +68,14 @@ export function AnalyticsEventDetailPanel({ event }: AnalyticsEventDetailPanelPr
           {JSON.stringify(event.payload, null, 2)}
         </pre>
       </section>
-    </aside>
+    </>
+  )
+
+  if (embedded) {
+    return <div>{inner}</div>
+  }
+
+  return (
+    <aside className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">{inner}</aside>
   )
 }

@@ -1,4 +1,5 @@
 import { isAttemptIdQuery, isCartIdQuery } from '../lib/handoffReconcileEligibility'
+import { fieldClass as inputClass } from '../lib/formStyles'
 
 export type AttemptLookupMode = 'attempt' | 'cart'
 
@@ -11,9 +12,6 @@ interface AttemptLookupBarProps {
   isLoading?: boolean
   disabled?: boolean
 }
-
-const inputClass =
-  'w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500'
 
 export function AttemptLookupBar({
   query,
@@ -36,7 +34,7 @@ export function AttemptLookupBar({
       className="rounded-lg border border-slate-800 bg-slate-900/60 p-4"
     >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-slate-200">Trace by attempt or Foxy cart</h2>
+        <h2 className="text-sm font-medium text-slate-200">Trace a single attempt or cart</h2>
         <div className="flex rounded-md border border-slate-700 p-0.5 text-xs">
           <button
             type="button"
@@ -64,8 +62,8 @@ export function AttemptLookupBar({
       </div>
       <p className="mb-3 text-xs text-slate-500">
         {mode === 'attempt'
-          ? 'Load handoff and checkout event for one donation_attempt_id. Use when the paginated list has no row yet.'
-          : 'Resolve attempt id from a Foxy error-log cart id when reconcile cannot find a transaction.'}
+          ? 'Pull the full handoff and checkout-event trace for one attempt id — works even when it is not in the table below.'
+          : 'Resolve an attempt id from a Foxy error-log cart id when a reconcile cannot find the transaction.'}
       </p>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
