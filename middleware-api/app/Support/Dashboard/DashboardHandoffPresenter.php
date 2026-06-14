@@ -9,6 +9,17 @@ class DashboardHandoffPresenter
     /**
      * @return array<string, mixed>
      */
+    public function listItem(CheckoutHandoff $handoff): array
+    {
+        return [
+            'donation_attempt_id' => $handoff->donation_attempt_id,
+            'handoff' => $this->summary($handoff),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function summary(CheckoutHandoff $handoff): array
     {
         return [

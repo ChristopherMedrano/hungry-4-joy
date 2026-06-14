@@ -5,7 +5,9 @@ namespace App\Services\HubSpot;
 use App\Contracts\HubSpotClient;
 use App\Models\CheckoutEvent;
 use App\Models\CrmSyncAttempt;
+use App\Models\IntegrationStepLog;
 use App\Services\Analytics\ServerAnalyticsEmitter;
+use App\Services\Integration\IntegrationStepLogger;
 use Throwable;
 
 class HubSpotDonationSyncer
@@ -13,6 +15,7 @@ class HubSpotDonationSyncer
     public function __construct(
         private readonly HubSpotClient $hubSpot,
         private readonly ServerAnalyticsEmitter $analyticsEmitter,
+        private readonly IntegrationStepLogger $stepLogger,
     ) {}
 
     /**
@@ -21,6 +24,8 @@ class HubSpotDonationSyncer
     public function sync(CheckoutEvent $event): array
     {
         if (! $event->hubSpotSyncEligible()) {
+            $this->logCrmSyncCompleted($event, null, IntegrationStepLog::STATUS_SKIPPED, 'HubSpot sync skipped: event ineligible.');
+
             return ['status' => 'skipped_ineligible'];
         }
 
@@ -30,6 +35,8 @@ class HubSpotDonationSyncer
         );
 
         if ($attempt->status === 'succeeded' && $attempt->error_code !== 'hubspot_list_warning') {
+            $this->logCrmSyncCompleted($event, $attempt, IntegrationStepLog::STATUS_SKIPPED, 'HubSpot sync already completed.');
+
             return [
                 'status' => 'already_synced',
                 'contact_id' => $attempt->hubspot_contact_id,
@@ -85,6 +92,14 @@ class HubSpotDonationSyncer
 
         $this->analyticsEmitter->emitCrmSyncConversion($event, $attempt->fresh() ?? $attempt);
 
+        $this->logCrmSyncCompleted(
+            $event,
+            $attempt->fresh() ?? $attempt,
+            IntegrationStepLog::STATUS_SUCCEEDED,
+            $warning === null ? 'HubSpot contact and deal synced.' : 'HubSpot synced with list enrollment warning.',
+            $warning === null ? null : 'hubspot_list_warning',
+        );
+
         return [
             'status' => 'synced',
             'contact_id' => $contactId,
@@ -121,6 +136,14 @@ class HubSpotDonationSyncer
 
         $this->analyticsEmitter->emitCrmSyncConversion($event, $attempt->fresh() ?? $attempt);
 
+        $this->logCrmSyncCompleted(
+            $event,
+            $attempt->fresh() ?? $attempt,
+            IntegrationStepLog::STATUS_SUCCEEDED,
+            $warning === null ? 'HubSpot list enrollment completed.' : 'HubSpot list enrollment warning.',
+            $warning === null ? null : 'hubspot_list_warning',
+        );
+
         return [
             'status' => $warning === null ? 'list_enrolled' : 'already_synced',
             'contact_id' => $attempt->hubspot_contact_id,
@@ -147,6 +170,14 @@ class HubSpotDonationSyncer
 
         if ($checkoutEvent instanceof CheckoutEvent) {
             $this->analyticsEmitter->emitCrmSyncConversion($checkoutEvent, $attempt->fresh() ?? $attempt);
+
+            $this->logCrmSyncCompleted(
+                $checkoutEvent,
+                $attempt->fresh() ?? $attempt,
+                $retryable ? IntegrationStepLog::STATUS_RETRYABLE : IntegrationStepLog::STATUS_FAILED,
+                $retryable ? 'HubSpot sync failed with retryable error.' : 'HubSpot sync failed with terminal error.',
+                $attempt->error_code,
+            );
         }
 
         return [
@@ -210,5 +241,24 @@ class HubSpotDonationSyncer
             'h4j_checkout_event_id' => $event->event_id,
             'closedate' => $event->event_created_at?->toIso8601String(),
         ];
+    }
+
+    private function logCrmSyncCompleted(
+        CheckoutEvent $event,
+        ?CrmSyncAttempt $attempt,
+        string $status,
+        string $summary,
+        ?string $errorCode = null,
+    ): void {
+        $this->stepLogger->record(
+            IntegrationStepLog::STEP_CRM_SYNC_COMPLETED,
+            $status,
+            IntegrationStepLog::PRODUCER_LARAVEL_CRM,
+            $summary,
+            $event->donation_attempt_id,
+            $errorCode,
+            $event->id,
+            crmSyncAttemptId: $attempt?->id,
+        );
     }
 }

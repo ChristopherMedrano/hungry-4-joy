@@ -36,6 +36,10 @@ return [
         'newsletter_list_id' => env('HUBSPOT_NEWSLETTER_LIST_ID', '12'),
     ],
 
+    'wordpress' => [
+        'site_url' => env('WORDPRESS_SITE_URL'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

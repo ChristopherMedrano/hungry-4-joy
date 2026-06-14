@@ -9,6 +9,7 @@ import type {
   ServerAnalyticsEventDetail,
   ServerAnalyticsEventSummary,
 } from '../types/analytics'
+import type { HealthReadyResponse } from '../types/health'
 
 export interface DashboardListResponse {
   data: CheckoutEventSummary[]
@@ -23,6 +24,14 @@ export interface DashboardListResponse {
 
 export interface DashboardDetailResponse {
   data: CheckoutEventDetail
+}
+
+export interface AttemptTraceResponse {
+  data: import('../types/handoff').AttemptTraceData
+}
+
+export interface HandoffReconcileResponse {
+  data: import('../types/handoff').AttemptTraceData
 }
 
 export class DashboardApiError extends Error {
@@ -101,6 +110,86 @@ export async function fetchDashboardEventDetail(
   return normalizeEventSummary(payload.data)
 }
 
+export async function fetchDashboardEventByAttempt(
+  donationAttemptId: string,
+): Promise<import('../types/handoff').AttemptTraceData> {
+  const response = await fetch(
+    apiUrl(`/api/dashboard/events/by-attempt/${encodeURIComponent(donationAttemptId)}`),
+  )
+  const payload = await parseJsonOrThrow<AttemptTraceResponse>(response)
+
+  return {
+    ...payload.data,
+    checkout_event: payload.data.checkout_event
+      ? normalizeEventSummary(payload.data.checkout_event)
+      : null,
+  }
+}
+
+export async function fetchDashboardEventByCart(
+  cartId: string,
+): Promise<import('../types/handoff').AttemptTraceData> {
+  const response = await fetch(
+    apiUrl(`/api/dashboard/events/by-cart/${encodeURIComponent(cartId)}`),
+  )
+  const payload = await parseJsonOrThrow<AttemptTraceResponse>(response)
+
+  return {
+    ...payload.data,
+    checkout_event: payload.data.checkout_event
+      ? normalizeEventSummary(payload.data.checkout_event)
+      : null,
+  }
+}
+
+export interface CheckoutAttemptsListResponse {
+  data: import('../types/handoff').CheckoutAttemptSummary[]
+  meta: {
+    current_page: number
+    per_page: number
+    total: number
+    last_page: number
+  }
+  filters: Record<string, string | null>
+}
+
+export async function fetchDashboardCheckoutAttempts(
+  filters: import('../types/handoff').CheckoutAttemptsFilters,
+  page = 1,
+): Promise<CheckoutAttemptsListResponse> {
+  const params = new URLSearchParams()
+  if (filters.search) {
+    params.set('search', filters.search)
+  }
+  params.set('page', String(page))
+  params.set('per_page', '25')
+  params.set('sort', '-handoff_at')
+
+  const response = await fetch(`${apiUrl('/api/dashboard/handoffs')}?${params}`)
+  return parseJsonOrThrow<CheckoutAttemptsListResponse>(response)
+}
+
+export async function fetchHandoffReconcile(
+  donationAttemptId: string,
+): Promise<import('../types/handoff').AttemptTraceData> {
+  const response = await fetch(apiUrl('/api/dashboard/handoffs/reconcile'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ donation_attempt_id: donationAttemptId }),
+  })
+  const payload = await parseJsonOrThrow<HandoffReconcileResponse>(response)
+
+  return {
+    ...payload.data,
+    checkout_event: payload.data.checkout_event
+      ? normalizeEventSummary(payload.data.checkout_event)
+      : null,
+  }
+}
+
 export async function fetchCrmSyncRetry(
   crmSyncAttemptId: number,
 ): Promise<CheckoutEventDetail> {
@@ -144,6 +233,11 @@ function analyticsQuery(filters: AnalyticsFilters, page = 1): string {
   params.set('sort', '-created_at')
 
   return params.toString()
+}
+
+export async function fetchHealthReady(): Promise<HealthReadyResponse> {
+  const response = await fetch(apiUrl('/api/health/ready'))
+  return parseJsonOrThrow<HealthReadyResponse>(response)
 }
 
 export async function fetchDashboardAnalyticsEvents(

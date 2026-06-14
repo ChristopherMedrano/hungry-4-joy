@@ -368,6 +368,26 @@ export const seededDashboardEvents: CheckoutEventDetail[] = [
       failure_message: 'Payment was declined by the test gateway.',
       provider_status: 'declined',
     },
+    handoff: {
+      status: 'checkout_event_reconciled',
+      handoff_at: '2026-06-12T10:34:30+00:00',
+      checkout_provider: 'foxy',
+      source_page: 'home',
+      campaign: { campaign_id: 'fish-campaign-02', campaign_name: 'Fish 4 Joy' },
+      donation: {
+        amount: 25,
+        currency: 'USD',
+        donation_label: '3 fish',
+        donation_type: 'one_time',
+      },
+      reconciliation: {
+        reconcile_attempts: 2,
+        next_reconcile_at: null,
+        foxy_transaction_id: '2246566861',
+        checkout_event_id: 9008,
+        note: null,
+      },
+    },
   }),
 ]
 
