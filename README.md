@@ -26,6 +26,13 @@ The donor-facing campaign site (WordPress):
 
 ![Campaign site](docs/images/09-wordpress.webp)
 
+Donations check out through **Foxy**. Since this is a demo, a banner surfaces test-card details so anyone can run the full flow safely:
+
+- **Approved payment** — card `4111 1111 1111 1111`, any future expiry, any CSC.
+- **Declined payment** — use that card with **Billing ZIP `46282`**.
+
+![Checkout demo](docs/images/10-checkout-demo.webp)
+
 The custom React operations dashboard — checkout events, CRM sync health, unlinked carts, server analytics, and live system readiness:
 
 ![Dashboard home](docs/images/01-dashboard.webp)
