@@ -74,6 +74,14 @@ Render injects the Postgres connection string into `DB_URL` from the Blueprint d
 
 Schedule reconciliation on hosted middleware by ensuring a cron job runs `php artisan schedule:run` every minute, or run `php artisan checkout:reconcile-handoffs` manually during verification.
 
+Support lookup when Foxy error logs show a cart id but no transaction:
+
+```bash
+curl "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-cart/<foxy_cart_id>"
+```
+
+See [`docs/foxy-middleware-connection-plan.md`](foxy-middleware-connection-plan.md) Phase 1.5 for why gateway declines use cart-id lookup instead of transaction reconcile.
+
 After the service is live, verify:
 
 ```bash

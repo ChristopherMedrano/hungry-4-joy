@@ -102,18 +102,64 @@ Foxy hAPI reconciliation requires OAuth credentials stored only in environment c
 | `FOXY_REFRESH_TOKEN` | Long-lived refresh token for hAPI access |
 | `FOXY_STORE_ID` | Foxy store id (for example `120139`) |
 
-Reconciliation lookup filter:
+Reconciliation lookup filter (transactions only):
 
 ```text
 GET /stores/{store_id}/transactions?items:item_options:name[donation_attempt_id]={attempt_id}&zoom=items,items:item_options,payments,custom_fields
 ```
 
-Declined or incomplete Foxy transactions (`declined`, empty status with `data_is_fed: false`) normalize to `payment.failed` so dashboard by-attempt lookup can show both the handoff and the failed checkout event.
+All hAPI requests must send `FOXY-API-VERSION: 1`.
 
-Verify decline handling with Authorize.net sandbox test cards (success `4111111111111111`, decline via billing ZIP `46282`), then:
+#### What reconcile can and cannot ingest
+
+Reconcile is **transaction-scoped**. That matches how Foxy exposes checkout outcomes in hAPI.
+
+| Foxy outcome (Authorize.net sandbox) | Foxy record | Reconcile result |
+| --- | --- | --- |
+| Success or auth/incomplete shell (empty `status`, `data_is_fed: false`) | **Transaction** | Ingests `donation.created` or `payment.failed`; links handoff |
+| Gateway card decline (billing ZIP `46282`) | **Cart + error log only** — no transaction | `foxy_transaction_not_found`; handoff stays visible |
+
+When a transaction exists, declined or incomplete shells normalize to `payment.failed` so by-attempt lookup can show both handoff and checkout event.
+
+Gateway declines do **not** create a transaction in Foxy during hosted testing, so reconcile cannot produce a `payment.failed` checkout event for that path. That is Foxy/gateway behavior, not a missing webhook or broken handoff.
+
+#### Support lookup by Foxy cart id (intended for declines)
+
+Foxy admin checkout error logs use the **cart id** as `id`. Middleware resolves attempt identity from the cart:
+
+```text
+GET /api/dashboard/events/by-cart/{foxy_cart_id}
+```
+
+Implementation: Foxy hAPI `GET /carts/{id}?zoom=items,items:item_options` → read `donation_attempt_id` item option → join `checkout_handoffs` / `checkout_events`.
+
+Use this when you have an error-log id (for example `2247125087`) and by-attempt reconcile shows `foxy_transaction_not_found`.
+
+`fcsid` (browser session) is not a supported hAPI lookup key; cart id is.
+
+#### Verification commands
+
+Auth-error / incomplete transaction (reconcile path):
 
 ```bash
-curl https://<middleware-render-host>/api/dashboard/events/by-attempt/<donation_attempt_id>
+curl "https://<middleware-host>/api/dashboard/events/by-attempt/<donation_attempt_id>"
+# Expect handoff + checkout_event payment.failed when transaction exists in Foxy
+```
+
+Gateway decline (cart-only path):
+
+```bash
+# After Authorize.net decline test (ZIP 46282), copy cart id from Foxy error log
+curl "https://<middleware-host>/api/dashboard/events/by-cart/<foxy_cart_id>"
+# Expect donation_attempt_id + handoff; checkout_event null; foxy_cart items with metadata
+```
+
+On-demand reconcile:
+
+```bash
+curl -X POST "https://<middleware-host>/api/checkout/handoffs/reconcile" \
+  -H "Content-Type: application/json" \
+  -d '{"donation_attempt_id":"h4j_attempt_..."}'
 ```
 
 ## Phase 2: Actual Foxy Webhook Connection
