@@ -783,7 +783,7 @@ Requires configured `FOXY_*` OAuth credentials on middleware. Returns `503` when
 | `event_created_from` | ISO 8601 datetime | `2026-05-27T00:00:00Z` | Lower bound on checkout event time |
 | `event_created_to` | ISO 8601 datetime | `2026-05-27T23:59:59Z` | Upper bound on checkout event time |
 | `search` | string | `h4j_attempt_demo_loaves_0001` | Match `donation_attempt_id`, `event_id`, `transaction_id`, or donor email |
-| `retry_activity` | boolean | `1` | When true, return only eligible donations whose CRM sync row has retry activity: `retry_count > 0`, status `failed` or `retryable`, or `error_code = hubspot_list_warning`. |
+| `retry_activity` | boolean | `1` | When true, return only completed donations eligible for HubSpot sync whose CRM row has an issue: `retry_count > 0`, status `failed` or `retryable`, or `error_code = hubspot_list_warning`. Powers the dashboard **CRM sync issues** tab. |
 | `page` | integer | `1` | Page number |
 | `per_page` | integer | `25` | Page size; default `25`, max `100` |
 | `sort` | string | `-event_created_at` | Sort field; prefix `-` for descending. Allowed: `event_created_at`, `created_at`, `donation_amount`, `campaign_name` |
@@ -816,6 +816,7 @@ Each list row represents one stored `checkout_events` record plus a derived CRM 
 | `ingest.channel` | `foxy_webhook` | Derived ingest path: `foxy_webhook` when `event_id` starts with `foxy_transaction_`; otherwise `fixture_receiver` for local/demo fixture posts |
 | `crm_sync.eligible` | `true` | Whether the event meets HubSpot sync eligibility rules |
 | `crm_sync.status` | `succeeded` | `not_applicable`, `pending`, `succeeded`, `failed`, or `retryable` |
+| `crm_sync.crm_sync_attempt_id` | `12` | Local `crm_sync_attempts.id` when a row exists; `null` when not applicable or still pending |
 | `crm_sync.retry_count` | `0` | Retry attempts when an attempt row exists; `0` when not applicable |
 | `crm_sync.last_attempted_at` | `2026-05-27T14:05:13Z` | Last CRM sync attempt time; `null` when not applicable |
 | `crm_sync.next_retry_at` | `null` | Next retry eligibility time for retryable rows; otherwise `null` |
@@ -1025,7 +1026,7 @@ Lookup by `donation_attempt_id` returns the same detail object or `404` when no 
 
 CRM retry state is stored on the current `crm_sync_attempts` row for each eligible checkout event.
 
-Dashboard list, detail, and Retry activity views expose:
+Dashboard list, detail, and CRM sync issues views expose:
 
 - `retry_count`
 - `last_attempted_at`
@@ -1033,6 +1034,8 @@ Dashboard list, detail, and Retry activity views expose:
 - current `error_code` and `error_message`
 
 Manual retry updates the same row (`retry_count`, `last_attempted_at`, `next_retry_at`, status, and error fields). `retry_count` increments on HubSpot sync failures and on each list-enrollment retry attempt (including manual dashboard retries for `hubspot_list_warning` rows).
+
+The dashboard runs manual CRM retry from the **CRM sync issues** tab (per-row **Retry** action). Checkout event detail shows **Open in CRM sync issues** for eligible rows instead of an inline retry button.
 
 ### Environment And Platform Constraints
 

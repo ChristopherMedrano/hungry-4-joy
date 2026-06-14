@@ -134,7 +134,7 @@ Scope:
 - Webhook event table.
 - HubSpot sync status.
 - Failure details.
-- Retry activity view and safe manual retry action.
+- CRM sync issues view and safe manual retry action.
 
 Demo:
 
@@ -253,7 +253,7 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- Repeated webhook, queue, or HubSpot failures are visible through CRM sync status and the Retry activity tab.
+- Repeated webhook, queue, or HubSpot failures are visible through CRM sync status and the CRM sync issues tab.
 - Retry count and last-attempt timestamps are visible on detail views.
 - Manual retry can recover eligible failures without duplicate donation records.
 

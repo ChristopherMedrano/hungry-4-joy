@@ -1,14 +1,26 @@
 import { crmErrorCodeLabel, formatDashboardTimestamp } from '../lib/crmLabels'
+import { crmRetryUiState } from '../lib/crmRetryEligibility'
 import { formatAttemptId } from '../lib/formatAttemptId'
 import type { CheckoutEventSummary } from '../types/dashboard'
 import { CrmStatusBadge } from './CrmStatusBadge'
 
-interface RetryActivityTableProps {
+interface CrmSyncIssuesTableProps {
   events: CheckoutEventSummary[]
+  focusAttemptId?: string | null
   onOpenEvent: (checkoutEventId: number) => void
+  onRetry: (event: CheckoutEventSummary) => Promise<void>
+  retryingEventId: number | null
+  retryDisabled?: boolean
 }
 
-export function RetryActivityTable({ events, onOpenEvent }: RetryActivityTableProps) {
+export function CrmSyncIssuesTable({
+  events,
+  focusAttemptId = null,
+  onOpenEvent,
+  onRetry,
+  retryingEventId,
+  retryDisabled = false,
+}: CrmSyncIssuesTableProps) {
   return (
     <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
       <div className="overflow-x-auto">
@@ -31,16 +43,32 @@ export function RetryActivityTable({ events, onOpenEvent }: RetryActivityTablePr
                 Current error
               </th>
               <th scope="col" className="px-3 py-3 font-medium">
-                Open
+                Actions
+              </th>
+              <th scope="col" className="px-3 py-3 font-medium">
+                View
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
             {events.map((event) => {
               const errorLabel = crmErrorCodeLabel(event.crm_sync.error_code)
+              const retryUi = crmRetryUiState(event.crm_status_summary, event.crm_sync)
+              const isFocused =
+                focusAttemptId !== null &&
+                focusAttemptId !== '' &&
+                event.donation_attempt_id === focusAttemptId
+              const isRetrying = retryingEventId === event.checkout_event_id
 
               return (
-                <tr key={event.checkout_event_id} className="hover:bg-slate-800/40">
+                <tr
+                  key={event.checkout_event_id}
+                  className={
+                    isFocused
+                      ? 'bg-orange-500/10 hover:bg-orange-500/15'
+                      : 'hover:bg-slate-800/40'
+                  }
+                >
                   <td className="px-3 py-3">
                     <button
                       type="button"
@@ -61,12 +89,28 @@ export function RetryActivityTable({ events, onOpenEvent }: RetryActivityTablePr
                     {formatDashboardTimestamp(event.crm_sync.last_attempted_at)}
                   </td>
                   <td className="hidden px-3 py-3 md:table-cell">
-                    <div className="text-slate-300">{errorLabel ?? '—'}</div>
+                    <div className={errorLabel ? 'text-slate-300' : 'text-slate-400'}>
+                      {errorLabel ?? '—'}
+                    </div>
                     {event.crm_sync.error_code ? (
                       <div className="font-mono text-xs text-slate-500">
                         {event.crm_sync.error_code}
                       </div>
                     ) : null}
+                  </td>
+                  <td className="px-3 py-3">
+                    {retryUi.kind === 'eligible' ? (
+                      <button
+                        type="button"
+                        disabled={retryDisabled || isRetrying}
+                        onClick={() => void onRetry(event)}
+                        className="rounded-md bg-orange-500/20 px-2.5 py-1.5 text-xs font-medium text-orange-200 ring-1 ring-orange-500/40 transition hover:bg-orange-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isRetrying ? 'Retrying…' : retryUi.label}
+                      </button>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     <button

@@ -17,7 +17,7 @@ import { EventFiltersBar } from './components/EventFiltersBar'
 import { EventTable } from './components/EventTable'
 import { Layout } from './components/Layout'
 import { LoadingState } from './components/LoadingState'
-import { RetryActivityTable } from './components/RetryActivityTable'
+import { CrmSyncIssuesTable } from './components/CrmSyncIssuesTable'
 import {
   findSeededDashboardEvent,
   seededDashboardEvents,
@@ -31,7 +31,7 @@ import {
 } from './lib/dashboardDataMode'
 import type { DashboardSection } from './lib/dashboardSections'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
-import { hasRetryActivity, sortByLastCrmAttempt } from './lib/retryActivity'
+import { filterCrmSyncIssuesBySearch, hasCrmSyncIssue, sortByLastCrmAttempt } from './lib/crmSyncIssues'
 import { defaultAnalyticsFilters } from './types/analytics'
 import type {
   AnalyticsFilters,
@@ -50,18 +50,21 @@ function App() {
   const [viewState, setViewState] = useState<DashboardDataMode>('hosted-api')
   const [filters, setFilters] = useState<EventFilters>(defaultFilters)
   const [liveEvents, setLiveEvents] = useState<CheckoutEventSummary[]>([])
-  const [retryActivityEvents, setRetryActivityEvents] = useState<CheckoutEventSummary[]>([])
+  const [crmSyncIssuesEvents, setCrmSyncIssuesEvents] = useState<CheckoutEventSummary[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<CheckoutEventDetail | null>(null)
   const [listError, setListError] = useState<string | null>(null)
-  const [retryActivityError, setRetryActivityError] = useState<string | null>(null)
+  const [crmSyncIssuesError, setCrmSyncIssuesError] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [isLoadingList, setIsLoadingList] = useState(false)
-  const [isLoadingRetryActivity, setIsLoadingRetryActivity] = useState(false)
+  const [isLoadingCrmSyncIssues, setIsLoadingCrmSyncIssues] = useState(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
-  const [isCrmRetrying, setIsCrmRetrying] = useState(false)
+  const [crmRetryingEventId, setCrmRetryingEventId] = useState<number | null>(null)
   const [crmRetryError, setCrmRetryError] = useState<string | null>(null)
+  const [crmSyncIssuesFocusAttemptId, setCrmSyncIssuesFocusAttemptId] = useState<string | null>(
+    null,
+  )
   const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>(defaultAnalyticsFilters)
   const [liveAnalyticsEvents, setLiveAnalyticsEvents] = useState<ServerAnalyticsEventSummary[]>([])
   const [selectedAnalyticsId, setSelectedAnalyticsId] = useState<number | null>(null)
@@ -80,15 +83,17 @@ function App() {
     [filters],
   )
 
-  const seededRetryActivityEvents = useMemo(
-    () => sortByLastCrmAttempt(seededEvents.filter(hasRetryActivity)),
+  const seededCrmSyncIssuesEvents = useMemo(
+    () => sortByLastCrmAttempt(seededEvents.filter(hasCrmSyncIssue)),
     [seededEvents],
   )
 
   const displayEvents = isSeededView ? seededEvents : liveEvents
-  const displayRetryActivityEvents = isSeededView
-    ? seededRetryActivityEvents
-    : retryActivityEvents
+  const displayCrmSyncIssuesEvents = useMemo(() => {
+    const base = isSeededView ? seededCrmSyncIssuesEvents : crmSyncIssuesEvents
+
+    return filterCrmSyncIssuesBySearch(base, filters.search)
+  }, [isSeededView, seededCrmSyncIssuesEvents, crmSyncIssuesEvents, filters.search])
 
   const activeSelectedId = useMemo(() => {
     if (selectedId && displayEvents.some((event) => event.checkout_event_id === selectedId)) {
@@ -262,16 +267,16 @@ function App() {
   }, [viewState, filters, reloadToken, isApiView, dashboardSection])
 
   useEffect(() => {
-    if (!isApiView || dashboardSection !== 'retry-activity') {
+    if (!isApiView || dashboardSection !== 'crm-sync-issues') {
       return
     }
 
     let cancelled = false
     setDashboardApiBase(apiBaseForMode(viewState))
 
-    async function loadRetryActivity(): Promise<void> {
-      setIsLoadingRetryActivity(true)
-      setRetryActivityError(null)
+    async function loadCrmSyncIssues(): Promise<void> {
+      setIsLoadingCrmSyncIssues(true)
+      setCrmSyncIssuesError(null)
 
       try {
         const response = await fetchDashboardEvents(filters, 1, { retryActivity: true })
@@ -279,24 +284,24 @@ function App() {
           return
         }
 
-        setRetryActivityEvents(sortByLastCrmAttempt(response.data))
+        setCrmSyncIssuesEvents(sortByLastCrmAttempt(response.data))
       } catch (error) {
         if (cancelled) {
           return
         }
 
-        setRetryActivityEvents([])
-        setRetryActivityError(
-          error instanceof Error ? error.message : 'Could not load retry activity.',
+        setCrmSyncIssuesEvents([])
+        setCrmSyncIssuesError(
+          error instanceof Error ? error.message : 'Could not load CRM sync issues.',
         )
       } finally {
         if (!cancelled) {
-          setIsLoadingRetryActivity(false)
+          setIsLoadingCrmSyncIssues(false)
         }
       }
     }
 
-    void loadRetryActivity()
+    void loadCrmSyncIssues()
 
     return () => {
       cancelled = true
@@ -353,39 +358,64 @@ function App() {
         event.checkout_event_id === updated.checkout_event_id ? summary : event,
       ),
     )
-    setRetryActivityEvents((events) => {
+    setCrmSyncIssuesEvents((events) => {
       const next = events.map((event) =>
         event.checkout_event_id === updated.checkout_event_id ? summary : event,
       )
 
-      return hasRetryActivity(summary)
+      return hasCrmSyncIssue(summary)
         ? sortByLastCrmAttempt(next)
         : sortByLastCrmAttempt(next.filter((event) => event.checkout_event_id !== updated.checkout_event_id))
     })
   }
 
-  async function handleCrmRetry(): Promise<void> {
-    const attemptId = selectedDetail?.crm_sync.crm_sync_attempt_id
-    if (attemptId === null || attemptId === undefined) {
+  async function handleCrmSyncIssueRetry(event: CheckoutEventSummary): Promise<void> {
+    const attemptId = event.crm_sync.crm_sync_attempt_id
+    if (attemptId === null || attemptId === undefined || isSeededView) {
       return
     }
 
     setDashboardApiBase(apiBaseForMode(viewState))
-    setIsCrmRetrying(true)
+    setCrmRetryingEventId(event.checkout_event_id)
     setCrmRetryError(null)
 
     try {
       const updated = await fetchCrmSyncRetry(attemptId)
       updateEventInLists(updated)
+
+      if (!hasCrmSyncIssue(updated)) {
+        setCrmSyncIssuesFocusAttemptId(null)
+        setFilters((current) => ({ ...current, search: '' }))
+      }
     } catch (error) {
       setCrmRetryError(error instanceof Error ? error.message : 'CRM sync retry failed.')
     } finally {
-      setIsCrmRetrying(false)
+      setCrmRetryingEventId(null)
     }
   }
 
-  function openEventFromRetryActivity(checkoutEventId: number): void {
+  function openCrmSyncIssuesFromEvent(donationAttemptId: string | null | undefined): void {
+    if (!donationAttemptId) {
+      return
+    }
+
+    setFilters((current) => ({ ...current, search: donationAttemptId }))
+    setCrmSyncIssuesFocusAttemptId(donationAttemptId)
+    setCrmRetryError(null)
+    setDashboardSection('crm-sync-issues')
+  }
+
+  function handleDashboardSectionChange(section: DashboardSection): void {
+    setDashboardSection(section)
+
+    if (section !== 'crm-sync-issues') {
+      setCrmSyncIssuesFocusAttemptId(null)
+    }
+  }
+
+  function openEventFromCrmSyncIssues(checkoutEventId: number): void {
     setSelectedId(checkoutEventId)
+    setCrmSyncIssuesFocusAttemptId(null)
     setDashboardSection('events')
   }
 
@@ -401,7 +431,7 @@ function App() {
           setViewState(nextView)
           setDetailError(null)
           setListError(null)
-          setRetryActivityError(null)
+          setCrmSyncIssuesError(null)
 
           if (nextView === 'seeded') {
             const nextEvents = filterEvents(seededDashboardEvents, filters)
@@ -448,15 +478,15 @@ function App() {
     </>
   )
 
-  const retryActivityHint = (
+  const crmSyncIssuesHint = (
     <>
-      Retry activity lists donations whose CRM sync row shows retries, failures, retryable state, or
-      a newsletter list warning such as{' '}
-      <code className="rounded bg-slate-800 px-1 py-0.5">hubspot_list_warning</code>. Rows link to
-      the checkout event by <strong className="font-medium text-slate-400">donation attempt id</strong>.
-      Each row reflects the stored CRM sync attempt fields (`retry_count`, status, and error summary).
-      After a successful list retry clears a warning, earlier list-enrollment errors are no longer
-      shown on that attempt row.
+      CRM sync issues lists completed donations whose HubSpot sync row shows failures, retryable
+      errors, prior retries, or a newsletter list warning such as{' '}
+      <code className="rounded bg-slate-800 px-1 py-0.5">hubspot_list_warning</code>. Use{' '}
+      <strong className="font-medium text-slate-400">Retry</strong> here to run manual CRM sync
+      actions. Rows link to the checkout event by{' '}
+      <strong className="font-medium text-slate-400">donation attempt id</strong> or{' '}
+      <strong className="font-medium text-slate-400">View event</strong>.
     </>
   )
 
@@ -526,14 +556,14 @@ function App() {
         </div>
       )
     }
-  } else if (dashboardSection === 'retry-activity') {
-    if (viewState === 'loading' || (isApiView && isLoadingRetryActivity && displayRetryActivityEvents.length === 0)) {
+  } else if (dashboardSection === 'crm-sync-issues') {
+    if (viewState === 'loading' || (isApiView && isLoadingCrmSyncIssues && displayCrmSyncIssuesEvents.length === 0)) {
       content = <LoadingState />
-    } else if (viewState === 'error' || (isApiView && retryActivityError)) {
+    } else if (viewState === 'error' || (isApiView && crmSyncIssuesError)) {
       content = (
         <ErrorState
           message={
-            retryActivityError ??
+            crmSyncIssuesError ??
             'Could not reach the Laravel dashboard API. Start middleware with php artisan serve.'
           }
           onRetry={() => {
@@ -542,16 +572,27 @@ function App() {
           }}
         />
       )
-    } else if (viewState === 'empty' || displayRetryActivityEvents.length === 0) {
+    } else if (viewState === 'empty' || displayCrmSyncIssuesEvents.length === 0) {
       content = (
         <EmptyState onResetFilters={() => setFilters(defaultFilters)} />
       )
     } else {
       content = (
-        <RetryActivityTable
-          events={displayRetryActivityEvents}
-          onOpenEvent={openEventFromRetryActivity}
-        />
+        <div className="space-y-3">
+          {crmRetryError ? (
+            <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200" role="alert">
+              {crmRetryError}
+            </p>
+          ) : null}
+          <CrmSyncIssuesTable
+            events={displayCrmSyncIssuesEvents}
+            focusAttemptId={crmSyncIssuesFocusAttemptId}
+            onOpenEvent={openEventFromCrmSyncIssues}
+            onRetry={handleCrmSyncIssueRetry}
+            retryingEventId={crmRetryingEventId}
+            retryDisabled={isSeededView}
+          />
+        </div>
       )
     }
   } else if (dashboardSection === 'events') {
@@ -593,10 +634,14 @@ function App() {
           ) : (
             <EventDetailPanel
               event={isSeededView ? seededDetail : activeSelectedId === null ? null : selectedDetail}
-              onCrmRetry={isSeededView ? undefined : handleCrmRetry}
-              isCrmRetrying={isCrmRetrying}
-              crmRetryError={crmRetryError}
-              crmRetryDisabled={isSeededView}
+              onOpenCrmSyncIssues={
+                (isSeededView ? seededDetail : selectedDetail)?.donation_attempt_id
+                  ? () =>
+                      openCrmSyncIssuesFromEvent(
+                        (isSeededView ? seededDetail : selectedDetail)?.donation_attempt_id,
+                      )
+                  : undefined
+              }
             />
           )}
         </div>
@@ -608,7 +653,7 @@ function App() {
     <Layout
       previewControl={previewControl}
       activeSection={dashboardSection}
-      onSectionChange={setDashboardSection}
+      onSectionChange={handleDashboardSectionChange}
     >
       <div className="space-y-4">
         {dashboardSection === 'analytics-events' ? (
@@ -617,8 +662,8 @@ function App() {
           <EventFiltersBar filters={filters} onChange={setFilters} />
         )}
         <p className="text-xs text-slate-500">
-          {dashboardSection === 'retry-activity'
-            ? retryActivityHint
+          {dashboardSection === 'crm-sync-issues'
+            ? crmSyncIssuesHint
             : dashboardSection === 'analytics-events'
               ? analyticsHint
               : dataSourceHint}

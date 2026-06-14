@@ -13,10 +13,7 @@ interface CrmSyncDetailSectionProps {
   crmStatusSummary: CrmStatusSummary
   crmSync: CheckoutEventDetail['crm_sync']
   checkoutDonationAttemptId: string | null
-  onRetry?: () => Promise<void>
-  isRetrying?: boolean
-  retryError?: string | null
-  retryDisabled?: boolean
+  onOpenCrmSyncIssues?: () => void
 }
 
 function DetailRow({ label, value }: { label: string; value: string | null }) {
@@ -126,7 +123,7 @@ function CrmStatusCallout({
           body={
             crmSync.error_message ??
             errorLabel ??
-            'HubSpot sync failed with a temporary error. You can retry now.'
+            'HubSpot sync failed with a temporary error. Open CRM sync issues to retry.'
           }
         />
       )
@@ -139,10 +136,7 @@ export function CrmSyncDetailSection({
   crmStatusSummary,
   crmSync,
   checkoutDonationAttemptId,
-  onRetry,
-  isRetrying = false,
-  retryError = null,
-  retryDisabled = false,
+  onOpenCrmSyncIssues,
 }: CrmSyncDetailSectionProps) {
   const errorLabel = crmErrorCodeLabel(crmSync.error_code)
   const hubspotAttemptId = crmSync.hubspot_donation_attempt_id
@@ -195,31 +189,20 @@ export function CrmSyncDetailSection({
       </div>
 
       <div className="mt-4 space-y-2">
-        {retryUi.kind === 'eligible' && onRetry ? (
+        {retryUi.kind === 'eligible' && onOpenCrmSyncIssues ? (
           <button
             type="button"
-            disabled={isRetrying || retryDisabled}
-            onClick={() => void onRetry()}
-            className="rounded-md bg-orange-500/20 px-3 py-2 text-sm font-medium text-orange-200 ring-1 ring-orange-500/40 transition hover:bg-orange-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onOpenCrmSyncIssues}
+            className="rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 ring-1 ring-slate-700 transition hover:bg-slate-700"
           >
-            {isRetrying ? 'Retrying…' : retryUi.label}
+            Open in CRM sync issues
           </button>
-        ) : null}
-        {retryDisabled && retryUi.kind === 'eligible' ? (
-          <p className="text-xs text-slate-500">
-            Manual retry is available in API view modes only.
-          </p>
         ) : null}
         {retryUi.kind === 'ineligible' &&
         (crmStatusSummary === 'synced' ||
           crmStatusSummary === 'pending' ||
           crmStatusSummary === 'not_applicable') ? (
           <p className="text-xs text-slate-500">{retryUi.reason}</p>
-        ) : null}
-        {retryError ? (
-          <p className="text-sm text-rose-300" role="alert">
-            {retryError}
-          </p>
         ) : null}
       </div>
 

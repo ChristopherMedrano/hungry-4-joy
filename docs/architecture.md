@@ -254,7 +254,7 @@ MVP responsibilities:
 - view checkout events and webhook ingest path
 - view CRM sync status and failure detail
 - filter by campaign, status, date, and free-text search
-- view retry activity for failed, retryable, and list-warning syncs
+- view CRM sync issues for failed, retryable, and list-warning syncs
 - trigger safe manual CRM retries when eligible
 
 Optional later polish:
@@ -422,7 +422,7 @@ Scenario:
 What this demonstrates:
 
 - queue failure analysis
-- retry activity and manual retry from the dashboard
+- CRM sync issues and manual retry from the dashboard
 
 ### Reconciliation Mismatch
 
@@ -472,7 +472,7 @@ Scenario:
 
 What this demonstrates:
 
-- reviewing CRM sync errors and retry activity in the dashboard
+- reviewing CRM sync errors and CRM sync issues in the dashboard
 - identifying cause from stored error summaries
 - verifying recovery after manual retry
 

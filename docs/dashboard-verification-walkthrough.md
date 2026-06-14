@@ -2,7 +2,7 @@
 
 Use this walkthrough to verify the Hungry-4-Joy integration status dashboard without production checkout, live HubSpot, or analytics access.
 
-It covers automated API checks, local fixture seeding, frontend lint/build commands, and browser inspection for success, failure, pending, duplicate-ingest exclusion, retryable CRM state, list-warning state, and retry activity.
+It covers automated API checks, local fixture seeding, frontend lint/build commands, and browser inspection for success, failure, pending, duplicate-ingest exclusion, retryable CRM state, list-warning state, and CRM sync issues.
 
 Related docs:
 
@@ -17,7 +17,7 @@ Related docs:
 - Dashboard list and detail API routes return contract-shaped JSON from local data only.
 - Demo seeder loads one row per transaction and CRM badge state.
 - Duplicate checkout replays do not create extra dashboard rows.
-- Retry activity lists CRM sync rows with retry-related status from stored attempt data.
+- CRM sync issues lists CRM sync rows with failures, retries, retryable state, or list warnings from stored attempt data.
 - Frontend lint, typecheck, and production build succeed.
 - Browser UI renders expected badges and detail callouts without payment or secret fields.
 
@@ -149,15 +149,17 @@ For a clean **8-row** list during walkthrough, run `php artisan migrate:fresh` t
 
 Contract reference: CRM badge derivation rules in [`docs/contracts.md`](contracts.md) — Section 5 CRM status summary.
 
-## 5. Browser Inspection — Retry Activity Tab
+## 5. Browser Inspection — CRM Sync Issues Tab
 
-Open the **Retry activity** tab.
+Open the **CRM sync issues** tab.
 
 Expected:
 
 - Rows for failed, retryable, and list-warning donations from the demo seeder.
 - Rows link to checkout events by **donation attempt id**.
-- Hint text describes how Retry activity is derived from stored CRM sync attempt fields.
+- Hint text describes how CRM sync issues are derived from stored CRM sync attempt fields.
+- Each eligible row shows a context-aware **Retry** action (left of **View event**).
+- Checkout event detail links to this tab via **Open in CRM sync issues** instead of inline retry.
 
 Filter **CRM sync → retryable** on the checkout events tab and confirm the same retryable row appears in both places.
 
@@ -226,7 +228,7 @@ After Render Blueprint sync:
 https://hungry-4-joy-dashboard.onrender.com
 ```
 
-Use **Live API** view mode. Retry activity and CRM retry require middleware redeploys from the same repository.
+Use **Live API** view mode. CRM sync issues and CRM retry require middleware redeploys from the same repository.
 
 See [`docs/render-deployment.md`](render-deployment.md).
 
