@@ -18,6 +18,65 @@ Hosted demo services:
 
 Start on the **campaign site** for the donation flow. Open the **dashboard** to inspect checkout events, CRM sync status, and CRM sync issues from live webhook ingest.
 
+## Showcase
+
+Screenshots from the running app in **seeded** mode (offline demo data), except Server Analytics, which is live API data.
+
+The donor-facing campaign site (WordPress):
+
+![Campaign site](docs/images/09-wordpress.webp)
+
+The custom React operations dashboard — checkout events, CRM sync health, unlinked carts, server analytics, and live system readiness:
+
+![Dashboard home](docs/images/01-dashboard.webp)
+
+<details open>
+<summary><b>📸 Full screenshot tour</b> — Events, Cart/CRM sync, System status, and more</summary>
+
+<br>
+
+### Events
+
+Every checkout event with its transaction and CRM sync state. Rows open a detail modal.
+
+![Events](docs/images/02-events.webp)
+
+A single event's full trace — Foxy checkout event, HubSpot CRM sync, and server analytics — in one modal.
+
+![Event detail modal](docs/images/03-event-modal.webp)
+
+### Cart Sync Issues
+
+Click-time donation handoffs not yet linked to a checkout event (pending checkouts, gateway declines, abandoned carts), with a single-id/cart trace lookup and bulk reconcile/sweep actions.
+
+![Cart Sync Issues](docs/images/04-cart-sync-issues.webp)
+
+### CRM Sync Issues
+
+Completed donations whose HubSpot sync failed, is retryable, or raised a list-enrollment warning — with one-click manual retry.
+
+![CRM Sync Issues](docs/images/05-crm-sync-issues.webp)
+
+### System status
+
+Per-integration readiness — middleware API, database, migrations, Foxy, HubSpot, WordPress — from the health endpoint.
+
+![System status](docs/images/06-system-status.webp)
+
+### Notifications
+
+In-header notification center.
+
+![Notifications](docs/images/08-notifications.webp)
+
+### Server Analytics
+
+Server-emitted conversion records produced after checkout ingest and CRM sync (live API data) — each row opens its full contract payload.
+
+![Server Analytics](docs/images/07-server-analytics.webp)
+
+</details>
+
 ## Planned Ecosystem
 
 ```text
