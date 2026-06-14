@@ -117,11 +117,6 @@ export function NotificationsBell() {
               </li>
             ))}
           </ul>
-          <div className="border-t border-slate-800 px-4 py-2.5">
-            <p className="text-center text-[11px] text-slate-500">
-              Notifications are mocked — wiring coming soon.
-            </p>
-          </div>
         </div>
       ) : null}
     </div>
