@@ -144,18 +144,20 @@ export function Layout({
               />
             ))}
           </nav>
-          <div className="my-2 border-t border-slate-800" />
-          <nav aria-label="Secondary" className="flex flex-col gap-1">
-            {secondary.map((item) => (
-              <NavButton
-                key={item.id}
-                item={item}
-                active={activeSection === item.id}
-                collapsed={collapsed}
-                onSelect={onSectionChange}
-              />
-            ))}
-          </nav>
+          <div className="mt-auto">
+            <div className="mb-2 border-t border-slate-800" />
+            <nav aria-label="Secondary" className="flex flex-col gap-1">
+              {secondary.map((item) => (
+                <NavButton
+                  key={item.id}
+                  item={item}
+                  active={activeSection === item.id}
+                  collapsed={collapsed}
+                  onSelect={onSectionChange}
+                />
+              ))}
+            </nav>
+          </div>
         </aside>
 
         <main className="min-w-0 flex-1 px-4 py-6 lg:px-6">
