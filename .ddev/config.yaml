@@ -11,7 +11,8 @@ database:
     version: "11.8"
 use_dns_when_possible: true
 composer_version: "2"
-web_environment: []
+web_environment:
+  - MIDDLEWARE_API_URL=http://127.0.0.1:8001
 corepack_enable: false
 
 # Key features of DDEV's config.yaml:
