@@ -114,6 +114,9 @@ Route::prefix('dashboard')->group(function () {
         ->name('dashboard.crm-sync.retry');
     Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
         ->name('dashboard.events.by-attempt');
+    Route::get('/events/by-cart/{cartId}', [DashboardEventController::class, 'showByCart'])
+        ->whereNumber('cartId')
+        ->name('dashboard.events.by-cart');
     Route::get('/events/{checkoutEvent}', [DashboardEventController::class, 'show'])
         ->whereNumber('checkoutEvent')
         ->name('dashboard.events.show');

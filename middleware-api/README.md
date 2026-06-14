@@ -218,6 +218,7 @@ Dashboard status routes for the admin UI:
 GET /api/dashboard/events
 GET /api/dashboard/events/{checkout_event_id}
 GET /api/dashboard/events/by-attempt/{donation_attempt_id}
+GET /api/dashboard/events/by-cart/{foxy_cart_id}
 POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry
 ```
 
