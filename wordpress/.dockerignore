@@ -2,6 +2,7 @@
 !Dockerfile
 !wp-config-render.php
 !bin/
+!bin/render-wordpress-functions.sh
 !bin/render-wordpress-start.sh
 !wp-content/
 wp-content/*

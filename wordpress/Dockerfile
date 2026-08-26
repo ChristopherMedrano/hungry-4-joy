@@ -18,6 +18,7 @@ COPY wp-config-render.php /usr/src/wordpress/wp-config.php
 COPY wp-content/themes/hungry-4-joy/assets/images/favicon.ico /usr/src/wordpress/favicon.ico
 COPY wp-content/themes/hungry-4-joy/ /usr/src/wordpress/wp-content/themes/hungry-4-joy/
 COPY bin/render-wordpress-start.sh /usr/local/bin/render-wordpress-start
+COPY bin/render-wordpress-functions.sh /usr/local/bin/render-wordpress-functions.sh
 
 RUN chmod +x /usr/local/bin/render-wordpress-start \
     && chown -R www-data:www-data /usr/src/wordpress/wp-content
