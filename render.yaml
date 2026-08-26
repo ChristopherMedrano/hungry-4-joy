@@ -4,6 +4,8 @@ services:
     runtime: docker
     plan: free
     rootDir: wordpress
+    dockerfilePath: wordpress/Dockerfile
+    dockerContext: wordpress
     healthCheckPath: /
     envVars:
       - key: WP_SITE_URL
@@ -35,6 +37,8 @@ services:
     runtime: docker
     plan: free
     rootDir: middleware-api
+    dockerfilePath: middleware-api/Dockerfile
+    dockerContext: middleware-api
     healthCheckPath: /api/health
     envVars:
       - key: APP_NAME
@@ -83,6 +87,8 @@ services:
     runtime: docker
     plan: free
     rootDir: dashboard
+    dockerfilePath: dashboard/Dockerfile
+    dockerContext: dashboard
     healthCheckPath: /
     envVars:
       - key: MIDDLEWARE_API_TARGET
