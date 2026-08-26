@@ -208,6 +208,27 @@ function App() {
     return displayCheckoutAttempts[0]?.donation_attempt_id ?? null
   }, [selectedAttemptId, displayCheckoutAttempts])
 
+  const seededAttemptTrace = useMemo<AttemptTraceData | null>(() => {
+    if (!isSeededView || activeSelectedAttemptId === null) {
+      return null
+    }
+
+    const attempt = displayCheckoutAttempts.find(
+      (row) => row.donation_attempt_id === activeSelectedAttemptId,
+    )
+
+    if (!attempt) {
+      return null
+    }
+
+    return {
+      donation_attempt_id: attempt.donation_attempt_id,
+      handoff: attempt.handoff,
+      checkout_event: null,
+      integration_steps: findSeededIntegrationSteps(attempt.donation_attempt_id),
+    }
+  }, [isSeededView, activeSelectedAttemptId, displayCheckoutAttempts])
+
   const activeSelectedId = useMemo(() => {
     if (selectedId && displayEvents.some((event) => event.checkout_event_id === selectedId)) {
       return selectedId
@@ -234,9 +255,6 @@ function App() {
 
   useEffect(() => {
     if (!isApiView) {
-      setHealthReady(null)
-      setHealthError(null)
-      setIsLoadingHealth(false)
       return
     }
 
@@ -669,41 +687,6 @@ function App() {
     dashboardSection,
     isAttemptModalOpen,
     reloadToken,
-  ])
-
-  useEffect(() => {
-    if (!isSeededView || dashboardSection !== 'checkout-attempts' || !isAttemptModalOpen) {
-      return
-    }
-
-    if (activeSelectedAttemptId === null) {
-      setAttemptTrace(null)
-      return
-    }
-
-    const attempt = displayCheckoutAttempts.find(
-      (row) => row.donation_attempt_id === activeSelectedAttemptId,
-    )
-
-    if (!attempt) {
-      setAttemptTrace(null)
-      return
-    }
-
-    setAttemptTrace({
-      donation_attempt_id: attempt.donation_attempt_id,
-      handoff: attempt.handoff,
-      checkout_event: null,
-      integration_steps: findSeededIntegrationSteps(attempt.donation_attempt_id),
-    })
-    setAttemptTraceError(null)
-    setHandoffReconcileError(null)
-  }, [
-    isSeededView,
-    dashboardSection,
-    isAttemptModalOpen,
-    activeSelectedAttemptId,
-    displayCheckoutAttempts,
   ])
 
   useEffect(() => {
@@ -1371,6 +1354,9 @@ function App() {
   const seededEventForModal = isSeededView ? seededDetail : null
   const liveEventForModal = activeSelectedId === null ? null : selectedDetail
   const modalEvent = isSeededView ? seededEventForModal : liveEventForModal
+  const displayAttemptTrace = isSeededView ? seededAttemptTrace : attemptTrace
+  const displayAttemptTraceError = isSeededView ? null : attemptTraceError
+  const displayHandoffReconcileError = isSeededView ? null : handoffReconcileError
 
   return (
     <Layout
@@ -1461,29 +1447,31 @@ function App() {
         title="Attempt trace"
         onClose={() => setIsAttemptModalOpen(false)}
       >
-        {attemptTraceError ? (
-          <ErrorState message={attemptTraceError} onRetry={() => void handleAttemptLookup()} />
+        {displayAttemptTraceError ? (
+          <ErrorState message={displayAttemptTraceError} onRetry={() => void handleAttemptLookup()} />
         ) : isLoadingAttemptTrace && isApiView ? (
           <LoadingState />
         ) : (
           <AttemptTracePanel
             embedded
-            trace={attemptTrace}
+            trace={displayAttemptTrace}
             onReconcile={
-              attemptTrace
+              displayAttemptTrace && isApiView
                 ? async () => {
-                    await handleHandoffReconcile(attemptTrace.donation_attempt_id)
+                    await handleHandoffReconcile(displayAttemptTrace.donation_attempt_id)
                   }
                 : undefined
             }
             isReconciling={isHandoffReconciling}
-            reconcileError={handoffReconcileError}
+            reconcileError={displayHandoffReconcileError}
             reconcileDisabled={isSeededView}
             onOpenCrmSyncIssues={
-              attemptTrace?.checkout_event?.donation_attempt_id
+              displayAttemptTrace?.checkout_event?.donation_attempt_id
                 ? () => {
                     setIsAttemptModalOpen(false)
-                    openCrmSyncIssuesFromEvent(attemptTrace?.checkout_event?.donation_attempt_id)
+                    openCrmSyncIssuesFromEvent(
+                      displayAttemptTrace.checkout_event!.donation_attempt_id,
+                    )
                   }
                 : undefined
             }
