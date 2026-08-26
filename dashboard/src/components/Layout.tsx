@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { DashboardSection, DashboardSectionConfig } from '../lib/dashboardSections'
+import type { DashboardDataMode } from '../types/dashboard'
 import { dashboardSections } from '../lib/dashboardSections'
 import { Icon } from './Icon'
 import { NotificationsBell } from './NotificationsBell'
@@ -10,6 +11,7 @@ interface LayoutProps {
   children: ReactNode
   previewControl?: ReactNode
   systemStatusBar?: ReactNode
+  dataMode: DashboardDataMode
   activeSection: DashboardSection
   onSectionChange: (section: DashboardSection) => void
 }
@@ -50,6 +52,7 @@ export function Layout({
   children,
   previewControl,
   systemStatusBar,
+  dataMode,
   activeSection,
   onSectionChange,
 }: LayoutProps) {
@@ -86,8 +89,12 @@ export function Layout({
               </>
             ) : null}
             {previewControl}
-            <span className="h-6 w-px bg-slate-700" aria-hidden />
-            <NotificationsBell />
+            {dataMode === 'seeded' ? (
+              <>
+                <span className="h-6 w-px bg-slate-700" aria-hidden />
+                <NotificationsBell />
+              </>
+            ) : null}
           </div>
         </div>
       </header>

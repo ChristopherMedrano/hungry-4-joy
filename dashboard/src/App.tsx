@@ -1375,6 +1375,7 @@ function App() {
   return (
     <Layout
       previewControl={previewControl}
+      dataMode={viewState}
       systemStatusBar={
         <SystemStatusBar
           health={displayHealth}
