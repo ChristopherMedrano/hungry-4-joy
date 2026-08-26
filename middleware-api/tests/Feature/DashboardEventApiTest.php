@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CheckoutEvent;
 use App\Models\CrmSyncAttempt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -143,7 +144,7 @@ class DashboardEventApiTest extends TestCase
             'services.foxy.store_id' => '120139',
         ]);
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
@@ -209,7 +210,7 @@ class DashboardEventApiTest extends TestCase
             'services.foxy.store_id' => '120139',
         ]);
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
@@ -257,7 +258,7 @@ class DashboardEventApiTest extends TestCase
             'services.foxy.store_id' => '120139',
         ]);
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }

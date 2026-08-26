@@ -256,6 +256,38 @@ npm test
 
 `npm test` runs WordPress CSS build, fixture JSON checks, donation/analytics JS tests, the full middleware PHPUnit suite, dashboard production build, and `git diff --check`.
 
+## Continuous Integration
+
+The GitHub Actions workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request. Its separate jobs make failures attributable to a project surface:
+
+- **Laravel middleware** uses PHP 8.4, installs the locked Composer dependencies, runs the full PHPUnit suite, and checks formatting with `vendor/bin/pint --test`.
+- **WordPress CSS and checkout JavaScript** uses Node.js 22 with `npm ci`, validates tracked fixture JSON with `jq`, runs both donation JavaScript test scripts, compiles the child-theme Sass, and fails if the tracked generated CSS is not current.
+- **Dashboard** uses Node.js 22 with `npm ci`, then runs ESLint and the TypeScript/Vite production build.
+
+Run the workflow-equivalent checks locally from the repository root:
+
+```bash
+npm ci
+jq --version
+npm run check:fixtures
+npm run test:donation-attempt-js
+npm run test:donation-analytics-js
+npm run build:wp-css
+git diff --exit-code -- wordpress/wp-content/themes/hungry-4-joy/assets/css/
+
+cd middleware-api
+composer install --no-interaction --prefer-dist --no-progress
+composer test
+vendor/bin/pint --test
+
+cd ../dashboard
+npm ci
+npm run lint
+npm run build
+```
+
+Use PHP 8.4 and Node.js 22 for exact CI runtime parity. `jq` must also be available locally. The workflow uses only repository contents and test configuration: it does not read application secrets, contact Foxy, HubSpot, or Render, deploy services, or modify provider configuration.
+
 The status dashboard shell lives in `dashboard/` as a Vite + React + Tailwind app:
 
 ```bash

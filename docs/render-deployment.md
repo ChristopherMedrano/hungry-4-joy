@@ -197,6 +197,12 @@ npm run dev:dashboard:hosted         # same, from repository root
 cd dashboard && npm run dev:hosted   # equivalent to dev:dashboard:hosted
 ```
 
+## CI and deployment boundary
+
+The GitHub Actions workflow in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) validates the Laravel middleware, WordPress Sass and checkout JavaScript, fixture JSON, and dashboard lint/build on pushes and pull requests. It uses PHP 8.4 and Node.js 22, matching the repository's declared application runtimes.
+
+CI does not deploy or synchronize the Render Blueprint, change Render environment variables, call live Foxy or HubSpot APIs, or verify hosted-service health. Render deployment and the post-deployment checks in this document remain separate, explicitly initiated operations.
+
 ## References
 
 - Render Laravel Docker guide: https://render.com/docs/deploy-php-laravel-docker

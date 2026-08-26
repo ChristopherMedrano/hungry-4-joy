@@ -55,5 +55,4 @@ class IntegrationStepLogger
             'occurrence_count' => 1,
         ]);
     }
-
 }

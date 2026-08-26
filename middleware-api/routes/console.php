@@ -1,5 +1,8 @@
 <?php
 
+use App\Services\Foxy\FoxyReconciliationService;
+use App\Services\Foxy\FoxyTemplateConfigService;
+use App\Support\Dashboard\DashboardStatusDemoSeeder;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -58,13 +61,13 @@ Artisan::command('checkout:replay-fixtures {--path= : Directory containing check
 })->purpose('Replay tracked checkout event fixtures through the local receiver route');
 
 Artisan::command('dashboard:seed-status-demo {--path= : Directory containing dashboard status demo fixture JSON files}', function () {
-    $seeder = app(\App\Support\Dashboard\DashboardStatusDemoSeeder::class);
+    $seeder = app(DashboardStatusDemoSeeder::class);
 
     try {
         foreach ($seeder->seed($this->option('path')) as $line) {
             $this->line($line);
         }
-    } catch (\Throwable $exception) {
+    } catch (Throwable $exception) {
         $this->error($exception->getMessage());
 
         return self::FAILURE;
@@ -77,7 +80,7 @@ Artisan::command('dashboard:seed-status-demo {--path= : Directory containing das
 
 Artisan::command('checkout:reconcile-handoffs {--limit= : Maximum number of due handoffs to process}', function () {
     $limit = $this->option('limit');
-    $processed = app(\App\Services\Foxy\FoxyReconciliationService::class)
+    $processed = app(FoxyReconciliationService::class)
         ->reconcileDueHandoffs($limit !== null ? (int) $limit : null);
 
     $this->info("Processed {$processed} checkout handoff(s).");
@@ -90,11 +93,11 @@ if (config('checkout.handoff_scheduled_reconcile_enabled', false)) {
 }
 
 Artisan::command('foxy:sync-checkout-demo-banner {--path= : Optional path to the Twig footer snippet}', function () {
-    $service = app(\App\Services\Foxy\FoxyTemplateConfigService::class);
+    $service = app(FoxyTemplateConfigService::class);
 
     try {
         $result = $service->syncCheckoutDemoBanner($this->option('path'));
-    } catch (\Throwable $exception) {
+    } catch (Throwable $exception) {
         $this->error($exception->getMessage());
 
         return self::FAILURE;

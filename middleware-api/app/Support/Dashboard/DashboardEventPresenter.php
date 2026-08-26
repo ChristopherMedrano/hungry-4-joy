@@ -9,6 +9,7 @@ use App\Models\CrmSyncAttempt;
 class DashboardEventPresenter
 {
     public function __construct(private readonly ?HubSpotClient $hubSpot = null) {}
+
     /**
      * @return array<string, mixed>
      */
