@@ -40,6 +40,10 @@ return [
         'site_url' => env('WORDPRESS_SITE_URL'),
     ],
 
+    'dashboard' => [
+        'operator_token' => env('DASHBOARD_OPERATOR_TOKEN'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

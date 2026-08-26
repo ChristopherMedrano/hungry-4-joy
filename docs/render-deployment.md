@@ -63,6 +63,7 @@ Set these secrets during Blueprint creation:
 | --- | --- |
 | `APP_KEY` | Output of `cd middleware-api && php artisan key:generate --show` |
 | `APP_URL` | The Render service URL, such as `https://hungry-4-joy-middleware.onrender.com` |
+| `DASHBOARD_OPERATOR_TOKEN` | High-entropy operator token generated privately; never configure it on the dashboard service |
 | `FOXY_WEBHOOK_ENCRYPTION_KEY` | Foxy JSON webhook encryption key |
 | `FOXY_CLIENT_ID` | Foxy OAuth client id for hAPI reconciliation |
 | `FOXY_CLIENT_SECRET` | Foxy OAuth client secret |
@@ -84,9 +85,7 @@ The root `render.yaml` provisions neither a Render cron job nor a scheduler work
 
 Support lookup when Foxy error logs show a cart id but no transaction:
 
-```bash
-curl "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-cart/<foxy_cart_id>"
-```
+Use the unlocked dashboard attempt lookup. Direct API lookup requires the same bearer token; never put the token in a URL, shell history, or captured output.
 
 See [`docs/foxy-middleware-connection-plan.md`](foxy-middleware-connection-plan.md) Phase 1.5 for why gateway declines use cart-id lookup instead of transaction reconcile.
 
@@ -94,7 +93,6 @@ After the service is live, verify:
 
 ```bash
 curl https://<middleware-render-host>/api/health
-curl https://<middleware-render-host>/api/health/ready
 ```
 
 Liveness response:
@@ -106,7 +104,7 @@ Liveness response:
 }
 ```
 
-Readiness returns database, migration, Foxy, HubSpot, and queue flags for the dashboard **System status** tab. Expect `degraded` when optional integration env vars are not set; `503` only when the database is unreachable.
+Operator-protected readiness returns database, migration, Foxy, HubSpot, and queue flags for the unlocked dashboard **System status** tab. Expect `degraded` when optional integration env vars are not set; `503` only when the database is unreachable.
 
 The Foxy JSON webhook target is:
 
@@ -147,7 +145,6 @@ Foxy sends `Foxy-Webhook-Event` and `Foxy-Webhook-Signature` (HMAC-SHA256 of the
 
 ```bash
 curl https://hungry-4-joy-middleware.onrender.com/api/health
-curl https://hungry-4-joy-middleware.onrender.com/api/dashboard/events
 cd middleware-api && php artisan test --filter=FoxyWebhook
 ```
 
@@ -181,11 +178,13 @@ After deploy, verify:
 ```bash
 curl -I https://hungry-4-joy-dashboard.onrender.com
 curl https://hungry-4-joy-dashboard.onrender.com/api/health
-curl https://hungry-4-joy-dashboard.onrender.com/api/health/ready
-curl https://hungry-4-joy-dashboard.onrender.com/api/dashboard/events
 ```
 
-Open the dashboard in a browser and confirm **System status** and checkout events load in **Live API** view mode. Manual CRM retry actions call through the same proxied `/api` path.
+Open the dashboard in a browser, confirm **Live API** begins locked, and enter the privately supplied operator token. Confirm **System status** and checkout events load, then use **Lock** and verify live data is no longer accessible. Manual CRM retry actions call through the same authenticated proxied `/api` path. Seeded view remains public and credential-free.
+
+The token belongs only on the middleware service. `render.yaml` declares it with `sync: false`; Blueprint sync does not provide a value. See [`access-control.md`](access-control.md) for ownership and rotation.
+
+The repository intentionally uses service-wide application rate-limit buckets rather than trusting `X-Forwarded-For`. Render documents that its proxy address is visible to the app by default and supplies the client chain in that header, but this Blueprint has no verified fixed proxy CIDR that Laravel can safely trust. The dashboard nginx proxy also appends a hop. Do not change Laravel to trust all proxies merely to obtain per-client limits; use a verified proxy range or an edge-aware limiter if deployment requirements later demand it.
 
 **Blueprint sync:** If the dashboard service is new, open the Render Blueprint for this repo and sync so `hungry-4-joy-dashboard` is created. Existing WordPress and middleware services are unchanged.
 
@@ -199,7 +198,7 @@ cd dashboard && npm run dev:hosted   # equivalent to dev:dashboard:hosted
 
 ## CI and deployment boundary
 
-The GitHub Actions workflow in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) validates the Laravel middleware, WordPress Sass and checkout JavaScript, fixture JSON, and dashboard lint/build on pushes and pull requests. It uses PHP 8.4 and Node.js 22, matching the repository's declared application runtimes.
+The GitHub Actions workflow in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) validates the Laravel middleware, WordPress Sass and checkout JavaScript, fixture JSON, dashboard operator lifecycle, and dashboard lint/build on pushes and pull requests. It uses PHP 8.4 and Node.js 22, matching the repository's declared application runtimes.
 
 CI does not deploy or synchronize the Render Blueprint, change Render environment variables, call live Foxy or HubSpot APIs, or verify hosted-service health. Render deployment and the post-deployment checks in this document remain separate, explicitly initiated operations.
 

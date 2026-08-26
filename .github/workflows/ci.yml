@@ -119,6 +119,10 @@ jobs:
         working-directory: dashboard
         run: npm run lint
 
+      - name: Test dashboard operator lifecycle
+        working-directory: dashboard
+        run: npm run test:auth
+
       - name: Type-check and build dashboard
         working-directory: dashboard
         run: npm run build
