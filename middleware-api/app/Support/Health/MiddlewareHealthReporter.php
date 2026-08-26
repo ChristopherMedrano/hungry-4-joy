@@ -52,7 +52,7 @@ class MiddlewareHealthReporter
     }
 
     /**
-     * @param array<string, array<string, mixed>> $checks
+     * @param  array<string, array<string, mixed>>  $checks
      */
     public function httpStatusFor(array $checks): int
     {
@@ -256,7 +256,7 @@ class MiddlewareHealthReporter
     }
 
     /**
-     * @param array<string, array<string, mixed>> $checks
+     * @param  array<string, array<string, mixed>>  $checks
      */
     private function overallStatus(array $checks): string
     {

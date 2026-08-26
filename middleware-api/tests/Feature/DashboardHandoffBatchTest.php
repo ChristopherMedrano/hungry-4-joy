@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CheckoutEvent;
 use App\Models\CheckoutHandoff;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -26,7 +27,7 @@ class DashboardHandoffBatchTest extends TestCase
 
     public function test_dashboard_reconcile_open_processes_all_non_terminal_handoffs(): void
     {
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
@@ -83,7 +84,7 @@ class DashboardHandoffBatchTest extends TestCase
 
     public function test_dashboard_sweep_unfed_ingests_transaction_with_attempt_id(): void
     {
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
@@ -124,7 +125,7 @@ class DashboardHandoffBatchTest extends TestCase
 
     public function test_dashboard_sweep_unfed_links_existing_event_to_handoff(): void
     {
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }

@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Services\Foxy\FoxyTemplateConfigService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -27,7 +28,7 @@ class FoxyTemplateConfigServiceTest extends TestCase
     {
         $bannerPath = dirname(base_path()).'/examples/foxy/checkout-demo-banner-footer.twig';
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) use ($bannerPath) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
@@ -89,7 +90,7 @@ class FoxyTemplateConfigServiceTest extends TestCase
         $service = app(FoxyTemplateConfigService::class);
         $existingFooter = '<!-- h4j-foxy-demo-banner:start -->'."\n".trim((string) file_get_contents($bannerPath))."\n".'<!-- h4j-foxy-demo-banner:end -->';
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) use ($existingFooter) {
+        Http::fake(function (Request $request) use ($existingFooter) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }

@@ -12,7 +12,7 @@ class CheckoutEventFixtureReceiverTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     #[DataProvider('checkoutEventFixtures')]
     public function test_checkout_event_fixtures_are_accepted_and_stored(string $fileName, array $payload): void
@@ -47,7 +47,7 @@ class CheckoutEventFixtureReceiverTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     #[DataProvider('checkoutEventFixtures')]
     public function test_checkout_event_fixture_retries_are_ignored(string $fileName, array $payload): void

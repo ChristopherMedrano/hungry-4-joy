@@ -2,8 +2,6 @@
 
 namespace App\Services\Foxy;
 
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class FoxyTemplateConfigService

@@ -6,6 +6,7 @@ use App\Models\CheckoutEvent;
 use App\Models\CheckoutHandoff;
 use App\Services\Foxy\FoxyReconciliationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -27,7 +28,7 @@ class FoxyReconciliationServiceTest extends TestCase
 
     public function test_reconciler_ingests_completed_transaction_with_empty_foxy_status(): void
     {
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
@@ -77,7 +78,7 @@ class FoxyReconciliationServiceTest extends TestCase
 
     public function test_handoff_with_no_foxy_match_schedules_retry(): void
     {
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }

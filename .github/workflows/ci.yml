@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  middleware:
+    name: Laravel middleware
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+
+      - name: Locate Composer cache
+        id: composer-cache
+        working-directory: middleware-api
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-8.4-composer-${{ hashFiles('middleware-api/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-8.4-composer-
+
+      - name: Install middleware dependencies
+        working-directory: middleware-api
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run middleware tests
+        working-directory: middleware-api
+        run: composer test
+
+      - name: Check PHP formatting
+        working-directory: middleware-api
+        run: vendor/bin/pint --test
+
+  wordpress-and-checkout-js:
+    name: WordPress CSS and checkout JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Confirm fixture validator is available
+        run: jq --version
+
+      - name: Validate checkout fixtures
+        run: npm run check:fixtures
+
+      - name: Test donation attempt behavior
+        run: npm run test:donation-attempt-js
+
+      - name: Test donation analytics behavior
+        run: npm run test:donation-analytics-js
+
+      - name: Build WordPress theme CSS
+        run: npm run build:wp-css
+
+      - name: Check generated WordPress CSS is current
+        run: git diff --exit-code -- wordpress/wp-content/themes/hungry-4-joy/assets/css/
+
+  dashboard:
+    name: Dashboard lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Lint dashboard
+        working-directory: dashboard
+        run: npm run lint
+
+      - name: Type-check and build dashboard
+        working-directory: dashboard
+        run: npm run build

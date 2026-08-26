@@ -10,6 +10,7 @@ use Tests\TestCase;
 class HealthReadyTest extends TestCase
 {
     use RefreshDatabase;
+
     public function test_health_ready_returns_all_checks(): void
     {
         $response = $this->getJson('/api/health/ready');
