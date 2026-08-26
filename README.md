@@ -356,6 +356,11 @@ wordpress/wp-content/uploads/
 wordpress/wp-content/cache/
 ```
 
+Before adding environment examples, database artifacts, exports, backups, or
+screenshots, follow the [Repository Safety Audit](docs/repository-safety-audit.md).
+The audit is limited to tracked repository content and deliberately does not
+read local environment or credential files.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
@@ -367,6 +372,7 @@ wordpress/wp-content/cache/
 - [Dashboard Verification Walkthrough](docs/dashboard-verification-walkthrough.md)
 - [Foxy To Middleware Connection Plan](docs/foxy-middleware-connection-plan.md)
 - [Render Deployment](docs/render-deployment.md)
+- [Repository Safety Audit](docs/repository-safety-audit.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
 

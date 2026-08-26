@@ -32,14 +32,24 @@ define( 'FORCE_SSL_ADMIN', true );
 
 define( 'WP_DEBUG', filter_var( getenv( 'WP_DEBUG' ) ?: false, FILTER_VALIDATE_BOOLEAN ) );
 
-define( 'AUTH_KEY', getenv( 'WP_AUTH_KEY' ) ?: 'demo-auth-key-hungry-4-joy' );
-define( 'SECURE_AUTH_KEY', getenv( 'WP_SECURE_AUTH_KEY' ) ?: 'demo-secure-auth-key-hungry-4-joy' );
-define( 'LOGGED_IN_KEY', getenv( 'WP_LOGGED_IN_KEY' ) ?: 'demo-logged-in-key-hungry-4-joy' );
-define( 'NONCE_KEY', getenv( 'WP_NONCE_KEY' ) ?: 'demo-nonce-key-hungry-4-joy' );
-define( 'AUTH_SALT', getenv( 'WP_AUTH_SALT' ) ?: 'demo-auth-salt-hungry-4-joy' );
-define( 'SECURE_AUTH_SALT', getenv( 'WP_SECURE_AUTH_SALT' ) ?: 'demo-secure-auth-salt-hungry-4-joy' );
-define( 'LOGGED_IN_SALT', getenv( 'WP_LOGGED_IN_SALT' ) ?: 'demo-logged-in-salt-hungry-4-joy' );
-define( 'NONCE_SALT', getenv( 'WP_NONCE_SALT' ) ?: 'demo-nonce-salt-hungry-4-joy' );
+function hungry_4_joy_required_environment_value( string $name ): string {
+	$value = getenv( $name );
+
+	if ( ! is_string( $value ) || '' === $value ) {
+		throw new RuntimeException( sprintf( 'Required environment variable %s is not set.', $name ) );
+	}
+
+	return $value;
+}
+
+define( 'AUTH_KEY', hungry_4_joy_required_environment_value( 'WP_AUTH_KEY' ) );
+define( 'SECURE_AUTH_KEY', hungry_4_joy_required_environment_value( 'WP_SECURE_AUTH_KEY' ) );
+define( 'LOGGED_IN_KEY', hungry_4_joy_required_environment_value( 'WP_LOGGED_IN_KEY' ) );
+define( 'NONCE_KEY', hungry_4_joy_required_environment_value( 'WP_NONCE_KEY' ) );
+define( 'AUTH_SALT', hungry_4_joy_required_environment_value( 'WP_AUTH_SALT' ) );
+define( 'SECURE_AUTH_SALT', hungry_4_joy_required_environment_value( 'WP_SECURE_AUTH_SALT' ) );
+define( 'LOGGED_IN_SALT', hungry_4_joy_required_environment_value( 'WP_LOGGED_IN_SALT' ) );
+define( 'NONCE_SALT', hungry_4_joy_required_environment_value( 'WP_NONCE_SALT' ) );
 
 $table_prefix = getenv( 'WP_TABLE_PREFIX' ) ?: 'wp_';
 

@@ -6,10 +6,44 @@ docs/superpowers/
 
 # Local secrets (never commit)
 .env
-.env.local
-.env.*.local
-!.env.local.example
+.env.*
+*.env
+*.env.*
+!.env.example
+!.env.*.example
+!*.env.example
+!*.env.*.example
 .hubspot-mcp-oauth.json
+auth.json
+credentials.json
+.netrc
+.npmrc
+!middleware-api/.npmrc
+.pypirc
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local data exports, database copies, and backups
+*.sql
+*.sql.gz
+*.sqlite*
+*.db
+*.db-*
+*.dump
+*.bak
+*.backup
+*~
+backups/
+db_snapshots/
+exports/
+
+# Private review captures (public seeded-demo images belong in docs/images/)
+private-screenshots/
+screenshots/private/
 
 # Node / Sass tooling
 node_modules/
