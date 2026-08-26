@@ -10,6 +10,19 @@ import type {
   ServerAnalyticsEventSummary,
 } from '../types/analytics'
 import type { HealthReadyResponse } from '../types/health'
+import {
+  assertDashboardResponseCurrent,
+  operatorAuthenticatedFetch,
+} from './operatorAccess'
+
+export {
+  dashboardAccessGeneration,
+  DashboardRequestCancelledError,
+  isCurrentDashboardAccessGeneration,
+  isDashboardRequestCancelled,
+  setDashboardOperatorToken,
+  setOperatorUnauthorizedHandler,
+} from './operatorAccess'
 
 export interface DashboardListResponse {
   data: CheckoutEventSummary[]
@@ -70,9 +83,13 @@ function toQuery(filters: EventFilters, page = 1, perPage = 25): string {
 }
 
 async function parseJsonOrThrow<T>(response: Response): Promise<T> {
+  assertDashboardResponseCurrent(response)
+
   const payload = (await response.json().catch(() => ({}))) as {
     message?: string
   }
+
+  assertDashboardResponseCurrent(response)
 
   if (!response.ok) {
     throw new DashboardApiError(
@@ -91,7 +108,7 @@ export async function fetchDashboardEvents(
 ): Promise<DashboardListResponse> {
   const params = toQuery(filters, page, options?.perPage ?? 25)
   const query = options?.retryActivity ? `${params}&retry_activity=1` : params
-  const response = await fetch(`${apiUrl('/api/dashboard/events')}?${query}`)
+  const response = await operatorAuthenticatedFetch(`${apiUrl('/api/dashboard/events')}?${query}`)
 
   const payload = await parseJsonOrThrow<DashboardListResponse>(response)
 
@@ -104,7 +121,7 @@ export async function fetchDashboardEvents(
 export async function fetchDashboardEventDetail(
   checkoutEventId: number,
 ): Promise<CheckoutEventDetail> {
-  const response = await fetch(apiUrl(`/api/dashboard/events/${checkoutEventId}`))
+  const response = await operatorAuthenticatedFetch(apiUrl(`/api/dashboard/events/${checkoutEventId}`))
   const payload = await parseJsonOrThrow<DashboardDetailResponse>(response)
 
   return normalizeEventSummary(payload.data)
@@ -113,7 +130,7 @@ export async function fetchDashboardEventDetail(
 export async function fetchDashboardEventByAttempt(
   donationAttemptId: string,
 ): Promise<import('../types/handoff').AttemptTraceData> {
-  const response = await fetch(
+  const response = await operatorAuthenticatedFetch(
     apiUrl(`/api/dashboard/events/by-attempt/${encodeURIComponent(donationAttemptId)}`),
   )
   const payload = await parseJsonOrThrow<AttemptTraceResponse>(response)
@@ -129,7 +146,7 @@ export async function fetchDashboardEventByAttempt(
 export async function fetchDashboardEventByCart(
   cartId: string,
 ): Promise<import('../types/handoff').AttemptTraceData> {
-  const response = await fetch(
+  const response = await operatorAuthenticatedFetch(
     apiUrl(`/api/dashboard/events/by-cart/${encodeURIComponent(cartId)}`),
   )
   const payload = await parseJsonOrThrow<AttemptTraceResponse>(response)
@@ -166,14 +183,14 @@ export async function fetchDashboardCheckoutAttempts(
   params.set('per_page', String(perPage))
   params.set('sort', '-handoff_at')
 
-  const response = await fetch(`${apiUrl('/api/dashboard/handoffs')}?${params}`)
+  const response = await operatorAuthenticatedFetch(`${apiUrl('/api/dashboard/handoffs')}?${params}`)
   return parseJsonOrThrow<CheckoutAttemptsListResponse>(response)
 }
 
 export async function fetchHandoffReconcile(
   donationAttemptId: string,
 ): Promise<import('../types/handoff').AttemptTraceData> {
-  const response = await fetch(apiUrl('/api/dashboard/handoffs/reconcile'), {
+  const response = await operatorAuthenticatedFetch(apiUrl('/api/dashboard/handoffs/reconcile'), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -208,7 +225,7 @@ export interface HandoffSweepUnfedSummary {
 }
 
 export async function fetchHandoffReconcileOpen(): Promise<HandoffBatchReconcileSummary> {
-  const response = await fetch(apiUrl('/api/dashboard/handoffs/reconcile-open'), {
+  const response = await operatorAuthenticatedFetch(apiUrl('/api/dashboard/handoffs/reconcile-open'), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -224,7 +241,7 @@ export async function fetchHandoffReconcileOpen(): Promise<HandoffBatchReconcile
 export async function fetchHandoffSweepUnfed(
   hours = 24,
 ): Promise<HandoffSweepUnfedSummary> {
-  const response = await fetch(apiUrl('/api/dashboard/handoffs/sweep-unfed'), {
+  const response = await operatorAuthenticatedFetch(apiUrl('/api/dashboard/handoffs/sweep-unfed'), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -240,10 +257,13 @@ export async function fetchHandoffSweepUnfed(
 export async function fetchCrmSyncRetry(
   crmSyncAttemptId: number,
 ): Promise<CheckoutEventDetail> {
-  const response = await fetch(apiUrl(`/api/dashboard/crm-sync/${crmSyncAttemptId}/retry`), {
-    method: 'POST',
-    headers: { Accept: 'application/json' },
-  })
+  const response = await operatorAuthenticatedFetch(
+    apiUrl(`/api/dashboard/crm-sync/${crmSyncAttemptId}/retry`),
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    },
+  )
   const payload = await parseJsonOrThrow<DashboardDetailResponse>(response)
 
   return normalizeEventSummary(payload.data)
@@ -283,7 +303,7 @@ function analyticsQuery(filters: AnalyticsFilters, page = 1, perPage = 25): stri
 }
 
 export async function fetchHealthReady(): Promise<HealthReadyResponse> {
-  const response = await fetch(apiUrl('/api/health/ready'))
+  const response = await operatorAuthenticatedFetch(apiUrl('/api/health/ready'))
   return parseJsonOrThrow<HealthReadyResponse>(response)
 }
 
@@ -292,7 +312,7 @@ export async function fetchDashboardAnalyticsEvents(
   page = 1,
   perPage = 25,
 ): Promise<DashboardAnalyticsListResponse> {
-  const response = await fetch(
+  const response = await operatorAuthenticatedFetch(
     `${apiUrl('/api/dashboard/analytics-events')}?${analyticsQuery(filters, page, perPage)}`,
   )
 
@@ -302,7 +322,7 @@ export async function fetchDashboardAnalyticsEvents(
 export async function fetchDashboardAnalyticsEventDetail(
   serverAnalyticsEventId: number,
 ): Promise<ServerAnalyticsEventDetail> {
-  const response = await fetch(
+  const response = await operatorAuthenticatedFetch(
     apiUrl(`/api/dashboard/analytics-events/${serverAnalyticsEventId}`),
   )
   const payload = await parseJsonOrThrow<DashboardAnalyticsDetailResponse>(response)

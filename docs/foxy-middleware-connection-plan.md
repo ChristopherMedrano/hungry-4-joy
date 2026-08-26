@@ -141,28 +141,19 @@ Use this when you have an error-log id (for example `2247125087`) and by-attempt
 
 #### Verification commands
 
+These operator routes require the bearer token. Use the unlocked dashboard so the token stays out of shell history, process arguments, URLs, and captured output.
+
 Completed transaction (reconcile path):
 
-```bash
-curl "https://<middleware-host>/api/dashboard/events/by-attempt/<donation_attempt_id>"
-# Expect handoff + checkout_event donation.created; an empty Foxy status maps to completed
-```
+Use the unlocked attempt lookup. Expect handoff + `checkout_event` `donation.created`; an empty Foxy status maps to completed.
 
 Gateway decline (cart-only path):
 
-```bash
-# After Authorize.net decline test (ZIP 46282), copy cart id from Foxy error log
-curl "https://<middleware-host>/api/dashboard/events/by-cart/<foxy_cart_id>"
-# Expect donation_attempt_id + handoff; checkout_event null; foxy_cart items with metadata
-```
+After the Authorize.net decline test (ZIP `46282`), copy the cart id from the Foxy error log and use the unlocked cart lookup. Expect `donation_attempt_id` + handoff, `checkout_event` null, and Foxy cart items with metadata.
 
 On-demand reconcile:
 
-```bash
-curl -X POST "https://<middleware-host>/api/checkout/handoffs/reconcile" \
-  -H "Content-Type: application/json" \
-  -d '{"donation_attempt_id":"h4j_attempt_..."}'
-```
+Use the unlocked dashboard's reconcile action for the attempt.
 
 ## Phase 2: Actual Foxy Webhook Connection
 
@@ -242,8 +233,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' -X POST \
   https://hungry-4-joy-middleware.onrender.com/api/checkout/events
 # Expected: 404
 
-# Dashboard list should include foxy_webhook rows
-curl https://hungry-4-joy-middleware.onrender.com/api/dashboard/events
+# The unlocked dashboard list should include foxy_webhook rows
 ```
 
 Complete a Foxy test transaction from the hosted WordPress demo cart (`https://hungry-4-joy-wordpress.onrender.com`). Then confirm:

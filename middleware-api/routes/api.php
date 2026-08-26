@@ -29,7 +29,8 @@ Route::get('/health', function () {
     ]);
 });
 
-Route::get('/health/ready', HealthReadyController::class);
+Route::get('/health/ready', HealthReadyController::class)
+    ->middleware(['operator.auth', 'throttle:operator-api']);
 
 $checkoutEventResponse = fn (string $status, int $code = Response::HTTP_OK) => response()->json([
     'service' => 'hungry-4-joy-middleware-api',
@@ -101,9 +102,11 @@ $logCheckoutIngestResult = function (
 };
 
 Route::post('/checkout/handoffs/reconcile', [CheckoutHandoffController::class, 'reconcile'])
+    ->middleware(['operator.auth', 'throttle:operator-mutations'])
     ->name('checkout.handoffs.reconcile');
 
 Route::post('/checkout/handoffs', [CheckoutHandoffController::class, 'store'])
+    ->middleware('throttle:public-handoffs')
     ->name('checkout.handoffs.store');
 
 Route::post('/checkout/events', function (
@@ -209,37 +212,43 @@ Route::post('/foxy/webhooks', function (
     }
 
     return $checkoutEventResponse($result['status'], $result['code']);
-})->name('foxy.webhooks.store');
+})->middleware('throttle:foxy-webhooks')->name('foxy.webhooks.store');
 
-Route::prefix('dashboard')->group(function () {
-    Route::get('/integration-events', [DashboardIntegrationStepController::class, 'index'])
-        ->name('dashboard.integration-events.index');
-    Route::get('/analytics-events/by-attempt/{donationAttemptId}', [DashboardServerAnalyticsController::class, 'showByAttempt'])
-        ->name('dashboard.analytics-events.by-attempt');
-    Route::get('/analytics-events/{serverAnalyticsEvent}', [DashboardServerAnalyticsController::class, 'show'])
-        ->whereNumber('serverAnalyticsEvent')
-        ->name('dashboard.analytics-events.show');
-    Route::get('/analytics-events', [DashboardServerAnalyticsController::class, 'index'])
-        ->name('dashboard.analytics-events.index');
-    Route::post('/crm-sync/{crmSyncAttempt}/retry', [DashboardCrmSyncRetryController::class, 'store'])
-        ->whereNumber('crmSyncAttempt')
-        ->name('dashboard.crm-sync.retry');
-    Route::get('/handoffs', [DashboardHandoffController::class, 'index'])
-        ->name('dashboard.handoffs.index');
-    Route::post('/handoffs/reconcile', [DashboardHandoffReconcileController::class, 'store'])
-        ->name('dashboard.handoffs.reconcile');
-    Route::post('/handoffs/reconcile-open', [DashboardHandoffBatchController::class, 'reconcileOpen'])
-        ->name('dashboard.handoffs.reconcile-open');
-    Route::post('/handoffs/sweep-unfed', [DashboardHandoffBatchController::class, 'sweepUnfed'])
-        ->name('dashboard.handoffs.sweep-unfed');
-    Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
-        ->name('dashboard.events.by-attempt');
-    Route::get('/events/by-cart/{cartId}', [DashboardEventController::class, 'showByCart'])
-        ->whereNumber('cartId')
-        ->name('dashboard.events.by-cart');
-    Route::get('/events/{checkoutEvent}', [DashboardEventController::class, 'show'])
-        ->whereNumber('checkoutEvent')
-        ->name('dashboard.events.show');
-    Route::get('/events', [DashboardEventController::class, 'index'])
-        ->name('dashboard.events.index');
-});
+Route::prefix('dashboard')
+    ->middleware(['operator.auth', 'throttle:operator-api'])
+    ->group(function () {
+        Route::get('/integration-events', [DashboardIntegrationStepController::class, 'index'])
+            ->name('dashboard.integration-events.index');
+        Route::get('/analytics-events/by-attempt/{donationAttemptId}', [DashboardServerAnalyticsController::class, 'showByAttempt'])
+            ->name('dashboard.analytics-events.by-attempt');
+        Route::get('/analytics-events/{serverAnalyticsEvent}', [DashboardServerAnalyticsController::class, 'show'])
+            ->whereNumber('serverAnalyticsEvent')
+            ->name('dashboard.analytics-events.show');
+        Route::get('/analytics-events', [DashboardServerAnalyticsController::class, 'index'])
+            ->name('dashboard.analytics-events.index');
+        Route::post('/crm-sync/{crmSyncAttempt}/retry', [DashboardCrmSyncRetryController::class, 'store'])
+            ->whereNumber('crmSyncAttempt')
+            ->middleware('throttle:operator-mutations')
+            ->name('dashboard.crm-sync.retry');
+        Route::get('/handoffs', [DashboardHandoffController::class, 'index'])
+            ->name('dashboard.handoffs.index');
+        Route::post('/handoffs/reconcile', [DashboardHandoffReconcileController::class, 'store'])
+            ->middleware('throttle:operator-mutations')
+            ->name('dashboard.handoffs.reconcile');
+        Route::post('/handoffs/reconcile-open', [DashboardHandoffBatchController::class, 'reconcileOpen'])
+            ->middleware('throttle:operator-mutations')
+            ->name('dashboard.handoffs.reconcile-open');
+        Route::post('/handoffs/sweep-unfed', [DashboardHandoffBatchController::class, 'sweepUnfed'])
+            ->middleware('throttle:operator-mutations')
+            ->name('dashboard.handoffs.sweep-unfed');
+        Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
+            ->name('dashboard.events.by-attempt');
+        Route::get('/events/by-cart/{cartId}', [DashboardEventController::class, 'showByCart'])
+            ->whereNumber('cartId')
+            ->name('dashboard.events.by-cart');
+        Route::get('/events/{checkoutEvent}', [DashboardEventController::class, 'show'])
+            ->whereNumber('checkoutEvent')
+            ->name('dashboard.events.show');
+        Route::get('/events', [DashboardEventController::class, 'index'])
+            ->name('dashboard.events.index');
+    });

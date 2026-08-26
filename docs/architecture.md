@@ -209,7 +209,7 @@ MVP responsibilities:
 - `integration_step_logs` pipeline step records (see `docs/contracts.md` Section 7)
 - FoxyCart webhook receipt and validation logs
 - HubSpot API request/response error logs
-- health/status checks (`GET /api/health` liveness, `GET /api/health/ready` readiness)
+- health/status checks (`GET /api/health` public liveness, operator-protected `GET /api/health/ready` readiness)
 - dashboard **System status** tab and header strip backed by readiness checks
 
 Optional later tools:

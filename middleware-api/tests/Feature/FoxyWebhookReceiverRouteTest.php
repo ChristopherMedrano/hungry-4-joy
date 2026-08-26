@@ -21,7 +21,7 @@ class FoxyWebhookReceiverRouteTest extends TestCase
 
         $payload = $this->foxyTransactionPayload();
 
-        $response = $this->postJson(
+        $response = $this->withoutHeader('Authorization')->postJson(
             '/api/foxy/webhooks',
             $payload,
             $this->signedHeaders($payload, 'transaction/created')

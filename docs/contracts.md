@@ -721,6 +721,8 @@ Planned route prefix:
 
 Implemented Laravel routes and the React dashboard consume these payload shapes.
 
+Every route under `/api/dashboard` requires the operator bearer token described in [`access-control.md`](access-control.md). The same protection applies to direct middleware calls and dashboard-proxied calls; CORS is not authorization.
+
 ### API Endpoints
 
 | Method | Path | Purpose |
@@ -746,9 +748,11 @@ These routes are outside `/api/dashboard` but are consumed by the dashboard **Sy
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Liveness probe only — process responds. Render deploy health check uses this path. |
-| `GET` | `/api/health/ready` | Readiness and integration configuration flags for ops UI |
+| `GET` | `/api/health/ready` | Operator-protected readiness and integration configuration flags for ops UI |
 
 **`GET /api/health/ready`**
+
+Requires the operator bearer token. Basic unauthenticated deploy health checks use `GET /api/health` instead.
 
 Returns `200` when the database is reachable; `503` when the database check fails. Overall `status` may still be `degraded` with HTTP `200` when optional integrations are not configured.
 

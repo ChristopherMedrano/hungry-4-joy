@@ -12,7 +12,12 @@ import {
   fetchHandoffReconcileOpen,
   fetchHandoffSweepUnfed,
   fetchHealthReady,
+  dashboardAccessGeneration,
+  isCurrentDashboardAccessGeneration,
+  isDashboardRequestCancelled,
   setDashboardApiBase,
+  setDashboardOperatorToken,
+  setOperatorUnauthorizedHandler,
   type HandoffBatchReconcileSummary,
   type HandoffSweepUnfedSummary,
 } from './api/dashboard'
@@ -30,6 +35,7 @@ import { EventFiltersBar } from './components/EventFiltersBar'
 import { EventTable } from './components/EventTable'
 import { Layout } from './components/Layout'
 import { LoadingState } from './components/LoadingState'
+import { OperatorUnlock } from './components/OperatorUnlock'
 import { CrmSyncIssuesTable } from './components/CrmSyncIssuesTable'
 import { DashboardHome } from './components/DashboardHome'
 import { Modal } from './components/Modal'
@@ -137,9 +143,12 @@ function App() {
   const [attemptsTotal, setAttemptsTotal] = useState(0)
   const [dashboardTotalEvents, setDashboardTotalEvents] = useState(0)
   const [dashboardCompletedCount, setDashboardCompletedCount] = useState(0)
+  const [operatorUnlocked, setOperatorUnlocked] = useState(false)
+  const [operatorAuthError, setOperatorAuthError] = useState<string | null>(null)
 
   const isSeededView = viewState === 'seeded'
-  const isApiView = isApiDataMode(viewState)
+  const isApiMode = isApiDataMode(viewState)
+  const isApiView = isApiMode && operatorUnlocked
 
   const seededEvents = useMemo(
     () => filterEvents(seededDashboardEvents, filters),
@@ -176,6 +185,40 @@ function App() {
   const crmPagination = usePagination(crmTotalCount)
   const analyticsPagination = usePagination(analyticsTotalCount)
   const attemptsPagination = usePagination(attemptsTotalCount)
+
+  function lockOperatorAccess(error: string | null = null): void {
+    setDashboardOperatorToken(null)
+    setOperatorUnlocked(false)
+    setOperatorAuthError(error)
+    setIsEventModalOpen(false)
+    setIsAttemptModalOpen(false)
+    setIsAnalyticsModalOpen(false)
+    setDashboardEvents([])
+    setLiveEvents([])
+    setCrmSyncIssuesEvents([])
+    setLiveCheckoutAttempts([])
+    setLiveAnalyticsEvents([])
+    setSelectedDetail(null)
+    setAttemptTrace(null)
+    setSelectedAnalyticsDetail(null)
+    setHealthReady(null)
+    setDashboardTotalEvents(0)
+    setDashboardCompletedCount(0)
+    setDashboardCrmIssuesCount(0)
+    setDashboardCartIssuesCount(0)
+    setEventsTotal(0)
+    setCrmTotal(0)
+    setAnalyticsTotal(0)
+    setAttemptsTotal(0)
+  }
+
+  useEffect(() => {
+    setOperatorUnauthorizedHandler(() => {
+      lockOperatorAccess('Operator access was not accepted. Enter the token again.')
+    })
+
+    return () => setOperatorUnauthorizedHandler(null)
+  }, [])
 
   // Rows for the current page: API responses are already the server page; seeded
   // data is sliced locally with the pager's offset/limit.
@@ -262,6 +305,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadHealth(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingHealth(true)
       setHealthError(null)
 
@@ -271,6 +315,7 @@ function App() {
           setHealthReady(response)
         }
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (!cancelled) {
           setHealthReady(null)
           setHealthError(
@@ -278,7 +323,7 @@ function App() {
           )
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingHealth(false)
         }
       }
@@ -322,7 +367,8 @@ function App() {
         setDashboardCompletedCount(completed.meta.total)
         setDashboardCrmIssuesCount(crm.meta.total)
         setDashboardCartIssuesCount(attempts.meta.total)
-      } catch {
+      } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (!cancelled) {
           setDashboardEvents([])
           setDashboardTotalEvents(0)
@@ -349,6 +395,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadAnalyticsEvents(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingAnalyticsList(true)
       setAnalyticsListError(null)
 
@@ -375,6 +422,7 @@ function App() {
           return response.data[0]?.server_analytics_event_id ?? null
         })
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (cancelled) {
           return
         }
@@ -386,7 +434,7 @@ function App() {
           error instanceof Error ? error.message : 'Could not load server analytics events.',
         )
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingAnalyticsList(false)
         }
       }
@@ -421,6 +469,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadAnalyticsDetail(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingAnalyticsDetail(true)
       setAnalyticsDetailError(null)
 
@@ -430,6 +479,7 @@ function App() {
           setSelectedAnalyticsDetail(detail)
         }
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (!cancelled) {
           setSelectedAnalyticsDetail(null)
           setAnalyticsDetailError(
@@ -439,7 +489,7 @@ function App() {
           )
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingAnalyticsDetail(false)
         }
       }
@@ -461,6 +511,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadEvents(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingList(true)
       setListError(null)
 
@@ -482,6 +533,7 @@ function App() {
           return response.data[0]?.checkout_event_id ?? null
         })
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (cancelled) {
           return
         }
@@ -491,7 +543,7 @@ function App() {
         setSelectedDetail(null)
         setListError(error instanceof Error ? error.message : 'Could not load checkout events.')
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingList(false)
         }
       }
@@ -521,6 +573,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadCrmSyncIssues(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingCrmSyncIssues(true)
       setCrmSyncIssuesError(null)
 
@@ -536,6 +589,7 @@ function App() {
         setCrmSyncIssuesEvents(sortByLastCrmAttempt(response.data))
         setCrmTotal(response.meta.total)
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (cancelled) {
           return
         }
@@ -545,7 +599,7 @@ function App() {
           error instanceof Error ? error.message : 'Could not load CRM sync issues.',
         )
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingCrmSyncIssues(false)
         }
       }
@@ -575,6 +629,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadCheckoutAttempts(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingCheckoutAttempts(true)
       setCheckoutAttemptsError(null)
 
@@ -601,6 +656,7 @@ function App() {
           return response.data[0]?.donation_attempt_id ?? null
         })
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (cancelled) {
           return
         }
@@ -612,7 +668,7 @@ function App() {
           error instanceof Error ? error.message : 'Could not load checkout attempts.',
         )
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingCheckoutAttempts(false)
         }
       }
@@ -651,6 +707,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadTraceForSelection(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingAttemptTrace(true)
       setAttemptTraceError(null)
       setHandoffReconcileError(null)
@@ -661,6 +718,7 @@ function App() {
           setAttemptTrace(trace)
         }
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (!cancelled) {
           setAttemptTrace(null)
           setAttemptTraceError(
@@ -668,7 +726,7 @@ function App() {
           )
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingAttemptTrace(false)
         }
       }
@@ -703,6 +761,7 @@ function App() {
     setDashboardApiBase(apiBaseForMode(viewState))
 
     async function loadDetail(): Promise<void> {
+      const requestGeneration = dashboardAccessGeneration()
       setIsLoadingDetail(true)
       setDetailError(null)
       setCrmRetryError(null)
@@ -713,6 +772,7 @@ function App() {
           setSelectedDetail(detail)
         }
       } catch (error) {
+        if (isDashboardRequestCancelled(error)) return
         if (!cancelled) {
           setSelectedDetail(null)
           setDetailError(
@@ -720,7 +780,7 @@ function App() {
           )
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentDashboardAccessGeneration(requestGeneration)) {
           setIsLoadingDetail(false)
         }
       }
@@ -761,6 +821,7 @@ function App() {
       return
     }
 
+    const requestGeneration = dashboardAccessGeneration()
     setDashboardApiBase(apiBaseForMode(viewState))
     setCrmRetryingEventId(event.checkout_event_id)
     setCrmRetryError(null)
@@ -774,9 +835,12 @@ function App() {
         setFilters((current) => ({ ...current, search: '' }))
       }
     } catch (error) {
+      if (isDashboardRequestCancelled(error)) return
       setCrmRetryError(error instanceof Error ? error.message : 'CRM sync retry failed.')
     } finally {
-      setCrmRetryingEventId(null)
+      if (isCurrentDashboardAccessGeneration(requestGeneration)) {
+        setCrmRetryingEventId(null)
+      }
     }
   }
 
@@ -819,6 +883,7 @@ function App() {
       return
     }
 
+    const requestGeneration = dashboardAccessGeneration()
     setDashboardApiBase(apiBaseForMode(viewState))
     setIsLoadingAttemptTrace(true)
     setAttemptTraceError(null)
@@ -833,13 +898,16 @@ function App() {
       setSelectedAttemptId(trace.donation_attempt_id)
       setIsAttemptModalOpen(true)
     } catch (error) {
+      if (isDashboardRequestCancelled(error)) return
       setAttemptTrace(null)
       setAttemptTraceError(
         error instanceof Error ? error.message : 'Could not load attempt trace.',
       )
       setIsAttemptModalOpen(true)
     } finally {
-      setIsLoadingAttemptTrace(false)
+      if (isCurrentDashboardAccessGeneration(requestGeneration)) {
+        setIsLoadingAttemptTrace(false)
+      }
     }
   }
 
@@ -848,6 +916,7 @@ function App() {
       return
     }
 
+    const requestGeneration = dashboardAccessGeneration()
     setDashboardApiBase(apiBaseForMode(viewState))
     setIsHandoffReconciling(true)
     setHandoffReconcileError(null)
@@ -877,11 +946,14 @@ function App() {
         )
       }
     } catch (error) {
+      if (isDashboardRequestCancelled(error)) return
       setHandoffReconcileError(
         error instanceof Error ? error.message : 'Handoff reconcile failed.',
       )
     } finally {
-      setIsHandoffReconciling(false)
+      if (isCurrentDashboardAccessGeneration(requestGeneration)) {
+        setIsHandoffReconciling(false)
+      }
     }
   }
 
@@ -890,6 +962,7 @@ function App() {
       return
     }
 
+    const requestGeneration = dashboardAccessGeneration()
     setDashboardApiBase(apiBaseForMode(viewState))
     setIsReconcilingOpenHandoffs(true)
     setHandoffBatchError(null)
@@ -902,11 +975,14 @@ function App() {
       setHandoffBatchSummaryKind('reconcile-open')
       setReloadToken((token) => token + 1)
     } catch (error) {
+      if (isDashboardRequestCancelled(error)) return
       setHandoffBatchError(
         error instanceof Error ? error.message : 'Open handoff reconcile failed.',
       )
     } finally {
-      setIsReconcilingOpenHandoffs(false)
+      if (isCurrentDashboardAccessGeneration(requestGeneration)) {
+        setIsReconcilingOpenHandoffs(false)
+      }
     }
   }
 
@@ -915,6 +991,7 @@ function App() {
       return
     }
 
+    const requestGeneration = dashboardAccessGeneration()
     setDashboardApiBase(apiBaseForMode(viewState))
     setIsSweepingUnfedTransactions(true)
     setHandoffBatchError(null)
@@ -927,11 +1004,14 @@ function App() {
       setHandoffBatchSummaryKind('sweep-unfed')
       setReloadToken((token) => token + 1)
     } catch (error) {
+      if (isDashboardRequestCancelled(error)) return
       setHandoffBatchError(
         error instanceof Error ? error.message : 'Unfed transaction sweep failed.',
       )
     } finally {
-      setIsSweepingUnfedTransactions(false)
+      if (isCurrentDashboardAccessGeneration(requestGeneration)) {
+        setIsSweepingUnfedTransactions(false)
+      }
     }
   }
 
@@ -974,47 +1054,63 @@ function App() {
   }
 
   const previewControl = (
-    <label className="flex items-center gap-2 text-sm text-slate-400">
-      <span className="hidden text-xs font-medium uppercase tracking-wide lg:inline">
-        View mode
-      </span>
-      <select
-        value={viewState}
-        onChange={(event) => {
-          const nextView = event.target.value as DashboardDataMode
-          setViewState(nextView)
-          setDetailError(null)
-          setListError(null)
-          setCrmSyncIssuesError(null)
-          resetAllPagination()
+    <div className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-sm text-slate-400">
+        <span className="hidden text-xs font-medium uppercase tracking-wide lg:inline">
+          View mode
+        </span>
+        <select
+          value={viewState}
+          onChange={(event) => {
+            const nextView = event.target.value as DashboardDataMode
+            setViewState(nextView)
 
-          if (nextView === 'seeded') {
-            const nextEvents = filterEvents(seededDashboardEvents, filters)
-            setSelectedId(nextEvents[0]?.checkout_event_id ?? null)
-          }
-        }}
-        className="rounded-md border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-sm text-slate-100 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-      >
-        <optgroup label="Data source">
-          {viewModeOptions()
-            .filter((option) => !isPreviewStateMode(option.value))
-            .map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-        </optgroup>
-        <optgroup label="Preview states">
-          {viewModeOptions()
-            .filter((option) => isPreviewStateMode(option.value))
-            .map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-        </optgroup>
-      </select>
-    </label>
+            if (!isApiDataMode(nextView)) {
+              lockOperatorAccess()
+            }
+
+            setDetailError(null)
+            setListError(null)
+            setCrmSyncIssuesError(null)
+            resetAllPagination()
+
+            if (nextView === 'seeded') {
+              const nextEvents = filterEvents(seededDashboardEvents, filters)
+              setSelectedId(nextEvents[0]?.checkout_event_id ?? null)
+            }
+          }}
+          className="rounded-md border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-sm text-slate-100 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+        >
+          <optgroup label="Data source">
+            {viewModeOptions()
+              .filter((option) => !isPreviewStateMode(option.value))
+              .map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+          </optgroup>
+          <optgroup label="Preview states">
+            {viewModeOptions()
+              .filter((option) => isPreviewStateMode(option.value))
+              .map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+          </optgroup>
+        </select>
+      </label>
+      {operatorUnlocked ? (
+        <button
+          type="button"
+          onClick={() => lockOperatorAccess()}
+          className="rounded-md border border-slate-700 px-2.5 py-1.5 text-sm text-slate-300 hover:border-slate-600 hover:text-white"
+        >
+          Lock
+        </button>
+      ) : null}
+    </div>
   )
 
   const dataSourceHint = isSeededView
@@ -1357,6 +1453,28 @@ function App() {
   const displayAttemptTrace = isSeededView ? seededAttemptTrace : attemptTrace
   const displayAttemptTraceError = isSeededView ? null : attemptTraceError
   const displayHandoffReconcileError = isSeededView ? null : handoffReconcileError
+
+  if (isApiMode && !operatorUnlocked) {
+    return (
+      <Layout
+        previewControl={previewControl}
+        dataMode={viewState}
+        activeSection={dashboardSection}
+        onSectionChange={handleDashboardSectionChange}
+      >
+        <OperatorUnlock
+          error={operatorAuthError}
+          onUnlock={(token) => {
+            setDashboardOperatorToken(token)
+            setOperatorAuthError(null)
+            setOperatorUnlocked(true)
+            setReloadToken((current) => current + 1)
+            setHealthReloadToken((current) => current + 1)
+          }}
+        />
+      </Layout>
+    )
+  }
 
   return (
     <Layout

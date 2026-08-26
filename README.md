@@ -262,7 +262,7 @@ The GitHub Actions workflow in [`.github/workflows/ci.yml`](.github/workflows/ci
 
 - **Laravel middleware** uses PHP 8.4, installs the locked Composer dependencies, runs the full PHPUnit suite, and checks formatting with `vendor/bin/pint --test`.
 - **WordPress CSS and checkout JavaScript** uses Node.js 22 with `npm ci`, validates tracked fixture JSON with `jq`, runs both donation JavaScript test scripts, compiles the child-theme Sass, and fails if the tracked generated CSS is not current.
-- **Dashboard** uses Node.js 22 with `npm ci`, then runs ESLint and the TypeScript/Vite production build.
+- **Dashboard** uses Node.js 22 with `npm ci`, then runs ESLint, focused operator-token lifecycle tests, and the TypeScript/Vite production build.
 
 Run the workflow-equivalent checks locally from the repository root:
 
@@ -283,12 +283,13 @@ vendor/bin/pint --test
 cd ../dashboard
 npm ci
 npm run lint
+npm run test:auth
 npm run build
 ```
 
 Use PHP 8.4 and Node.js 22 for exact CI runtime parity. `jq` must also be available locally. The workflow uses only repository contents and test configuration: it does not read application secrets, contact Foxy, HubSpot, or Render, deploy services, or modify provider configuration.
 
-The status dashboard shell lives in `dashboard/` as a Vite + React + Tailwind app:
+The status dashboard shell lives in `dashboard/` as a Vite + React + Tailwind app. Its public Seeded view demonstrates the interface without credentials; Live API data, readiness, and support actions require a runtime operator unlock:
 
 ```bash
 npm run dev:dashboard
@@ -300,7 +301,7 @@ For hosted middleware data during local UI work:
 npm run dev:dashboard:hosted
 ```
 
-See [`dashboard/README.md`](dashboard/README.md) for lint/build commands and [`docs/dashboard-verification-walkthrough.md`](docs/dashboard-verification-walkthrough.md) for fixture verification.
+See [`dashboard/README.md`](dashboard/README.md) for lint/build commands, [`docs/access-control.md`](docs/access-control.md) for the operator boundary, and [`docs/dashboard-verification-walkthrough.md`](docs/dashboard-verification-walkthrough.md) for fixture verification.
 
 The middleware/API receives validated checkout events, stores normalized rows, syncs eligible donations to HubSpot with local status tracking, and exposes dashboard status and retry APIs.
 

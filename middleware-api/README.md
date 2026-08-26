@@ -36,6 +36,8 @@ Start the local Laravel server:
 php artisan serve
 ```
 
+Set a private, high-entropy `DASHBOARD_OPERATOR_TOKEN` in the local `.env` to use dashboard, reconciliation, and detailed readiness routes. Those routes fail closed with a generic `401` when the server token is missing or a request does not carry a matching bearer token. Basic liveness, public handoff registration, and signed Foxy webhooks keep their separate public/provider boundaries. See [`docs/access-control.md`](../docs/access-control.md).
+
 Use the URL printed by Artisan. If another local service already uses port `8000`, Laravel may choose the next available port, such as `8001`.
 
 The local API health endpoint is available at:
@@ -164,6 +166,8 @@ HubSpot sync runs as a Laravel job on `QUEUE_CONNECTION=sync` so Render free-tie
 
 One `crm_sync_attempts` row tracks each eligible checkout event. Status values are `pending`, `succeeded`, `failed`, and `retryable`; successful rows store the HubSpot contact and Deal ids, and failed rows store redacted error details, retry count, `last_attempted_at`, and `next_retry_at` when retryable. Automatic retry scheduling is not implemented. Manual retry is available at `POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry` for eligible dashboard records.
 
+All `/api/dashboard/*` routes, direct handoff reconciliation, and detailed readiness require the operator bearer token. CORS does not grant access.
+
 Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal uses a **static** contact segment for API list enrollment. Set `HUBSPOT_NEWSLETTER_LIST_ID` to the segment's **ILS Segment ID** (not the Legacy V1 list ID). Active/dynamic segments reject membership API calls even when scopes are correct.
 
 The private app token must include these scopes for full sync (including list enrollment):
@@ -224,7 +228,7 @@ POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry
 
 `by-cart` calls Foxy hAPI to read `donation_attempt_id` from cart item options. Use it when Foxy admin error logs show a cart id but reconcile returns `foxy_transaction_not_found` (common for Authorize.net gateway declines that never create a transaction). See `docs/contracts.md` Section 2.
 
-These routes read stored `checkout_events` and `crm_sync_attempts` rows using the payload contract in `docs/contracts.md` Section 5. Authentication is not implemented yet.
+These routes read stored `checkout_events` and `crm_sync_attempts` rows using the payload contract in `docs/contracts.md` Section 5. They require the operator bearer token; CORS and access to the public dashboard shell do not grant API access.
 
 Dashboard verification walkthrough: [`docs/dashboard-verification-walkthrough.md`](../docs/dashboard-verification-walkthrough.md).
 

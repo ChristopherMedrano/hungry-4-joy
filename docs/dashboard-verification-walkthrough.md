@@ -2,6 +2,8 @@
 
 Use this walkthrough to verify the Hungry-4-Joy integration status dashboard without production checkout, live HubSpot, or analytics access.
 
+Live API and readiness checks require `DASHBOARD_OPERATOR_TOKEN`; the Seeded view does not. Enter the token only in the dashboard unlock form—never place the value in a command, URL, commit, screenshot, or captured output. See [`access-control.md`](access-control.md).
+
 It covers automated API checks, local fixture seeding, frontend lint/build commands, and browser inspection for success, failure, pending, duplicate-ingest exclusion, retryable CRM state, list-warning state, and CRM sync issues.
 
 Related docs:
@@ -125,9 +127,9 @@ API check:
 
 ```bash
 PORT=8001  # example — use your `php artisan serve` port
-
-curl -sS "http://127.0.0.1:${PORT}/api/health/ready" | jq .
 ```
+
+Open the local dashboard, unlock the API view, and inspect **System status**.
 
 Liveness (Render probe) stays separate:
 
@@ -223,15 +225,9 @@ Expected:
 
 When middleware has written `integration_step_logs` rows for an attempt:
 
-```bash
-curl -sS "http://127.0.0.1:${PORT}/api/dashboard/events/by-attempt/<donation_attempt_id>" | jq '.data.integration_steps'
-```
+Use the unlocked local dashboard attempt lookup and inspect its integration timeline.
 
-Or query the step list directly:
-
-```bash
-curl -sS "http://127.0.0.1:${PORT}/api/dashboard/integration-events?donation_attempt_id=<donation_attempt_id>" | jq .
-```
+The same protected integration events appear in the attempt trace.
 
 Expected for a completed synced donation:
 
@@ -263,9 +259,9 @@ curl -s -X POST http://127.0.0.1:${PORT}/api/checkout/events \
 curl -s -X POST http://127.0.0.1:${PORT}/api/checkout/events \
   -H 'Content-Type: application/json' \
   -d @examples/checkout-events/donation-created.one-time.json
-
-curl -s "http://127.0.0.1:${PORT}/api/dashboard/events" | jq '.meta.total'
 ```
+
+Read the total from the unlocked dashboard event list or automated API tests.
 
 Expected responses:
 
@@ -323,9 +319,7 @@ Related: [`docs/foxy-middleware-connection-plan.md`](foxy-middleware-connection-
 
 ### By-attempt lookup
 
-```bash
-curl -sS "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-attempt/<donation_attempt_id>" | jq .
-```
+Use the unlocked hosted dashboard attempt lookup. Direct API verification requires the same private bearer token.
 
 Expect at minimum a `handoff` block with `status: cart_handoff_created` and an `integration_steps` array when step logs exist for the attempt.
 
@@ -351,9 +345,7 @@ No Render cron worker is required for the demo when these buttons are used after
 
 When Foxy admin shows a checkout error, copy the logged **`id`** (cart id):
 
-```bash
-curl -sS "https://hungry-4-joy-middleware.onrender.com/api/dashboard/events/by-cart/<foxy_cart_id>" | jq .
-```
+Use the unlocked hosted dashboard cart lookup. Direct API verification requires the same private bearer token.
 
 Expect:
 
