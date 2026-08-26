@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\SyncDonationToHubSpot;
+use App\Models\IntegrationStepLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -250,6 +251,62 @@ class FoxyWebhookReceiverRouteTest extends TestCase
             ]);
 
         $this->assertSame(1, DB::table('checkout_events')->where('transaction_id', '1042')->count());
+    }
+
+    public function test_signed_refeed_corrects_legacy_empty_status_failure_and_records_audit_step(): void
+    {
+        config(['services.foxy.webhook_encryption_key' => self::WEBHOOK_SECRET]);
+
+        $payload = $this->foxyTransactionPayload();
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/created')
+        )->assertAccepted();
+
+        DB::table('checkout_events')
+            ->where('event_id', 'foxy_transaction_1042_transaction_created')
+            ->update([
+                'event_type' => 'payment.failed',
+                'transaction_status' => 'failed',
+                'failure_code' => 'checkout_incomplete',
+                'failure_message' => 'Checkout did not complete successfully.',
+                'failure_provider_status' => 'incomplete',
+            ]);
+        DB::table('server_analytics_events')
+            ->where('event', 'DonationCompleted')
+            ->update(['event' => 'PaymentFailed']);
+
+        $payload['status'] = '';
+        $payload['data_is_fed'] = false;
+
+        $this->postJson(
+            '/api/foxy/webhooks',
+            $payload,
+            $this->signedHeaders($payload, 'transaction/refeed')
+        )
+            ->assertOk()
+            ->assertExactJson([
+                'service' => 'hungry-4-joy-middleware-api',
+                'status' => 'corrected',
+            ]);
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => 'foxy_transaction_1042_transaction_created',
+            'event_type' => 'donation.created',
+            'transaction_status' => 'completed',
+            'failure_code' => null,
+            'failure_provider_status' => null,
+        ]);
+        $this->assertDatabaseMissing('server_analytics_events', ['event' => 'PaymentFailed']);
+        $this->assertDatabaseHas('server_analytics_events', ['event' => 'DonationCompleted']);
+        $this->assertDatabaseHas('integration_step_logs', [
+            'donation_attempt_id' => 'h4j_attempt_foxy_cart_1042',
+            'step' => IntegrationStepLog::STEP_CHECKOUT_EVENT_CORRECTED,
+            'status' => IntegrationStepLog::STATUS_SUCCEEDED,
+            'producer' => IntegrationStepLog::PRODUCER_FOXY_WEBHOOK,
+            'checkout_event_id' => 1,
+        ]);
     }
 
     public function test_foxy_webhook_dispatches_hubspot_sync_for_signed_completed_donation(): void

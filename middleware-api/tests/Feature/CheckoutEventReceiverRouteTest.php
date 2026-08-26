@@ -205,6 +205,38 @@ class CheckoutEventReceiverRouteTest extends TestCase
         $this->assertSame(1, DB::table('checkout_events')->where('idempotency_key', $payload['idempotency_key'])->count());
     }
 
+    public function test_corrected_foxy_webhook_repairs_legacy_empty_status_failure(): void
+    {
+        $completedPayload = $this->fixture('donation-created.one-time.json');
+        $legacyFailurePayload = $completedPayload;
+        $legacyFailurePayload['event_type'] = 'payment.failed';
+        $legacyFailurePayload['transaction_status'] = 'failed';
+        $legacyFailurePayload['failure'] = [
+            'failure_code' => 'checkout_incomplete',
+            'failure_message' => 'Checkout did not complete successfully.',
+            'provider_status' => 'incomplete',
+        ];
+
+        $this->postJson('/api/checkout/events', $legacyFailurePayload)->assertAccepted();
+
+        $this->postJson('/api/checkout/events', $completedPayload)
+            ->assertOk()
+            ->assertExactJson([
+                'service' => 'hungry-4-joy-middleware-api',
+                'status' => 'corrected',
+            ]);
+
+        $this->assertDatabaseHas('checkout_events', [
+            'event_id' => $completedPayload['event_id'],
+            'event_type' => 'donation.created',
+            'transaction_status' => 'completed',
+            'failure_code' => null,
+            'failure_provider_status' => null,
+        ]);
+        $this->assertDatabaseMissing('server_analytics_events', ['event' => 'PaymentFailed']);
+        $this->assertDatabaseHas('server_analytics_events', ['event' => 'DonationCompleted']);
+    }
+
     public function test_checkout_event_ingestor_treats_unique_constraint_collision_as_duplicate_retry(): void
     {
         $payload = $this->fixture('donation-created.one-time.json');

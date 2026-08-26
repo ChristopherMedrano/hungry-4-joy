@@ -26,13 +26,18 @@ class CheckoutEventIngestor
     {
         $validated = Validator::make($payload, $this->rules())->validate();
 
-        if (CheckoutEvent::where('event_id', $validated['event_id'])
+        $existingEvent = CheckoutEvent::query()
+            ->where('event_id', $validated['event_id'])
             ->orWhere('idempotency_key', $validated['idempotency_key'])
-            ->exists()) {
+            ->first();
+
+        if ($existingEvent instanceof CheckoutEvent) {
+            $correctedEvent = $this->correctLegacyEmptyStatusFailure($existingEvent, $validated);
+
             return [
-                'status' => 'duplicate_ignored',
+                'status' => $correctedEvent instanceof CheckoutEvent ? 'corrected' : 'duplicate_ignored',
                 'code' => Response::HTTP_OK,
-                'checkout_event' => null,
+                'checkout_event' => $correctedEvent,
             ];
         }
 
@@ -86,6 +91,45 @@ class CheckoutEventIngestor
     private function isUniqueConstraintViolation(QueryException $exception): bool
     {
         return in_array($exception->getCode(), ['23000', '23505'], true);
+    }
+
+    /**
+     * Correct rows created before empty Foxy statuses were recognized as completed.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function correctLegacyEmptyStatusFailure(CheckoutEvent $event, array $validated): ?CheckoutEvent
+    {
+        $isLegacyEmptyStatusFailure = $event->checkout_provider === 'foxy'
+            && $event->event_type === 'payment.failed'
+            && $event->transaction_status === 'failed'
+            && $event->failure_provider_status === 'incomplete';
+
+        $isCorrectedFoxyPayload = $validated['checkout_provider'] === 'foxy'
+            && $validated['event_type'] === 'donation.created'
+            && $validated['transaction_status'] === 'completed'
+            && $event->transaction_id === ($validated['transaction_id'] ?? null);
+
+        if (! $isLegacyEmptyStatusFailure || ! $isCorrectedFoxyPayload) {
+            return null;
+        }
+
+        $event->forceFill([
+            'event_type' => 'donation.created',
+            'transaction_status' => 'completed',
+            'failure_code' => null,
+            'failure_message' => null,
+            'failure_provider_status' => null,
+        ])->save();
+
+        $event->serverAnalyticsEvents()
+            ->where('event', 'PaymentFailed')
+            ->delete();
+
+        $event = $event->fresh();
+        $this->analyticsEmitter->emitCheckoutConversion($event);
+
+        return $event;
     }
 
     /**

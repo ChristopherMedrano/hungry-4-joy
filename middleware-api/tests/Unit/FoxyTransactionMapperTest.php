@@ -46,7 +46,7 @@ class FoxyTransactionMapperTest extends TestCase
         ];
     }
 
-    public function test_empty_unfed_transaction_maps_to_checkout_incomplete_failure(): void
+    public function test_empty_status_transaction_maps_to_completed_even_when_webhook_is_unfed(): void
     {
         $transaction = $this->baseTransaction([
             'status' => '',
@@ -55,9 +55,9 @@ class FoxyTransactionMapperTest extends TestCase
 
         $mapped = $this->mapper->toCheckoutEvent($transaction, 'reconcile');
 
-        $this->assertSame('payment.failed', $mapped['event_type']);
-        $this->assertSame('checkout_incomplete', $mapped['failure']['failure_code']);
-        $this->assertSame('incomplete', $mapped['failure']['provider_status']);
+        $this->assertSame('donation.created', $mapped['event_type']);
+        $this->assertSame('completed', $mapped['transaction_status']);
+        $this->assertArrayNotHasKey('failure', $mapped);
     }
 
     /**
