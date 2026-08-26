@@ -25,7 +25,7 @@ class FoxyReconciliationServiceTest extends TestCase
         ]);
     }
 
-    public function test_reconciler_ingests_payment_failed_from_foxy_api_response(): void
+    public function test_reconciler_ingests_completed_transaction_with_empty_foxy_status(): void
     {
         Http::fake(function (\Illuminate\Http\Client\Request $request) {
             if (str_contains($request->url(), '/token')) {
@@ -70,9 +70,9 @@ class FoxyReconciliationServiceTest extends TestCase
         $this->assertSame('2246566861', $handoff->foxy_transaction_id);
 
         $event = CheckoutEvent::findOrFail($handoff->checkout_event_id);
-        $this->assertSame('payment.failed', $event->event_type);
-        $this->assertSame('failed', $event->transaction_status);
-        $this->assertSame('checkout_incomplete', $event->failure_code);
+        $this->assertSame('donation.created', $event->event_type);
+        $this->assertSame('completed', $event->transaction_status);
+        $this->assertNull($event->failure_code);
     }
 
     public function test_handoff_with_no_foxy_match_schedules_retry(): void

@@ -89,19 +89,9 @@ class FoxyTransactionMapper
         }
 
         if ($rawStatus === '') {
-            $dataIsFed = $transaction['data_is_fed'] ?? null;
-
-            if ($dataIsFed === false || $dataIsFed === 'false' || $dataIsFed === 0) {
-                return [
-                    'event_type' => 'payment.failed',
-                    'transaction_status' => 'failed',
-                    'failure' => $this->failureEnvelope($transaction, 'incomplete'),
-                ];
-            }
-
             return [
                 'event_type' => 'donation.created',
-                'transaction_status' => 'pending',
+                'transaction_status' => 'completed',
             ];
         }
 

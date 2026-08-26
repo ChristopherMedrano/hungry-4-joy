@@ -23,6 +23,8 @@ class IntegrationStepLog extends Model
 
     public const STEP_CHECKOUT_EVENT_DUPLICATE = 'checkout_event_duplicate';
 
+    public const STEP_CHECKOUT_EVENT_CORRECTED = 'checkout_event_corrected';
+
     public const STEP_HANDOFF_REGISTERED = 'handoff_registered';
 
     public const STEP_HANDOFF_RECONCILE_ATTEMPTED = 'handoff_reconcile_attempted';

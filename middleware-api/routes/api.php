@@ -75,6 +75,19 @@ $logCheckoutIngestResult = function (
         return;
     }
 
+    if (($result['status'] ?? '') === 'corrected') {
+        $stepLogger->record(
+            IntegrationStepLog::STEP_CHECKOUT_EVENT_CORRECTED,
+            IntegrationStepLog::STATUS_SUCCEEDED,
+            $producer,
+            'Legacy Foxy checkout failure corrected after webhook refeed.',
+            $donationAttemptId,
+            checkoutEventId: $checkoutEventId,
+        );
+
+        return;
+    }
+
     if (($result['status'] ?? '') === 'duplicate_ignored') {
         $stepLogger->record(
             IntegrationStepLog::STEP_CHECKOUT_EVENT_DUPLICATE,

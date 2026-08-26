@@ -111,8 +111,8 @@ class DashboardHandoffBatchTest extends TestCase
 
         $this->assertDatabaseHas('checkout_events', [
             'donation_attempt_id' => 'h4j_attempt_sweep_unfed_01',
-            'event_type' => 'payment.failed',
-            'transaction_status' => 'failed',
+            'event_type' => 'donation.created',
+            'transaction_status' => 'completed',
         ]);
 
         $this->assertDatabaseHas('checkout_handoffs', [

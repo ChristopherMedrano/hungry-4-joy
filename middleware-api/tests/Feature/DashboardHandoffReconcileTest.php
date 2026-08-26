@@ -168,7 +168,7 @@ class DashboardHandoffReconcileTest extends TestCase
         ])
             ->assertAccepted()
             ->assertJsonPath('data.handoff.status', 'checkout_event_reconciled')
-            ->assertJsonPath('data.checkout_event.event_type', 'payment.failed');
+            ->assertJsonPath('data.checkout_event.event_type', 'donation.created');
     }
 
     /**
