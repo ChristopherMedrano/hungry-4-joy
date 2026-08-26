@@ -301,7 +301,10 @@ When a transaction exists, the shared mapper adapts it and `CheckoutEventIngesto
 | `completed`, `approved`, `authorized`, `captured`, `verified` | `donation.created` | `completed` |
 | `pending` | `donation.created` | `pending` |
 | `declined`, `rejected`, `failed` | `payment.failed` | `failed` |
-| empty with `data_is_fed = false` | `payment.failed` | `failed` (`checkout_incomplete`) |
+| any other non-empty status | `payment.failed` | `failed` (fail-closed fallback) |
+| empty (regardless of `data_is_fed`) | `donation.created` | `completed` |
+
+Foxy's empty transaction status is a completed transaction in the verified checkout flow. `data_is_fed` records whether Foxy has fed the transaction to a configured webhook; it is not a payment-outcome field. The unfed sweep uses it only to find transactions that may need ingestion. Known explicit failure statuses (`declined`, `rejected`, and `failed`) produce `payment.failed`; any other unrecognized non-empty status also fails closed to `payment.failed` rather than being treated as a donation.
 
 #### Foxy failure modes (why two lookup paths exist)
 
@@ -309,7 +312,7 @@ Hosted Authorize.net sandbox testing showed two different Foxy behaviors after c
 
 | Outcome | What Foxy creates | Middleware reconcile | Support lookup |
 | --- | --- | --- | --- |
-| **Auth / incomplete shell** (bad or expired card, some gateway errors) | **Transaction** record (often empty `status`, `data_is_fed: false`) | Finds transaction by `donation_attempt_id`, ingests `payment.failed` | `GET /api/dashboard/events/by-attempt/{id}` |
+| **Completed checkout** | **Transaction** record (Foxy may return empty `status`; `data_is_fed` may be false before feed) | Finds transaction by `donation_attempt_id`, ingests `donation.created` with `transaction_status=completed` | `GET /api/dashboard/events/by-attempt/{id}` |
 | **Gateway card decline** (Authorize.net sandbox ZIP `46282`) | **Cart** + **error log entry only** — no transaction | `reconciliation.note = foxy_transaction_not_found` (expected, not a bug) | `GET /api/dashboard/events/by-cart/{foxy_cart_id}` |
 
 **Why cart-id lookup:** In Foxy admin error logs, the logged **`id` is the cart id**, not a transaction id. hAPI exposes `GET /carts/{cart_id}` with `zoom=items,items:item_options`, which returns the same `donation_attempt_id` item option written at click time. That is the intended bridge when reconcile cannot run because Foxy never created a transaction.
@@ -321,9 +324,7 @@ Example decline trace (verified on hosted middleware):
 - Foxy error log id `2247125087` → cart `2247125087` → attempt `h4j_attempt_3cadaab7-…`
 - Handoff present; `checkout_event` null; reconcile note `foxy_transaction_not_found`
 
-Example auth-error trace (verified via hAPI):
-
-- Transaction `2246566861` → attempt `h4j_attempt_3ed7624c-…` → reconcile ingests `payment.failed`
+Hosted completion remediation was verified with a new checkout and a signed Foxy webhook refeed. Refeeding the same transaction corrects a legacy row only when it has the old `payment.failed` / `failed` / `failure_provider_status=incomplete` signature and the incoming empty-status payload maps the same transaction to `donation.created` / `completed`. The correction clears failure fields, replaces the stale `PaymentFailed` server analytics event with `DonationCompleted`, and records a correction integration step. Other duplicate deliveries remain `duplicate_ignored`.
 
 #### Reconciliation notes
 
@@ -358,7 +359,7 @@ Content-Type: application/json
 - **`reconcile-open`** — Reconciles every non-terminal handoff in Laravel, ignoring `next_reconcile_at` backoff. Returns counts: `processed`, `linked`, `still_open`, `abandoned`.
 - **`sweep-unfed`** — Queries Foxy hAPI for recent transactions with `data_is_fed=false`, keeps rows whose item options include a canonical `donation_attempt_id`, ingests safe checkout events, and creates/links handoffs when missing. Returns counts: `scanned`, `ingested`, `linked`, `skipped_existing`, `skipped_no_attempt_id`, `errors`.
 
-Scheduled reconcile is **off by default** (`CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=false`). Enable only when a host runs `php artisan schedule:run` every minute.
+Scheduled reconcile is **off by default** (`CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=false`). Setting the flag only registers `checkout:reconcile-handoffs` with Laravel's every-minute schedule; it does not start a scheduler process. A host that opts in must also invoke `php artisan schedule:run` every minute (or run Laravel's scheduler worker). The checked-in Render Blueprint does not provision that process, so the hosted demo continues to use dashboard batch actions or manual Artisan execution unless separate scheduler infrastructure is explicitly configured.
 
 Foxy checkout demo banner (hosted checkout footer):
 

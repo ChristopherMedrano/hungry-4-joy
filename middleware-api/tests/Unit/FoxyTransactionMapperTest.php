@@ -42,6 +42,7 @@ class FoxyTransactionMapperTest extends TestCase
             'approved' => ['approved', 'donation.created', 'completed'],
             'declined' => ['declined', 'payment.failed', 'failed', 'card_declined'],
             'rejected' => ['rejected', 'payment.failed', 'failed', 'card_declined'],
+            'failed' => ['failed', 'payment.failed', 'failed', 'payment_failed'],
             'pending' => ['pending', 'donation.created', 'pending'],
         ];
     }
@@ -58,6 +59,32 @@ class FoxyTransactionMapperTest extends TestCase
         $this->assertSame('donation.created', $mapped['event_type']);
         $this->assertSame('completed', $mapped['transaction_status']);
         $this->assertArrayNotHasKey('failure', $mapped);
+    }
+
+    public function test_empty_status_transaction_maps_to_completed_when_webhook_is_fed(): void
+    {
+        $transaction = $this->baseTransaction([
+            'status' => '',
+            'data_is_fed' => true,
+        ]);
+
+        $mapped = $this->mapper->toCheckoutEvent($transaction, 'reconcile');
+
+        $this->assertSame('donation.created', $mapped['event_type']);
+        $this->assertSame('completed', $mapped['transaction_status']);
+        $this->assertArrayNotHasKey('failure', $mapped);
+    }
+
+    public function test_unknown_non_empty_status_fails_closed(): void
+    {
+        $transaction = $this->baseTransaction(['status' => 'provider_review']);
+
+        $mapped = $this->mapper->toCheckoutEvent($transaction, 'reconcile');
+
+        $this->assertSame('payment.failed', $mapped['event_type']);
+        $this->assertSame('failed', $mapped['transaction_status']);
+        $this->assertSame('payment_failed', $mapped['failure']['failure_code']);
+        $this->assertSame('provider_review', $mapped['failure']['provider_status']);
     }
 
     /**

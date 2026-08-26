@@ -73,7 +73,14 @@ WordPress receives `MIDDLEWARE_API_URL` from the middleware service URL via Blue
 
 Render injects the Postgres connection string into `DB_URL` from the Blueprint database reference.
 
-Reconciliation for the hosted demo is **manual by default**. Use the dashboard **Checkout attempts** tab buttons **Reconcile open handoffs** and **Sweep unfed transactions**, or run `php artisan checkout:reconcile-handoffs` from a shell during verification. Background scheduling is disabled unless `CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=true` and a cron job runs `php artisan schedule:run` every minute.
+Reconciliation for the hosted demo is **manual by default**. Use the dashboard **Checkout attempts** tab buttons **Reconcile open handoffs** and **Sweep unfed transactions**, or run `php artisan checkout:reconcile-handoffs` from a shell during verification.
+
+Optional background reconciliation requires both parts below:
+
+1. Set `CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=true` for the middleware runtime. This registers `checkout:reconcile-handoffs` with Laravel's every-minute schedule.
+2. Provision a separate host-side scheduler that invokes `php artisan schedule:run` every minute, or runs Laravel's scheduler worker continuously.
+
+The root `render.yaml` provisions neither a Render cron job nor a scheduler worker. Setting the environment flag by itself does not run reconciliation, and these instructions do not imply that scheduling is active on the hosted demo. Keep the default `false` when using manual/dashboard reconciliation.
 
 Support lookup when Foxy error logs show a cart id but no transaction:
 
@@ -153,7 +160,7 @@ Run a test donation from `https://hungry-4-joy-wordpress.onrender.com` through t
 3. Restart or redeploy the middleware service after env changes.
 4. Confirm `/api/dashboard/events` stops receiving new `foxy_webhook` rows.
 
-See `docs/foxy-middleware-connection-plan.md` (Phase 2) for duplicate replay (`duplicate_ignored`) and `donation_attempt_id` behavior.
+See `docs/foxy-middleware-connection-plan.md` (Phase 2) for ordinary duplicate replay (`duplicate_ignored`), qualifying legacy-row correction (`corrected`), and `donation_attempt_id` behavior.
 
 ## Status Dashboard
 

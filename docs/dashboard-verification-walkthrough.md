@@ -342,10 +342,10 @@ No Render cron worker is required for the demo when these buttons are used after
 
 | Test | Foxy creates | By-attempt result |
 | --- | --- | --- |
-| Success or auth/incomplete shell | Transaction | `checkout_event` present (`donation.created` or `payment.failed`) |
+| Completed checkout (including empty Foxy transaction status) | Transaction | `checkout_event` present as `donation.created` with `transaction_status=completed` |
 | Authorize.net decline (ZIP `46282`) | Cart + error log only | `handoff` present; `checkout_event` null; `reconciliation.note` = `foxy_transaction_not_found` |
 
-The decline case is **expected**. Foxy does not create a transaction for that sandbox decline path, so transaction reconcile cannot ingest `payment.failed`.
+`data_is_fed=false` means the transaction has not been fed to the webhook; it does not mean payment failed. The decline case is **expected**: Foxy does not create a transaction for that sandbox decline path, so transaction reconcile cannot ingest `payment.failed`.
 
 ### By-cart lookup (decline / error-log path)
 
