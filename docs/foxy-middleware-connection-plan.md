@@ -85,13 +85,13 @@ POST /api/checkout/handoffs
 
 Hosted WordPress receives `MIDDLEWARE_API_URL` from Render (wired to the middleware service URL). The middleware CORS allowlist includes the hosted WordPress origin so the browser can POST safely.
 
-After registration, Laravel reconciles immediately and on a backoff schedule:
+After registration, Laravel attempts immediate reconciliation. Operators can reconcile on demand, and hosts can opt into the backoff schedule:
 
 ```bash
 php artisan checkout:reconcile-handoffs
 ```
 
-Hosted backoff depends on Render invoking `php artisan schedule:run` every minute (or running the command manually during demo verification).
+The schedule is disabled by default. `CHECKOUT_HANDOFF_SCHEDULED_RECONCILE=true` registers the command with Laravel's every-minute schedule, but a host must separately invoke `php artisan schedule:run` every minute (or run Laravel's scheduler worker). The checked-in `render.yaml` does not configure a cron job or scheduler worker; hosted demo verification uses the dashboard batch actions or manual command unless that infrastructure is added explicitly.
 
 Foxy hAPI reconciliation requires OAuth credentials stored only in environment configuration:
 
@@ -116,10 +116,12 @@ Reconcile is **transaction-scoped**. That matches how Foxy exposes checkout outc
 
 | Foxy outcome (Authorize.net sandbox) | Foxy record | Reconcile result |
 | --- | --- | --- |
-| Success or auth/incomplete shell (empty `status`, `data_is_fed: false`) | **Transaction** | Ingests `donation.created` or `payment.failed`; links handoff |
+| Completed checkout (including empty `status`, whether `data_is_fed` is true or false) | **Transaction** | Ingests `donation.created` with `transaction_status=completed`; links handoff |
+| Explicit `declined`, `rejected`, or `failed` transaction status | **Transaction** | Ingests `payment.failed`; links handoff |
+| Unrecognized non-empty transaction status | **Transaction** | Fails closed to `payment.failed`; links handoff |
 | Gateway card decline (billing ZIP `46282`) | **Cart + error log only** — no transaction | `foxy_transaction_not_found`; handoff stays visible |
 
-When a transaction exists, declined or incomplete shells normalize to `payment.failed` so by-attempt lookup can show both handoff and checkout event.
+An empty Foxy transaction status is a completed transaction in the verified flow. `data_is_fed` tracks feed/delivery state, not payment outcome; the unfed sweep uses it only to find transactions that may need ingestion. Known explicit failure statuses (`declined`, `rejected`, and `failed`) become `payment.failed`. The mapper also treats any unrecognized non-empty status as `payment.failed` so an unknown provider outcome cannot be recorded as a completed donation.
 
 Gateway declines do **not** create a transaction in Foxy during hosted testing, so reconcile cannot produce a `payment.failed` checkout event for that path. That is Foxy/gateway behavior, not a missing webhook or broken handoff.
 
@@ -139,11 +141,11 @@ Use this when you have an error-log id (for example `2247125087`) and by-attempt
 
 #### Verification commands
 
-Auth-error / incomplete transaction (reconcile path):
+Completed transaction (reconcile path):
 
 ```bash
 curl "https://<middleware-host>/api/dashboard/events/by-attempt/<donation_attempt_id>"
-# Expect handoff + checkout_event payment.failed when transaction exists in Foxy
+# Expect handoff + checkout_event donation.created; an empty Foxy status maps to completed
 ```
 
 Gateway decline (cart-only path):
@@ -218,7 +220,7 @@ The existing fixture endpoint remains available for local/test project-owned dem
 POST /api/checkout/events
 ```
 
-Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation, preserves the same `donation_attempt_id`, and should return `duplicate_ignored` when the transaction was already stored.
+Manual Foxy webhook replays may arrive with `Foxy-Webhook-Event: transaction/refeed`. The middleware treats those as signed replays of the original `transaction/created` donation and preserves the same `donation_attempt_id`. An ordinary replay of an already-correct row returns `duplicate_ignored`. A replay of the same transaction with an empty status returns `corrected` only when the existing row has the legacy `payment.failed` / `failed` / `failure_provider_status=incomplete` signature; that remediation converts it to `donation.created` / `completed`, clears failure fields, replaces stale failure analytics, and records an integration correction step.
 
 ### Hosted verification (active)
 
@@ -254,7 +256,8 @@ Complete a Foxy test transaction from the hosted WordPress demo cart (`https://h
 Duplicate handling:
 
 - Re-post the same signed payload or use Foxy's webhook **refeed** for an existing transaction.
-- Expected response: `200 OK` with `{"status":"duplicate_ignored",...}`.
+- Expected response for an already-correct row: `200 OK` with `{"status":"duplicate_ignored",...}`.
+- Expected response for a qualifying legacy empty-status failure: `200 OK` with `{"status":"corrected",...}`; confirm the row is now `donation.created` / `completed` and its failure fields are null.
 - No extra `checkout_events` rows and no duplicate CRM sync dispatches for the same `event_id`.
 - Local coverage: `cd middleware-api && php artisan test --filter=FoxyWebhook`.
 

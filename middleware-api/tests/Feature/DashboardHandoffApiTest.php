@@ -18,7 +18,7 @@ class DashboardHandoffApiTest extends TestCase
     {
         return [
             'donation_attempt_id' => $attemptId,
-            'handoff_at' => '2026-06-13T12:00:00Z',
+            'handoff_at' => now()->toIso8601String(),
             'checkout_provider' => 'foxy',
             'source_page' => 'home',
             'campaign_id' => 'loaves-campaign-01',

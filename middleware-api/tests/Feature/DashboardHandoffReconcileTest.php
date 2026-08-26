@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\CheckoutEvent;
 use App\Models\CheckoutHandoff;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -18,7 +20,7 @@ class DashboardHandoffReconcileTest extends TestCase
     {
         return [
             'donation_attempt_id' => $attemptId,
-            'handoff_at' => '2026-06-13T12:00:00Z',
+            'handoff_at' => now()->toIso8601String(),
             'checkout_provider' => 'foxy',
             'source_page' => 'home',
             'campaign_id' => 'loaves-campaign-01',
@@ -79,7 +81,7 @@ class DashboardHandoffReconcileTest extends TestCase
         $this->postJson('/api/checkout/events', $this->fixture('donation-created.one-time.json'))
             ->assertAccepted();
 
-        $eventId = \App\Models\CheckoutEvent::firstOrFail()->id;
+        $eventId = CheckoutEvent::firstOrFail()->id;
 
         $this->getJson("/api/dashboard/events/{$eventId}")
             ->assertOk()
@@ -90,7 +92,7 @@ class DashboardHandoffReconcileTest extends TestCase
 
     public function test_dashboard_handoff_reconcile_links_existing_checkout_event(): void
     {
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), '/token')) {
                 return Http::response(['access_token' => 'test-access-token'], 200);
             }
