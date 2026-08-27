@@ -57,6 +57,13 @@ import {
   viewModeOptions,
 } from './lib/dashboardDataMode'
 import { defaultCheckoutAttemptsFilters } from './lib/checkoutAttemptsFilters'
+import {
+  closeAttemptTraceModal,
+  closedAttemptTraceModal,
+  openAttemptTraceFromLookup,
+  openAttemptTraceFromSelection,
+  shouldAutoLoadAttemptTrace,
+} from './lib/attemptTraceSelection'
 import { filterCheckoutAttempts } from './lib/filterCheckoutAttempts'
 import { dashboardSections, type DashboardSection } from './lib/dashboardSections'
 import { defaultFilters, filterEvents } from './lib/filterEvents'
@@ -80,7 +87,7 @@ function App() {
   const [dashboardSection, setDashboardSection] = useState<DashboardSection>('dashboard')
   const [viewState, setViewState] = useState<DashboardDataMode>('hosted-api')
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
-  const [isAttemptModalOpen, setIsAttemptModalOpen] = useState(false)
+  const [attemptTraceModal, setAttemptTraceModal] = useState(closedAttemptTraceModal)
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false)
   const [dashboardEvents, setDashboardEvents] = useState<CheckoutEventSummary[]>([])
   const [dashboardCrmIssuesCount, setDashboardCrmIssuesCount] = useState(0)
@@ -191,7 +198,7 @@ function App() {
     setOperatorUnlocked(false)
     setOperatorAuthError(error)
     setIsEventModalOpen(false)
-    setIsAttemptModalOpen(false)
+    setAttemptTraceModal(closeAttemptTraceModal())
     setIsAnalyticsModalOpen(false)
     setDashboardEvents([])
     setLiveEvents([])
@@ -692,9 +699,8 @@ function App() {
   useEffect(() => {
     if (
       dashboardSection !== 'checkout-attempts' ||
-      !isAttemptModalOpen ||
-      activeSelectedAttemptId === null ||
-      isSeededView
+      isSeededView ||
+      !shouldAutoLoadAttemptTrace(attemptTraceModal, activeSelectedAttemptId)
     ) {
       return
     }
@@ -743,7 +749,7 @@ function App() {
     isApiView,
     isSeededView,
     dashboardSection,
-    isAttemptModalOpen,
+    attemptTraceModal,
     reloadToken,
   ])
 
@@ -896,14 +902,14 @@ function App() {
           : await fetchDashboardEventByAttempt(query)
       setAttemptTrace(trace)
       setSelectedAttemptId(trace.donation_attempt_id)
-      setIsAttemptModalOpen(true)
+      setAttemptTraceModal(openAttemptTraceFromLookup())
     } catch (error) {
       if (isDashboardRequestCancelled(error)) return
       setAttemptTrace(null)
       setAttemptTraceError(
         error instanceof Error ? error.message : 'Could not load attempt trace.',
       )
-      setIsAttemptModalOpen(true)
+      setAttemptTraceModal(openAttemptTraceFromLookup())
     } finally {
       if (isCurrentDashboardAccessGeneration(requestGeneration)) {
         setIsLoadingAttemptTrace(false)
@@ -1029,7 +1035,7 @@ function App() {
 
   function handleViewAttempt(donationAttemptId: string): void {
     setSelectedAttemptId(donationAttemptId)
-    setIsAttemptModalOpen(true)
+    setAttemptTraceModal(openAttemptTraceFromSelection())
   }
 
   function handleAttemptsFilterChange(next: CheckoutAttemptsFilters): void {
@@ -1387,7 +1393,7 @@ function App() {
             />
             <CheckoutAttemptsTable
               attempts={displayCheckoutAttempts}
-              selectedAttemptId={isAttemptModalOpen ? activeSelectedAttemptId : null}
+              selectedAttemptId={attemptTraceModal.isOpen ? activeSelectedAttemptId : null}
               onView={handleViewAttempt}
               embedded
             />
@@ -1561,9 +1567,9 @@ function App() {
       </Modal>
 
       <Modal
-        open={isAttemptModalOpen}
+        open={attemptTraceModal.isOpen}
         title="Attempt trace"
-        onClose={() => setIsAttemptModalOpen(false)}
+        onClose={() => setAttemptTraceModal(closeAttemptTraceModal())}
       >
         {displayAttemptTraceError ? (
           <ErrorState message={displayAttemptTraceError} onRetry={() => void handleAttemptLookup()} />
@@ -1586,7 +1592,7 @@ function App() {
             onOpenCrmSyncIssues={
               displayAttemptTrace?.checkout_event?.donation_attempt_id
                 ? () => {
-                    setIsAttemptModalOpen(false)
+                    setAttemptTraceModal(closeAttemptTraceModal())
                     openCrmSyncIssuesFromEvent(
                       displayAttemptTrace.checkout_event!.donation_attempt_id,
                     )
