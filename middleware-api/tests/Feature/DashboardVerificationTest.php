@@ -6,7 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Acceptance checks for docs/dashboard-verification-walkthrough.md.
+ * Acceptance checks for the dashboard portion of docs/mvp-smoke-test-checklist.md.
  */
 class DashboardVerificationTest extends TestCase
 {

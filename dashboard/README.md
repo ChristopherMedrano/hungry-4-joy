@@ -1,8 +1,8 @@
 # Hungry-4-Joy Status Dashboard
 
-Vite + React + Tailwind shell for the practice nonprofit integration status dashboard.
+Vite + React + Tailwind support dashboard for the Hungry-4-Joy portfolio demo.
 
-This app is the frontend half of MVP 5. Laravel remains the API backend; this directory owns the support UI only.
+Laravel remains the API backend; this directory owns the support UI only.
 
 ## Local run
 
@@ -64,15 +64,15 @@ npm run build:dashboard
 npm run test:dashboard
 ```
 
-## Current scope
+## Implemented features
 
-Issue #37 checkout event views:
+Checkout event views:
 
 - List and detail panels load from Laravel `/api/dashboard/events`
 - Filters are sent to the API as query parameters
 - Vite proxies `/api` to `http://127.0.0.1:8000` during local development
 
-Issue #38 HubSpot CRM sync views:
+HubSpot CRM sync views:
 
 - CRM status badges in the event list (Synced, Warning, Pending, Failed, Retryable, N/A)
 - Dedicated HubSpot CRM sync section in the detail panel
@@ -80,11 +80,14 @@ Issue #38 HubSpot CRM sync views:
 - Safe HubSpot contact/deal references, error codes, and redacted error messages
 - `last_attempted_at`, retry count, and next retry timestamps in detail
 
-Issue #39 CRM sync retry actions:
+CRM sync retry actions:
 
 - Manual retry button for retryable, failed, and list-warning states (API modes)
 - Disabled retry with explanation for synced, pending, and not-applicable states
 - Duplicate-click prevention via loading state; list and detail refresh after retry
+
+The notification bell and its seeded entries are a visual presentation mock.
+Automated incident flags and external notification delivery are out of scope.
 
 Prerequisites for live data:
 
@@ -125,7 +128,8 @@ Run the dashboard verification bundle from the repo root:
 npm run test:dashboard
 ```
 
-See [`docs/dashboard-verification-walkthrough.md`](../docs/dashboard-verification-walkthrough.md) for the full local and browser inspection path.
+Use the repository [MVP smoke-test checklist](../docs/mvp-smoke-test-checklist.md)
+for the release-level local and browser inspection path.
 
 ## Stack
 

@@ -6,12 +6,12 @@ local SQLite, fake HubSpot behavior, and disabled analytics-provider writes.
 Tier 2 touches hosted services and is optional; run it only with explicit
 authorization from the service owner.
 
-Detailed troubleshooting stays in the focused walkthroughs:
+Supporting implementation and troubleshooting guidance:
 
-- [Campaign and checkout metadata](checkout-event-verification.md)
-- [Middleware receiver](middleware-receiver-verification.md)
-- [Dashboard](dashboard-verification-walkthrough.md)
-- [Foxy handoff, reconciliation, and webhook behavior](foxy-middleware-connection-plan.md)
+- [Data contracts](contracts.md)
+- [Middleware setup and receiver commands](../middleware-api/README.md)
+- [Dashboard setup](../dashboard/README.md)
+- [Foxy handoff, reconciliation, and webhook behavior](foxy-integration.md)
 - [Access control](access-control.md)
 - [Payment safety boundary](payment-safety-boundary.md)
 - [Render deployment](render-deployment.md)
@@ -267,9 +267,8 @@ servers; no database reset is required.
 - [ ] Confirm the current runtime uses the synchronous queue. There is no
   background queue worker, scheduler worker, or Render cron service. Scheduled
   handoff reconciliation is off by default and must not be presented as active.
-- [ ] External notification delivery and the repeated-failure incident/alert
-  feed from issue #46 are not implemented. Seeded notification UI is a visual
-  preview, not evidence that alerts were delivered.
+- [ ] The seeded notification UI is a visual preview. Automated incident flags
+  and external notification delivery are out of scope.
 - [ ] External analytics-provider delivery is also unavailable. WordPress
   hard-codes `providersEnabled=false`; Laravel always preserves stored server
   records, and enabling its provider flag only logs

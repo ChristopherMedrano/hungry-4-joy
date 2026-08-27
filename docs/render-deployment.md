@@ -99,7 +99,8 @@ Support lookup when Foxy error logs show a cart id but no transaction:
 
 Use the unlocked dashboard attempt lookup. Direct API lookup requires the same bearer token; never put the token in a URL, shell history, or captured output.
 
-See [`docs/foxy-middleware-connection-plan.md`](foxy-middleware-connection-plan.md) Phase 1.5 for why gateway declines use cart-id lookup instead of transaction reconcile.
+See the [Foxy integration guide](foxy-integration.md#browser-handoff-registration-and-foxy-reconciliation)
+for why gateway declines use cart-id lookup instead of transaction reconcile.
 
 After the service is live, verify:
 
@@ -169,7 +170,9 @@ Run a test donation from `https://hungry-4-joy-wordpress.onrender.com` through t
 3. Restart or redeploy the middleware service after env changes.
 4. Confirm `/api/dashboard/events` stops receiving new `foxy_webhook` rows.
 
-See `docs/foxy-middleware-connection-plan.md` (Phase 2) for ordinary duplicate replay (`duplicate_ignored`), qualifying legacy-row correction (`corrected`), and `donation_attempt_id` behavior.
+See the [Foxy integration guide](foxy-integration.md#signed-foxy-webhook-connection)
+for ordinary duplicate replay (`duplicate_ignored`), qualifying legacy-row
+correction (`corrected`), and `donation_attempt_id` behavior.
 
 ## Status Dashboard
 

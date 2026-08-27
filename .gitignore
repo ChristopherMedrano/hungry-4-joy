@@ -3,6 +3,7 @@
 .claude/
 ai/
 docs/superpowers/
+.archive/
 
 # Local secrets (never commit)
 .env

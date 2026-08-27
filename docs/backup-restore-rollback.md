@@ -348,7 +348,8 @@ provider values into this runbook, Git, CI logs, or incident notes.
 ## Future work—not implemented
 
 - Upgrade persistent demo data to paid Postgres before the free-instance expiry.
-- Automate encrypted off-site logical dumps with retention and failure alerts.
+- Automate encrypted off-site logical dumps with retention and observable job
+  status.
 - Define a named backup owner, schedule, retention period, and deletion process.
 - Run and record scheduled restore drills against isolated targets.
 - Add database-expiration and backup-age monitoring.
