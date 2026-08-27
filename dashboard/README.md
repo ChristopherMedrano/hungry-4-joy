@@ -20,6 +20,8 @@ On localhost, **Hosted API (Render)** is the default and reads the hosted middle
 
 Live API modes begin locked. Enter the operator token at runtime to load support data and readiness or run actions. The token is held in page memory only: it is not a Vite variable, persistent browser storage, cookie, or URL value. **Lock**, switching to Seeded/preview mode, page refresh, tab close, and API `401` responses clear access and invalidate in-flight requests. See [`docs/access-control.md`](../docs/access-control.md).
 
+The unlock form can generate 32 random bytes with browser Web Crypto and encode them as 64 lowercase hexadecimal characters. **Generate secure token** only fills the password field; it does not submit or configure a service. Use **Copy token**, set the identical value as `DASHBOARD_OPERATOR_TOKEN` on the Render middleware, deploy that service, and only then select **Unlock**. Clipboard denial leaves the value in the field for manual copying.
+
 ### Hosted API data
 
 From `dashboard/`:

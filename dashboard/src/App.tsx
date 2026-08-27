@@ -1464,6 +1464,7 @@ function App() {
       >
         <OperatorUnlock
           error={operatorAuthError}
+          onTokenChange={() => setOperatorAuthError(null)}
           onUnlock={(token) => {
             setDashboardOperatorToken(token)
             setOperatorAuthError(null)

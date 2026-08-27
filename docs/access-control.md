@@ -34,12 +34,13 @@ One person may hold multiple roles, but each credential grants only its listed b
 
 ## Provisioning and rotation
 
-Generate a high-entropy token on a trusted machine, for example with `openssl rand -base64 32`. Do not paste the result into source, `.env.example`, `render.yaml`, Vite variables, screenshots, issues, chat, logs, or URLs.
+Generate a high-entropy token on a trusted machine, for example with `openssl rand -base64 32`, or use the dashboard unlock form's client-side generator. The browser generator uses Web Crypto for 32 random bytes and produces a 64-character lowercase hexadecimal value that is safe in the bearer header. Generation fills the password field but never submits, persists, logs, embeds, or sends the value. Its explicit copy action reports success or failure; a clipboard failure leaves the value available for manual copying. Do not paste the result into source, `.env.example`, `render.yaml`, Vite variables, screenshots, issues, chat, logs, or URLs.
 
-1. A Render/deployment administrator sets `DASHBOARD_OPERATOR_TOKEN` on the middleware service. The Blueprint declares it with `sync: false`; no value is checked in.
-2. Share it with the intended support operator through an approved private channel.
-3. The operator enters it into the dashboard unlock form. It is retained in JavaScript memory only, sent in the Authorization header, and cleared on **Lock**, switching to Seeded/preview mode, refresh, tab close, or any `401` response. Clearing or replacing it aborts in-flight requests and invalidates responses from the previous access generation.
-4. To rotate, generate a new token, update the middleware secret, deploy/restart the middleware as required, privately distribute the replacement, and revoke the old value by completing the runtime update.
+1. Generate and copy the value. A generated value is not yet accepted by the API.
+2. A Render/deployment administrator sets that identical value as `DASHBOARD_OPERATOR_TOKEN` on the middleware service. The Blueprint declares it with `sync: false`; no value is checked in. Deploy/restart the middleware so the new runtime value is active.
+3. Share it with the intended support operator through an approved private channel.
+4. The operator enters it into the dashboard unlock form. It is retained in JavaScript memory only, sent in the Authorization header, and cleared on **Lock**, switching to Seeded/preview mode, refresh, tab close, or any `401` response. Clearing or replacing it aborts in-flight requests and invalidates responses from the previous access generation.
+5. To rotate, generate a new token, update the middleware secret, deploy/restart the middleware as required, privately distribute the replacement, and revoke the old value by completing the runtime update.
 
 Do not configure the token on the dashboard service. Anything exposed through `VITE_*` is public build output.
 

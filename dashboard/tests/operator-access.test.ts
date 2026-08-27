@@ -8,6 +8,12 @@ import {
   setDashboardOperatorToken,
   setOperatorUnauthorizedHandler,
 } from '../src/api/operatorAccess.ts'
+import {
+  copyOperatorToken,
+  generateOperatorToken,
+  OPERATOR_TOKEN_BYTE_LENGTH,
+  TokenCopyGuard,
+} from '../src/lib/operatorToken.ts'
 
 const originalFetch = globalThis.fetch
 
@@ -71,4 +77,77 @@ test('a response from an old generation cannot be consumed after token replaceme
     assert.equal(isDashboardRequestCancelled(error), true)
     return true
   })
+})
+
+test('operator token generator requests 32 random bytes and returns header-safe lowercase hex', () => {
+  let requestedBytes = 0
+  const token = generateOperatorToken((bytes) => {
+    requestedBytes = bytes.length
+    bytes.forEach((_value, index) => {
+      bytes[index] = index
+    })
+    return bytes
+  })
+
+  assert.equal(requestedBytes, OPERATOR_TOKEN_BYTE_LENGTH)
+  assert.equal(token.length, 64)
+  assert.match(token, /^[0-9a-f]{64}$/)
+  assert.equal(token, '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f')
+})
+
+test('copy helper writes the exact token and surfaces clipboard failure without mutation', async () => {
+  const token = 'ab'.repeat(OPERATOR_TOKEN_BYTE_LENGTH)
+  let copied = ''
+
+  await copyOperatorToken(token, {
+    async writeText(value) {
+      copied = value
+    },
+  })
+  assert.equal(copied, token)
+
+  await assert.rejects(
+    copyOperatorToken(token, {
+      async writeText() {
+        throw new Error('permission denied')
+      },
+    }),
+    /permission denied/,
+  )
+  assert.equal(token, 'ab'.repeat(OPERATOR_TOKEN_BYTE_LENGTH))
+})
+
+test('delayed clipboard completion cannot publish status after token edit or regeneration', async () => {
+  const guard = new TokenCopyGuard()
+  let currentToken = '11'.repeat(OPERATOR_TOKEN_BYTE_LENGTH)
+  let finishCopy!: () => void
+
+  const delayedCopy = guard.copy(currentToken, () => currentToken, {
+    writeText() {
+      return new Promise<void>((resolve) => {
+        finishCopy = resolve
+      })
+    },
+  })
+
+  currentToken = '22'.repeat(OPERATOR_TOKEN_BYTE_LENGTH)
+  guard.invalidate()
+  finishCopy()
+
+  assert.equal(await delayedCopy, 'stale')
+
+  let failCopy!: (reason: Error) => void
+  const delayedFailure = guard.copy(currentToken, () => currentToken, {
+    writeText() {
+      return new Promise<void>((_resolve, reject) => {
+        failCopy = reject
+      })
+    },
+  })
+
+  currentToken = '33'.repeat(OPERATOR_TOKEN_BYTE_LENGTH)
+  guard.invalidate()
+  failCopy(new Error('clipboard permission changed'))
+
+  assert.equal(await delayedFailure, 'stale')
 })
