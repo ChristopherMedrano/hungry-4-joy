@@ -16,7 +16,9 @@ Hosted demo services:
 | Integration status dashboard | [hungry-4-joy-dashboard.onrender.com](https://hungry-4-joy-dashboard.onrender.com) |
 | Middleware API health | [hungry-4-joy-middleware.onrender.com/api/health](https://hungry-4-joy-middleware.onrender.com/api/health) |
 
-Start on the **campaign site** for the donation flow. Open the **dashboard** to inspect checkout events, CRM sync status, and CRM sync issues from live webhook ingest.
+Start on the **campaign site** for the donation flow. Open the dashboard's
+credential-free **Seeded** view to explore the support experience; live webhook
+data and actions require operator access.
 
 ## Showcase
 
@@ -70,9 +72,10 @@ Per-integration readiness — middleware API, database, migrations, Foxy, HubSpo
 
 ![System status](docs/images/06-system-status.webp)
 
-### Notifications
+### Notifications (seeded visual preview)
 
-In-header notification center.
+In-header notification presentation. Repeated-failure incident flags and
+external alert delivery are not implemented.
 
 ![Notifications](docs/images/08-notifications.webp)
 
@@ -113,7 +116,7 @@ Laravel middleware/API
   - normalize donor and donation data
   - deduplicate records
   - store application state
-  - queue background jobs
+  - run CRM sync jobs synchronously in the current demo
   - retry failed syncs
   - log errors
   |
@@ -150,6 +153,9 @@ documented in the
 [backup, restore, and rollback runbook](docs/backup-restore-rollback.md).
 Use the [MVP smoke-test checklist](docs/mvp-smoke-test-checklist.md) for the
 final safe local rehearsal and any separately authorized hosted verification.
+Start with the
+[demo handoff and support runbook](docs/demo-handoff-support-runbook.md) when
+evaluating, presenting, supporting, or transferring ownership of the demo.
 
 ## Project Stack
 
@@ -170,7 +176,7 @@ Checkout and integrations:
 Backend and data:
 
 - Framework: Laravel, middleware and APIs.
-- Queue: Laravel jobs, retryable sync work.
+- Queue: Laravel jobs executed synchronously in the current demo; manual retryable sync work.
 - Database: PostgreSQL, SQLite.
 
 Development and deployment:
@@ -380,6 +386,7 @@ read local environment or credential files.
 - [Foxy To Middleware Connection Plan](docs/foxy-middleware-connection-plan.md)
 - [Render Deployment](docs/render-deployment.md)
 - [Repository Safety Audit](docs/repository-safety-audit.md)
+- [Demo Handoff and Support Runbook](docs/demo-handoff-support-runbook.md)
 - [Laravel Middleware/API Setup](middleware-api/README.md)
 - [Workflow](docs/workflow.md)
 
