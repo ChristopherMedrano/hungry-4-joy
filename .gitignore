@@ -34,8 +34,10 @@ credentials.json
 *.db
 *.db-*
 *.dump
+*.pgdump
 *.bak
 *.backup
+*.dir.tar.gz
 *~
 backups/
 db_snapshots/

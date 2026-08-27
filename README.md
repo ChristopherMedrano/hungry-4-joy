@@ -145,6 +145,10 @@ Laravel middleware/API
 
 Track implementation status in [GitHub Issues](https://github.com/ChristopherMedrano/hungry-4-joy/issues) and [Milestones](https://github.com/ChristopherMedrano/hungry-4-joy/milestones).
 
+Operational recovery responsibilities and the current free-tier limitations are
+documented in the
+[backup, restore, and rollback runbook](docs/backup-restore-rollback.md).
+
 ## Project Stack
 
 Frontend (WP/Dashboard):

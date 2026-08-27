@@ -1,6 +1,6 @@
 # Render Deployment
 
-This project should deploy to Render as separate services:
+This project is deployed to Render as separate services:
 
 - Laravel middleware/API as a Render Web Service.
 - WordPress as a separate demo Render Web Service using SQLite.
@@ -73,6 +73,18 @@ Set these secrets during Blueprint creation:
 WordPress receives `MIDDLEWARE_API_URL` from the middleware service URL via Blueprint wiring so browser handoff registration can reach `POST /api/checkout/handoffs`.
 
 Render injects the Postgres connection string into `DB_URL` from the Blueprint database reference.
+
+The Blueprint currently selects the free Postgres plan. Render documents that a
+free database expires 30 days after creation. At expiration it becomes
+inaccessible; it can be recovered by upgrading during a 14-day grace period,
+after which Render deletes the database and its data. Free Postgres has no
+Render-managed backups, logical exports, or point-in-time recovery. Create a
+manual `pg_dump` while the database is accessible if its demo history must be
+preserved. Never put the connection URL, dump, or donor data in Git or CI.
+
+See [`backup-restore-rollback.md`](backup-restore-rollback.md) for the
+credential-safe backup example, isolated restore validation, expiry response,
+and the distinction between service rollback and database recovery.
 
 Reconciliation for the hosted demo is **manual by default**. Use the dashboard **Checkout attempts** tab buttons **Reconcile open handoffs** and **Sweep unfed transactions**, or run `php artisan checkout:reconcile-handoffs` from a shell during verification.
 
@@ -206,6 +218,8 @@ CI does not deploy or synchronize the Render Blueprint, change Render environmen
 
 - Render Laravel Docker guide: https://render.com/docs/deploy-php-laravel-docker
 - Render free service limitations: https://render.com/docs/free
+- Render Postgres recovery and backups: https://render.com/docs/postgresql-backups
+- Render service rollbacks: https://render.com/docs/rollbacks
 - Render WordPress guide: https://render.com/docs/deploy-wordpress
 - Render Blueprint reference: https://render.com/docs/blueprint-spec
 - WordPress SQLite Database Integration plugin: https://wordpress.org/plugins/sqlite-database-integration/
