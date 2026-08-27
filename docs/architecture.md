@@ -14,7 +14,7 @@ Donor / visitor
 
 Laravel middleware/API
   -> application database
-  -> queue jobs
+  -> synchronous queue jobs (current hosted demo)
   -> CRM / Marketing
   -> marketing analytics
   -> observability/logging
@@ -91,22 +91,19 @@ What this demonstrates:
 
 Laravel is the integration layer between the public site, FoxyCart transaction/webhook events, HubSpot, the database, and the admin dashboard.
 
-Current local receiver responsibilities:
+Current middleware responsibilities:
 
-- receive safe checkout event fixture payloads
+- receive signed Foxy webhook events in the hosted demo and safe checkout event
+  fixture payloads in local/test environments
 - validate the checkout event contract
 - store safe normalized checkout event fields
 - normalize campaign, donation, donor/contact, transaction, and redacted failure data
 - prevent duplicate processing by `event_id` or `idempotency_key`
 
-Future middleware responsibilities:
-
-- receive production provider webhook events
-- validate event signatures with a local demo signing value before production secrets are introduced
-- queue HubSpot CRM/marketing sync jobs
-- update HubSpot contact/activity/deal or follow-up status with donation details
-- log success and failure states
-- expose status data to the admin dashboard
+It also validates Foxy signatures, dispatches HubSpot CRM sync jobs, records
+success/failure state, and exposes operator-protected status data to the
+dashboard. On Render, `QUEUE_CONNECTION=sync` executes jobs in the middleware
+request; no background worker is provisioned.
 
 What this demonstrates:
 
@@ -310,7 +307,7 @@ Visitor views WordPress campaign page
   -> WordPress passes campaign metadata to FoxyCart
   -> FoxyCart creates transaction/webhook event
   -> Laravel receives, validates, and stores event
-  -> queue job processes donation
+  -> synchronous queue job processes donation in the middleware request
   -> donor/donation details sync to HubSpot
   -> HubSpot campaign list/follow-up status is updated
   -> marketing analytics event is logged
@@ -486,18 +483,25 @@ Local WordPress development uses DDEV.
 
 In local development, DDEV runs the WordPress site, while the Laravel middleware/API can run separately with `php artisan serve` and local sqlite storage. This keeps the MVP reproducible and avoids depending on hosted infrastructure while the system is still changing quickly.
 
-Render is the preferred deployment target for the Laravel side of the MVP.
+The hosted demo currently runs four Render resources defined in `render.yaml`:
 
-Good Render candidates:
+- `hungry-4-joy-wordpress`, a Docker web service with intentionally ephemeral
+  SQLite, uploads, and administrator edits; startup reseeds repository-owned
+  demo content;
+- `hungry-4-joy-middleware`, a Docker web service connected to
+  `hungry-4-joy-middleware-db`, a free Render Postgres database;
+- `hungry-4-joy-dashboard`, a Docker web service that serves the Vite build
+  through nginx and proxies `/api` requests to the middleware; and
+- no background worker or Render cron service. Queue jobs use the `sync` driver,
+  and scheduled handoff reconciliation is disabled by default.
 
-- Laravel middleware/API as a web service
-- queue worker as a background worker
-- scheduled cleanup/reconciliation task as a cron job
-- React/Next.js dashboard as either a separate web service/static deployment or as part of the Laravel-served app, depending on the final dashboard approach
-- database as a managed datastore, likely Postgres for deployment even if local development uses DDEV-managed MySQL or MariaDB
-- logs, metrics, health checks, environment variables, deploy hooks, and rollbacks
-
-WordPress should be developed locally in DDEV first. It can be hosted separately later or explored on Render with Docker/persistent storage, but the MVP should keep WordPress simple until the Laravel integration flow works.
+Free Render Postgres expires after 30 days, has a 14-day paid-upgrade grace
+period, and provides no managed backups or point-in-time recovery. WordPress's
+ephemeral runtime and the dashboard's static build are recovered from Git, not
+from runtime backups. See [`render-deployment.md`](render-deployment.md) for
+deployment verification and
+[`backup-restore-rollback.md`](backup-restore-rollback.md) for ownership,
+database preservation, and service rollback procedures.
 
 ## Guiding Principle
 

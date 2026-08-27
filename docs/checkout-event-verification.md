@@ -11,7 +11,9 @@ Use it when changing donation button metadata, checkout handoff docs, simulated 
 - Foxy demo cart links preserve safe metadata and receive `donation_attempt_id` at click time.
 - Simulated checkout event fixtures match the checkout event contract.
 - Sensitive payment details stay out of markup, docs, and fixture payloads.
-- Local middleware receiver behavior is verified separately; CRM, analytics, and dashboard work remain future milestones.
+- Local middleware receiver behavior is verified separately. CRM sync, server
+  analytics, and dashboard persistence/views are implemented, but their
+  verification is outside this checkout-fixture walkthrough.
 
 ## 1. Start With Campaign Page Metadata
 
@@ -250,7 +252,13 @@ Expected result:
 
 ## 5. Confirm Current Boundaries
 
-The current demo connects one-time donation buttons to the Foxy demo cart. The fixture/local receiver is implemented at `POST /api/checkout/events`, and the signed Foxy webhook route plus adapter are implemented locally at `POST /api/foxy/webhooks`. Production Foxy webhook activation remains gated by Render configuration, `FOXY_WEBHOOK_ENCRYPTION_KEY`, and real provider testing.
+The current demo connects one-time donation buttons to the Foxy demo cart. The
+fixture/local receiver is implemented at `POST /api/checkout/events` and returns
+`404` in production. The signed `POST /api/foxy/webhooks` route is implemented
+and active on the hosted Render demo; it verifies Foxy signatures before
+normalizing safe fields. This walkthrough remains focused on checkout metadata,
+fixtures, and the payment boundary rather than repeating hosted integration
+verification.
 
 In scope:
 
@@ -261,15 +269,14 @@ In scope:
 - Local receiver validation and normalized fixture storage.
 - Payment data boundary documentation.
 
-Out of scope:
+Out of scope for this walkthrough:
 
-- Production Foxy webhook activation before hosted configuration, webhook secret setup, and real provider testing are complete.
-- CRM or dashboard persistence beyond local `checkout_events` storage.
-- CRM sync.
-- Analytics events.
-- Dashboard views.
-- Production checkout writes.
-- Subscription or refund flows.
+- Hosted Foxy configuration and webhook refeed; see
+  [`foxy-middleware-connection-plan.md`](foxy-middleware-connection-plan.md).
+- CRM sync behavior, server analytics, and dashboard API/UI verification; these
+  are implemented and covered by their focused tests and walkthroughs.
+- Operating production checkout writes or reconciliation actions.
+- Subscription or refund flows, which remain unimplemented.
 
 ## Laravel Receiver Boundary
 
@@ -282,8 +289,11 @@ Current Laravel receiver status:
 - It acknowledges valid JSON requests with `202 Accepted`.
 - It stores one safe normalized `checkout_events` row for each new valid event.
 - It ignores duplicate `event_id` or `idempotency_key` sends with a `duplicate_ignored` response.
-- The separate `POST /api/foxy/webhooks` route verifies signed Foxy webhook payloads locally and adapts safe transaction fields into the same normalized checkout event contract.
-- It does not sync CRM data, emit analytics, or power dashboard views yet.
+- The fixture route is local/test-only; production returns `404`.
+- The separate `POST /api/foxy/webhooks` route verifies signed Foxy webhook payloads and adapts safe transaction fields into the same normalized checkout event contract.
+- Eligible accepted checkout events dispatch the current sync-driver CRM job,
+  produce server analytics records, and populate application tables read by the
+  dashboard. Those downstream behaviors are not re-verified here.
 
 ## Final Verification Commands
 

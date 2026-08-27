@@ -16,6 +16,9 @@ dedicated secret scanner or a review of provider-side configuration.
   dependency lockfile hashes are expected false positives in broad scans.
 - If a real secret may have entered Git, do not paste it into an issue or log.
   Stop, rotate/revoke it at the provider, and coordinate history remediation.
+- Treat database dumps and exports as sensitive even when they contain only
+  demo records. Create and retain them outside the repository; see
+  [`backup-restore-rollback.md`](backup-restore-rollback.md).
 
 ## Expected tracked configuration
 
@@ -40,7 +43,7 @@ Inventory tracked environment- and runtime-like names without reading content:
 
 ```bash
 git ls-files \
-  | rg -i '(^|/)(\.env($|\.)|wp-config|.*(credential|secret|token|oauth).*|.*\.(pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|sql|dump|bak|backup)$|uploads?/|cache/)'
+  | rg -i '(^|/)(\.env($|\.)|wp-config|.*(credential|secret|token|oauth).*|.*\.(pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|sql|dump|pgdump|bak|backup)$|.*\.dir\.tar\.gz$|uploads?/|cache/)'
 ```
 
 Repeat the filename-only check across history:
@@ -49,7 +52,7 @@ Repeat the filename-only check across history:
 git log --all --name-only --pretty=format: \
   | sed '/^$/d' \
   | sort -u \
-  | rg -i '(^|/)(\.env($|\.)|wp-config\.php$|.*(credential|secret|token|oauth).*|.*\.(pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|sql|dump|bak|backup)$|uploads?/|cache/)'
+  | rg -i '(^|/)(\.env($|\.)|wp-config\.php$|.*(credential|secret|token|oauth).*|.*\.(pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|sql|dump|pgdump|bak|backup)$|.*\.dir\.tar\.gz$|uploads?/|cache/)'
 ```
 
 Find tracked paths that now match an ignore rule:
@@ -70,7 +73,7 @@ that do not currently exist:
 ```bash
 for path in \
   .env.production production.env.local credentials.json private.pem dump.sql snapshot.sqlite \
-  backups/local.backup exports/donors.csv private-screenshots/review.png \
+  backup.pgdump render-export.dir.tar.gz backups/local.backup exports/donors.csv private-screenshots/review.png \
   screenshots/private/donor.png wordpress/wp-content/uploads/private.jpg \
   wordpress/wp-content/cache/object-cache.php \
   middleware-api/storage/logs/laravel.log \
