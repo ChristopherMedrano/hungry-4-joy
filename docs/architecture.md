@@ -18,7 +18,7 @@ Laravel middleware/API
   -> CRM / Marketing
   -> marketing analytics
   -> observability/logging
-  -> React/Next.js status dashboard
+  -> React status dashboard
 
 GitHub Actions
   -> checks WordPress, Laravel, dashboard, and build workflows
@@ -241,9 +241,9 @@ The admin dashboard is the support surface for the ecosystem.
 
 The dashboard reads from application tables: stored checkout events and CRM sync attempts.
 
-Implementation direction:
+Current implementation:
 
-- Use React or Next.js for the dashboard front end.
+- Use the React/Vite dashboard front end.
 - Use Tailwind CSS for dashboard UI styling.
 - Use Laravel as the API and integration backend.
 - Start with the simplest useful dashboard; avoid turning the dashboard into a full admin product before the integration flow works.
@@ -266,7 +266,7 @@ Optional later polish:
 
 What this demonstrates:
 
-- React/Next.js front-end patterns
+- React/Vite front-end patterns
 - Tailwind CSS dashboard styling
 - API-connected dashboard UI
 - support tooling
@@ -287,7 +287,7 @@ MVP responsibilities:
 - run Laravel Pint for PHP formatting
 - optionally run PHPStan or Larastan for static analysis after the core MVP stabilizes
 - run Sass/SCSS build checks for the WordPress child theme when the theme styling workflow is added
-- run JavaScript/React/Next.js/Tailwind lint, typecheck, and build checks when the dashboard is added
+- run JavaScript/React/Vite/Tailwind lint, typecheck, and build checks for the dashboard
 - keep environment variables out of git
 
 What this demonstrates:

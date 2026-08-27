@@ -129,7 +129,7 @@ Goal:
 
 Scope:
 
-- React/Next.js dashboard view.
+- React/Vite dashboard view.
 - Tailwind CSS dashboard styling.
 - Webhook event table.
 - HubSpot sync status.
@@ -172,7 +172,7 @@ Scope:
 - Laravel tests with PHPUnit or Pest.
 - Laravel Pint.
 - Sass/SCSS build checks when the WordPress child theme styling workflow exists.
-- Front-end lint/typecheck/build checks when the React/Next.js Tailwind dashboard exists.
+- Front-end lint/typecheck/build checks for the React/Vite Tailwind dashboard.
 - Render deployment for Laravel service if ready.
 
 Demo:
