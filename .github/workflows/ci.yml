@@ -80,6 +80,9 @@ jobs:
       - name: Validate checkout fixtures
         run: npm run check:fixtures
 
+      - name: Validate tracked WordPress configuration
+        run: npm run test:wordpress-config-tracking
+
       - name: Test WordPress runtime secret handling
         run: npm run test:wordpress-runtime-security
 

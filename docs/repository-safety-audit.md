@@ -23,7 +23,16 @@ dedicated secret scanner or a review of provider-side configuration.
 ## Expected tracked configuration
 
 - `middleware-api/.env.example` contains empty or local-only placeholders.
-- `wordpress/wp-config-render.php` reads sensitive values from the environment.
+- `wordpress/wp-config-render.php` is the hosted SQLite template and reads
+  sensitive values from the environment. Its `DB_NAME`, `DB_USER`,
+  `DB_PASSWORD`, and `DB_HOST` constants are non-secret compatibility
+  placeholders required before the SQLite drop-in loads; they are not server
+  credentials.
+- `wordpress/wp-config-render.php` is the only permitted tracked `wp-config`
+  file. WordPress core, including its upstream `wp-config-sample.php`, is
+  downloaded locally and ignored. DDEV creates/manages
+  `wordpress/wp-config.php` and `wordpress/wp-config-ddev.php` for a fresh local
+  checkout; both are ignored runtime files and must remain untracked.
 - `render.yaml` declares hosted secrets with `sync: false`; it does not contain
   their values.
 - `docs/images/` contains intentional seeded-demo screenshots. Private review
@@ -36,6 +45,14 @@ Explicit environment values take precedence. Because the demo filesystem is
 ephemeral, a container restart can invalidate existing administrator sessions.
 The administrator password is supplied to WP-CLI through its prompted standard
 input, not through a process argument or normal command output.
+
+CI enforces the WordPress configuration allowlist, ignore rules, absence of
+fixed authentication keys/salts in tracked WordPress code, and the Docker
+image's use of `wp-config-render.php`:
+
+```bash
+npm run test:wordpress-config-tracking
+```
 
 ## Metadata and ignore checks
 
