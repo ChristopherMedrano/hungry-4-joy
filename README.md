@@ -125,8 +125,19 @@ Start WordPress:
 
 ```bash
 ddev start
+ddev wp core download
 ddev launch
 ```
+
+The checked-in DDEV configuration sets `wordpress/` as the docroot. On a fresh
+clone, `ddev start` starts the services and manages the local
+`wordpress/wp-config.php` and `wordpress/wp-config-ddev.php` runtime files;
+`ddev wp core download` then downloads WordPress core into that docroot. Both
+configuration files and the downloaded core remain ignored and must not be
+committed. The tracked `wordpress/wp-config-render.php` is only for the hosted
+SQLite demo; its MySQL-shaped database constants are non-secret compatibility
+placeholders, and its authentication keys and salts are supplied through the
+environment.
 
 Start the middleware after copying its example environment file to a local,
 ignored `.env` and configuring local values:

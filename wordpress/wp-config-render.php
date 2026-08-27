@@ -7,6 +7,11 @@
  * a separate MySQL service.
  */
 
+/*
+ * WordPress requires these MySQL-shaped constants before the SQLite drop-in
+ * loads. They are non-secret compatibility placeholders: the hosted demo does
+ * not use them to connect to a database server.
+ */
 define( 'DB_NAME', 'hungry_4_joy_demo' );
 define( 'DB_USER', 'hungry_4_joy_demo' );
 define( 'DB_PASSWORD', 'hungry_4_joy_demo' );
