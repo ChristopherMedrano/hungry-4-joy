@@ -184,8 +184,6 @@ Open the dashboard in a browser, confirm **Live API** begins locked, and enter t
 
 The token belongs only on the middleware service. `render.yaml` declares it with `sync: false`; Blueprint sync does not provide a value. See [`access-control.md`](access-control.md) for ownership and rotation.
 
-The dashboard unlock form may generate and copy a 64-character hexadecimal token locally with browser Web Crypto. That does not call Render or issue a backend credential. Copy the generated value into the middleware's `DASHBOARD_OPERATOR_TOKEN`, deploy/restart the middleware, and then use the same value to unlock. Do not configure it on the dashboard service.
-
 The repository intentionally uses service-wide application rate-limit buckets rather than trusting `X-Forwarded-For`. Render documents that its proxy address is visible to the app by default and supplies the client chain in that header, but this Blueprint has no verified fixed proxy CIDR that Laravel can safely trust. The dashboard nginx proxy also appends a hop. Do not change Laravel to trust all proxies merely to obtain per-client limits; use a verified proxy range or an edge-aware limiter if deployment requirements later demand it.
 
 **Blueprint sync:** If the dashboard service is new, open the Render Blueprint for this repo and sync so `hungry-4-joy-dashboard` is created. Existing WordPress and middleware services are unchanged.
