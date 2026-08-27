@@ -7,7 +7,11 @@ This walkthrough covers two middleware/API routes:
 - `/api/checkout/events` is the local fixture receiver for project-owned checkout event JSON.
 - `/api/foxy/webhooks` is the signed Foxy webhook route, implemented for local/signed webhook verification and adaptation into the same normalized checkout event contract.
 
-Production Foxy webhook activation is still gated by environment configuration and hosted provider setup. The middleware does not call Foxy, sync CRM data, emit analytics, create observability events, or power dashboard views yet.
+Production Foxy webhook activation is gated by environment configuration and
+hosted provider setup. Accepted events can dispatch synchronous CRM work, store
+server analytics and integration steps, and power dashboard views. Local tests
+use fake HubSpot behavior; Foxy hAPI reconciliation and live provider writes
+remain separate, explicitly authorized checks.
 
 ## What This Verifies
 

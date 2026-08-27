@@ -148,6 +148,8 @@ Track implementation status in [GitHub Issues](https://github.com/ChristopherMed
 Operational recovery responsibilities and the current free-tier limitations are
 documented in the
 [backup, restore, and rollback runbook](docs/backup-restore-rollback.md).
+Use the [MVP smoke-test checklist](docs/mvp-smoke-test-checklist.md) for the
+final safe local rehearsal and any separately authorized hosted verification.
 
 ## Project Stack
 
