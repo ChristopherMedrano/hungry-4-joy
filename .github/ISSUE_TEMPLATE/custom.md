@@ -1,32 +1,36 @@
 ---
-name: Custom issue template
-about: Describe this issue template's purpose here.
-title: "[EPIC]"
+name: Hungry-4-Joy work item
+about: Propose a focused change to the portfolio demo
+title: ""
 labels: ''
-assignees: ChristopherMedrano
+assignees: ''
 
 ---
 
 ## Goal
 
-What this issue should accomplish.
+Describe the user, integration, or support outcome.
 
 ## Scope
 
-- Item 1
-- Item 2
-- Item 3
+- Included behavior
+- Affected component or system boundary
+
+## Out of scope
+
+- Explicitly excluded behavior
 
 ## Acceptance Criteria
 
-- [ ] Clear user-facing or system behavior exists
-- [ ] Relevant docs/code updated
-- [ ] Verified locally
+- [ ] Expected behavior is testable
+- [ ] Safety, privacy, and provider-write boundaries are preserved
+- [ ] Focused tests and relevant documentation are updated
+- [ ] Local verification passes
 
 ## Verification
 
-Command, screenshot, browser check, or manual test.
+List commands, browser checks, fixtures, or evidence required to close the issue.
 
 ## Notes
 
-Links, decisions, follow-up ideas.
+Dependencies, risks, or follow-up work.

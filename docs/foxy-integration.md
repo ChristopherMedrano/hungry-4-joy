@@ -1,6 +1,9 @@
-# Foxy To Middleware Connection Plan
+# Foxy Integration Guide
 
-This plan explains how the current Foxy demo cart handoff connects to the Laravel middleware receiver, what is connected now, and what must happen before a real Foxy webhook is trusted.
+This guide explains the implemented Foxy cart handoff, reconciliation, and
+signed-webhook connection to the Laravel middleware. Local fixture replay is
+safe by default; hosted provider verification is an explicitly authorized
+operator task.
 
 ## Current State
 
@@ -25,7 +28,7 @@ POST /api/foxy/webhooks
 
 That route verifies Foxy's webhook signature before adapting safe transaction fields into the existing normalized checkout event contract. The hosted Foxy JSON webhook is **active** on Render as of June 2026: signed `transaction/created` events store normalized rows with `ingest.channel = foxy_webhook` and appear in the dashboard API.
 
-## Phase 1: Local Demo Event Replay
+## Local fixture replay
 
 Use the tracked checkout event fixtures as the local demo event source:
 
@@ -55,7 +58,7 @@ This command keeps the connection project-owned and public-safe:
 - It does not call Foxy, HubSpot, analytics, dashboard services, or production checkout APIs.
 - It does not require provider secrets.
 
-Use this phase to prove the end-to-end local path:
+Use this path to prove the end-to-end local receiver flow:
 
 ```text
 Foxy-shaped fixture event with donation_attempt_id -> Laravel receiver route -> validation -> checkout_events storage -> duplicate handling
@@ -75,7 +78,7 @@ donation-created.one-time.json: duplicate_ignored
 payment-failed.one-time.json: duplicate_ignored
 ```
 
-## Phase 1.5: Browser Handoff Registration And Foxy Reconciliation
+## Browser handoff registration and Foxy reconciliation
 
 The WordPress theme registers checkout handoffs at click time without writing to the WordPress database:
 
@@ -155,7 +158,7 @@ On-demand reconcile:
 
 Use the unlocked dashboard's reconcile action for the attempt.
 
-## Phase 2: Actual Foxy Webhook Connection
+## Signed Foxy webhook connection
 
 Foxy's webhook API supports JSON webhooks that push data to an endpoint. The Foxy webhook resource includes fields such as `format`, `url`, `query`, `encryption_key`, `event_resource`, and `is_active`. Foxy's docs note that JSON webhook configuration requires an `encryption_key`, and that key is also used for payload signature integrity.
 
@@ -173,7 +176,7 @@ Official references:
 - [Foxy webhooks API relation](https://api.foxy.io/rels/webhooks)
 - [Foxy JSON webhook announcement](https://foxy.io/blog/new-feature-json-webhook/)
 
-### Activation checklist
+### Configuration checklist
 
 Use this checklist when turning on or re-verifying the hosted webhook:
 

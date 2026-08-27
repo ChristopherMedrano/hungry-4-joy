@@ -61,18 +61,18 @@ Find tracked paths that now match an ignore rule:
 git ls-files -ci --exclude-standard
 ```
 
-The two existing `docs/superpowers/` planning files are expected because they
-were tracked before that local-notes directory was ignored. Treat any listed
-environment, credential, private-key, runtime, export, backup, or configuration
-file as an unexpected conflict that must be reviewed. The known-safe tracked
-`middleware-api/.npmrc` is explicitly exempted from the root `.npmrc` rule.
+The release-ready repository should return no tracked ignored paths. Treat any
+listed planning, environment, credential, private-key, runtime, export, backup,
+or configuration file as an unexpected conflict that must be reviewed. The
+known-safe tracked `middleware-api/.npmrc` is explicitly exempted from the root
+`.npmrc` rule.
 
 Confirm representative local paths are ignored. `--no-index` also tests paths
 that do not currently exist:
 
 ```bash
 for path in \
-  .env.production production.env.local credentials.json private.pem dump.sql snapshot.sqlite \
+  .archive/docs/plan.md .env.production production.env.local credentials.json private.pem dump.sql snapshot.sqlite \
   backup.pgdump render-export.dir.tar.gz backups/local.backup exports/donors.csv private-screenshots/review.png \
   screenshots/private/donor.png wordpress/wp-content/uploads/private.jpg \
   wordpress/wp-content/cache/object-cache.php \

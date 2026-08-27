@@ -155,10 +155,12 @@ Safe local defaults:
 ```dotenv
 HUBSPOT_ENABLED=false
 HUBSPOT_ACCESS_TOKEN=
-HUBSPOT_NEWSLETTER_LIST_ID=9
+HUBSPOT_NEWSLETTER_LIST_ID=12
 ```
 
-With the default config, tests and local development do not make HubSpot network calls. The fake client records calls in memory and returns deterministic fake contact/deal IDs so later sync work can be tested without credentials.
+With the default config, tests and local development do not make HubSpot network
+calls. The fake client records calls in memory and returns deterministic fake
+contact/deal IDs so sync behavior can be tested without credentials.
 
 Donor matching for the MVP is email-only. The syncer calls `HubSpotClient::upsertContact()` with donor email, first name, last name, and optional phone; HubSpot handles whether that upsert updates an existing contact or creates a new one. The middleware does not do fuzzy matching. Successful syncs store returned HubSpot contact and Deal ids on `crm_sync_attempts`.
 
@@ -168,7 +170,11 @@ One `crm_sync_attempts` row tracks each eligible checkout event. Status values a
 
 All `/api/dashboard/*` routes, direct handoff reconciliation, and detailed readiness require the operator bearer token. CORS does not grant access.
 
-Live HubSpot testing is optional and should only be done with a private local `.env` token that is never committed. The practice portal uses a **static** contact segment for API list enrollment. Set `HUBSPOT_NEWSLETTER_LIST_ID` to the segment's **ILS Segment ID** (not the Legacy V1 list ID). Active/dynamic segments reject membership API calls even when scopes are correct.
+Live HubSpot testing is optional and should only be done with a private local
+`.env` token that is never committed. The configured HubSpot target must be a
+**static** contact segment. Set `HUBSPOT_NEWSLETTER_LIST_ID` to the segment's
+**ILS Segment ID** (not the Legacy V1 list ID). Active/dynamic segments reject
+membership API calls even when scopes are correct.
 
 The private app token must include these scopes for full sync (including list enrollment):
 
@@ -204,10 +210,11 @@ HUBSPOT_ACCESS_TOKEN=pat-local-only php artisan tinker
 
 Then resolve `App\Contracts\HubSpotClient`, upsert an `@example.test` contact, create one Deal with `h4j_donation_attempt_id=h4j_attempt_demo_test_0001`, associate the Deal to the Contact, and try adding the Contact to `HUBSPOT_NEWSLETTER_LIST_ID`.
 
-For the full local receiver walkthrough, including manual fixture submission, validation-error checks, duplicate replay checks, storage inspection, and payment-safety scans, see:
+For the release-level local receiver checks, including fixtures, validation,
+duplicate handling, storage, and payment-safety scans, see:
 
 ```text
-../docs/middleware-receiver-verification.md
+../docs/mvp-smoke-test-checklist.md
 ```
 
 Confirm the API route exists:
@@ -230,10 +237,15 @@ POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry
 
 These routes read stored `checkout_events` and `crm_sync_attempts` rows using the payload contract in `docs/contracts.md` Section 5. They require the operator bearer token; CORS and access to the public dashboard shell do not grant API access.
 
-Dashboard verification walkthrough: [`docs/dashboard-verification-walkthrough.md`](../docs/dashboard-verification-walkthrough.md).
+Release-level dashboard and receiver verification:
+[`docs/mvp-smoke-test-checklist.md`](../docs/mvp-smoke-test-checklist.md).
 
 ## Current Boundary
 
-Current middleware work adds safe checkout event storage, duplicate prevention, signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking, dashboard status API routes, and manual CRM sync retry for eligible attempts. Automatic CRM retry scheduling and analytics event emission are handled in later milestones.
+The middleware implements safe checkout event storage, duplicate prevention,
+signed Foxy JSON webhook intake, HubSpot CRM sync with local status tracking,
+server conversion records, dashboard APIs, and manual CRM retry. CRM jobs run
+synchronously; automatic retry scheduling and external analytics delivery are
+not implemented.
 
 Keep `.env` local and uncommitted. Use `.env.example` for safe local placeholders only.

@@ -9,7 +9,7 @@ Contract sections:
 1. Campaign checkout metadata
 2. Canonical donation identity
 3. Checkout event payload
-4. CRM / marketing sync payload
+4. HubSpot CRM sync payload
 5. Dashboard status payload
 6. Marketing analytics events
 7. Integration step log
@@ -28,7 +28,9 @@ The purpose is to make each donation option identifiable before the visitor ente
 
 The WordPress page keeps this metadata inspectable with `data-*` attributes on donation buttons.
 
-The current Foxy demo cart implementation maps the same metadata into cart request parameters. The contract should stay stable even if a later issue changes the handoff mechanism.
+The current Foxy demo cart implementation maps the same metadata into cart
+request parameters. The contract remains the stable boundary if the handoff
+mechanism changes.
 
 ### Source
 
@@ -229,22 +231,22 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) before adding any
 
 Status: Implemented end-to-end for demo cart links, fixtures, Laravel validation, normalized storage, and Foxy webhook adaptation.
 
-`donation_attempt_id` is the canonical project-owned identifier for one donor checkout attempt. It links the browser click, provider cart item option, normalized checkout event, local storage row, duplicate handling, and future reconciliation workflows without exposing donor identity or payment data.
+`donation_attempt_id` is the canonical project-owned identifier for one donor checkout attempt. It links the browser click, provider cart item option, normalized checkout event, local storage row, duplicate handling, and reconciliation workflows without exposing donor identity or payment data.
 
 | Concern | Contract |
 | --- | --- |
 | Field name | `donation_attempt_id` |
 | Owner | Hungry-4-Joy application layer. WordPress generates it; Laravel validates and stores it. |
 | Generation point | Current demo: WordPress theme script at donation button click time. |
-| Future production generation point | Server-issued or signed application endpoint before hosted checkout handoff. |
+| Possible hardened generation point | Server-issued or signed application endpoint before hosted checkout handoff. Not implemented in this portfolio demo. |
 | Lifetime | One checkout attempt. A retry from the same provider event should preserve the same value. A new donor click creates a new value. |
 | Provider relationship | Sent to Foxy as a safe item option. It is independent of Foxy `transaction_id`, `checkout_session_id`, and webhook event IDs. |
 | Format | `h4j_attempt_<uuid-or-random-token>`, max 128 characters, URL-safe. Laravel validation requires the `h4j_attempt_` prefix and characters `[A-Za-z0-9_-]` only. |
 | Duplicate and reconciliation relationship | `idempotency_key` and `event_id` prevent duplicate event processing today. `donation_attempt_id` reconciles records tied to the same donor attempt across systems. |
 | Safety boundary | Safe only when opaque. It must not encode donor identity, private notes, card data, provider credentials, authorization data, or secrets. |
-| Status vocabulary | Shared producer vocabulary for later CRM, dashboard, analytics, observability, retry, and reconciliation issues. |
+| Status vocabulary | Shared producer vocabulary for CRM, dashboard, analytics, observability, retry, and reconciliation. |
 
-Shared status vocabulary for later work:
+Shared status vocabulary:
 
 - `attempt_started`
 - `cart_handoff_created`
@@ -258,7 +260,8 @@ Shared status vocabulary for later work:
 - `dashboard_read_failed`
 - `reconciliation_mismatch`
 
-This contract defines the vocabulary. Later work decides where status records live and how they are displayed.
+This contract defines the vocabulary used by stored handoffs, checkout events,
+integration logs, and dashboard views.
 
 ### Checkout handoff registration
 
@@ -392,13 +395,17 @@ Today, the source is either:
 - a tracked checkout event fixture posted to the local receiver, or
 - a signed Foxy webhook payload adapted by `FoxyWebhookAdapter` at `POST /api/foxy/webhooks`.
 
-Both paths normalize into this contract before Laravel validation and storage. A later hosted checkout integration should preserve the same normalized fields even if the provider sends a larger raw event.
+Both paths normalize into this contract before Laravel validation and storage.
+Any provider change must preserve the same normalized fields even when the raw
+event is larger.
 
 ### Destination
 
 Laravel middleware receiver at `POST /api/checkout/events` or `POST /api/foxy/webhooks`.
 
-The Laravel receiver is responsible for validating the event, storing a safe copy, preventing duplicate processing, and normalizing the donation into later CRM, analytics, observability, and dashboard workflows.
+The Laravel receiver validates the event, stores a safe copy, prevents duplicate
+processing, and normalizes the donation for CRM, analytics, observability, and
+dashboard workflows.
 
 ### Event Types
 
@@ -454,7 +461,7 @@ Checkout events may include donor/contact fields that Laravel can use for CRM sy
 
 | Field | Example | Purpose |
 | --- | --- | --- |
-| `donor.email` | `jordan.helper@example.test` | Contact identity for follow-up and CRM sync. |
+| `donor.email` | `jordan.helper@example.test` | Contact identity for CRM upsert. |
 | `donor.first_name` | `Jordan` | Donor first name. |
 | `donor.last_name` | `Helper` | Donor last name. |
 | `donor.phone` | `555-0104` | Optional support contact number if checkout provides it. |
@@ -528,15 +535,17 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the full chec
 - Duplicate-event handling is represented through `idempotency_key`.
 - The contract remains safe for public documentation and does not include sensitive payment data.
 
-## 4. CRM / Marketing Sync Payload
+## 4. HubSpot CRM Sync Payload
 
-Status: Implemented for HubSpot CRM MVP.
+Status: Implemented for the HubSpot CRM boundary.
 
-This contract defines the normalized data Laravel prepares from stored `checkout_events` rows and maps into HubSpot for the practice nonprofit donation demo.
+This contract defines the normalized data Laravel reads from stored
+`checkout_events` rows and maps into HubSpot.
 
-The selected CRM target is HubSpot (free / STANDARD portal). The MVP uses Contact upsert, one Deal per donation attempt, and newsletter list enrollment.
+The implementation uses HubSpot Contact upsert, one Deal per donation attempt,
+Contact-to-Deal association, and enrollment in one configured static list.
 
-This mapping reflects the current practice portal and free-tier capabilities. Object choices, custom properties, list enrollment, and pipeline defaults may be adjusted if HubSpot plan limits, API availability, or portal setup require a simpler fallback. `donation_attempt_id` remains the canonical external id across any revision.
+`donation_attempt_id` is the canonical external identity stored on the Deal.
 
 ### Source
 
@@ -559,8 +568,8 @@ HubSpot CRM through the Laravel middleware sync boundary:
 
 1. Upsert Contact by `donor.email`
 2. Create one Deal per donation attempt
-3. Associate Deal to Contact
-4. Add Contact to the configured newsletter static list
+3. Associate the Deal to the Contact
+4. Add the Contact to the configured static list
 
 HubSpot sync deduplication is owned by Laravel middleware, not by HubSpot Deal lookup.
 
@@ -568,9 +577,10 @@ HubSpot sync deduplication is owned by Laravel middleware, not by HubSpot Deal l
 2. **Sync:** `crm_sync_attempts` tracks one sync lifecycle per `checkout_event_id`. Do not call HubSpot again for that row when status is `succeeded`. Retries apply only to `failed` or `retryable` rows.
 3. **HubSpot:** Contact upsert by email avoids duplicate contacts. Deal create runs only when middleware dispatches sync for an eligible, not-yet-succeeded checkout event.
 
-### Required Normalized Payload Fields
+### Source fields used for HubSpot requests
 
-Laravel maps one eligible `checkout_events` row into this internal shape before HubSpot requests:
+Laravel reads these safe fields from one eligible `checkout_events` row when it
+builds Contact and Deal requests:
 
 | Field | Example | Purpose |
 | --- | --- | --- |
@@ -592,11 +602,13 @@ Laravel maps one eligible `checkout_events` row into this internal shape before 
 | `donor.first_name` | `Jordan` | Contact first name |
 | `donor.last_name` | `Helper` | Contact last name |
 | `donor.phone` | `555-0104` | Optional contact phone |
-| `follow_up.newsletter_list_id` | `9` | Static list for newsletter enrollment |
 
 ### HubSpot Contact Mapping
 
-The MVP donor matching policy is email-only. Laravel does not search by name, phone, date, amount, or campaign. A stored event without `donor.email` is not eligible for HubSpot sync, and incoming checkout payloads are rejected by validation when required donor identity fields are missing.
+The donor matching policy is email-only. Laravel does not search by name, phone,
+date, amount, or campaign. A stored event without `donor.email` is not eligible
+for HubSpot sync, and incoming checkout payloads are rejected by validation when
+required donor identity fields are missing.
 
 | Source field | HubSpot property | Rule |
 | --- | --- | --- |
@@ -605,7 +617,9 @@ The MVP donor matching policy is email-only. Laravel does not search by name, ph
 | `donor.last_name` | `lastname` | Update on match |
 | `donor.phone` | `phone` | Update when present |
 
-Do not create a second contact when email already exists. Existing-contact versus new-contact detection stays inside HubSpot contact upsert for the MVP; Laravel records durable sync status and returned HubSpot ids on `crm_sync_attempts`.
+Do not create a second Contact when email already exists. Existing-versus-new
+detection stays inside HubSpot Contact upsert; Laravel records durable sync
+status and returned HubSpot ids on `crm_sync_attempts`.
 
 ### HubSpot Deal Mapping
 
@@ -630,13 +644,14 @@ Do not create a second contact when email already exists. Existing-contact versu
 
 Associate each Deal to the synced Contact.
 
-### Follow-Up / Marketing Mapping
+### Static-list enrollment
 
 | Action | HubSpot target | Purpose |
 | --- | --- | --- |
-| Add contact to static list | `HUBSPOT_NEWSLETTER_LIST_ID` (default `9`) | Newsletter subscribers enrollment |
+| Add Contact to static list | `HUBSPOT_NEWSLETTER_LIST_ID` | Configured list enrollment |
 
-List membership is the MVP follow-up action. Campaign-specific lists and automated email workflows are out of scope for this milestone.
+HubSpot forms, contact-capture pages, email delivery, follow-up status, and
+automated workflows are not implemented.
 
 ### Local Sync Status Fields
 
@@ -654,7 +669,11 @@ CRM outcomes persist on `crm_sync_attempts` linked to `checkout_events`:
 | `last_attempted_at` | `2026-06-08T12:00:00Z` | Last sync attempt time |
 | `next_retry_at` | `2026-06-08T12:15:00Z` | Next time a retry is eligible |
 
-The MVP records retry eligibility on `crm_sync_attempts`. Automatic retry scheduling is not implemented. Manual retry is available through the dashboard API (`POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry`). Already-succeeded attempts are skipped so repeated jobs do not create duplicate HubSpot records, except list-enrollment warnings which retry list membership only.
+The middleware records retry eligibility on `crm_sync_attempts`. Automatic retry
+scheduling is not implemented. Manual retry is available through the dashboard
+API (`POST /api/dashboard/crm-sync/{crm_sync_attempt_id}/retry`). Already-succeeded
+attempts are skipped so repeated jobs do not create duplicate HubSpot records,
+except static-list warnings, which retry list enrollment only.
 
 ### Validation And Safety Rules
 
@@ -682,7 +701,8 @@ The MVP records retry eligibility on `crm_sync_attempts`. Automatic retry schedu
 
 ### CRM Sync Acceptance Criteria
 
-- Eligible `donation.created` events map to Contact, Deal, and newsletter list actions.
+- Eligible `donation.created` events map to Contact upsert, one donation Deal,
+  Contact-to-Deal association, and configured static-list enrollment.
 - `donation_attempt_id` is the canonical HubSpot Deal external id.
 - Donor matching uses email upsert rather than fuzzy donor/date/amount matching.
 - Campaign and donation details map to safe Deal properties.
@@ -691,7 +711,7 @@ The MVP records retry eligibility on `crm_sync_attempts`. Automatic retry schedu
 
 ## 5. Dashboard Status Payload
 
-Status: Contract defined for dashboard MVP; GET list/detail and POST manual CRM retry implemented in issues #36–#39; frontend UI in #37–#39.
+Status: Implemented by the Laravel dashboard API and React dashboard.
 
 This contract defines the normalized data Laravel exposes to the admin/status dashboard. The dashboard reads application-owned records from `checkout_events` and `crm_sync_attempts`. It does not use raw provider payloads, observability tooling, or HubSpot as the source of truth.
 
@@ -711,9 +731,9 @@ Duplicate checkout replays that return `duplicate_ignored` do not create `checko
 
 ### Destination
 
-React or Next.js admin/status dashboard through Laravel JSON API routes.
+React/Vite support dashboard through Laravel JSON API routes.
 
-Planned route prefix:
+Route prefix:
 
 ```text
 /api/dashboard
@@ -1126,7 +1146,7 @@ The dashboard contract must reflect how this practice app actually runs in local
 | `QUEUE_CONNECTION=sync` on Render | No separate queue worker; CRM sync runs inline in the web request after ingest, so `pending` states are usually short-lived |
 | `POST /api/checkout/events` returns `404` in production | Hosted dashboard data comes from signed Foxy webhooks at `POST /api/foxy/webhooks`, not fixture replay |
 | Fixture receiver remains local/test-only | Rows with `ingest.channel = fixture_receiver` are expected in local verification; production rows should usually have `ingest.channel = foxy_webhook` |
-| Render free Postgres for middleware | Checkout and CRM sync rows persist across redeploys; this is the dashboard source of truth |
+| Render free Postgres for middleware | Checkout and CRM sync rows persist across service redeploys and are the dashboard source of truth, but the database expires under Render's free-database policy and has no managed backups or point-in-time recovery |
 | Render free WordPress SQLite is ephemeral | Campaign-site state is not dashboard source data; do not treat WordPress DB contents as integration status |
 
 Expose `crm_sync.hubspot_mode` in detail responses so support users can tell whether stored HubSpot ids came from the fake client or a live portal write.
@@ -1158,7 +1178,9 @@ See [`payment-safety-boundary.md`](payment-safety-boundary.md) for the project-w
 - Error messages exposed to the dashboard must remain redacted summaries safe for support display.
 - Manual retry actions must only target `failed`, `retryable`, or list-warning `succeeded` attempts and must not replay clean succeeded events.
 - Dashboard routes must not expose the local fixture receiver behavior as production ingest status.
-- Analytics vendor writes and alert-flag dashboards remain out of scope for this contract section. Integration step logs are defined in Section 7.
+- External analytics delivery, automated incident flags, and external
+  notification delivery are out of scope. Integration step logs are defined in
+  Section 7.
 
 ### Dashboard Payload Acceptance Criteria
 
@@ -1173,7 +1195,9 @@ Status: Contract defined. Browser producers are implemented in the WordPress the
 
 This contract defines the **event names and safe properties** for donation-journey analytics. It aligns browser-side GTM-style `dataLayer` events with server-side conversion events derived from stored checkout and CRM sync records.
 
-Production writes to Google Analytics, Meta Pixel, Meta Conversions API, or other vendors are **out of scope** for this section. Later issues emit or log events using this vocabulary only.
+Writes to Google Analytics, Meta Pixel, Meta Conversions API, or other external
+vendors are **out of scope**. The implemented browser and server producers use
+this vocabulary for local `dataLayer` events and stored server records only.
 
 Related docs:
 
@@ -1187,7 +1211,8 @@ Related docs:
 - Use one event name list across browser and server producers.
 - Tie journey events to `donation_attempt_id` when a checkout attempt exists.
 - Carry campaign attribution and safe donation metadata without payment secrets.
-- Support later consent-aware browser tracking (#43) and server-side conversion emission (#44).
+- Support the implemented consent-aware browser tracking and server-side
+  conversion records.
 
 ### Event Envelope
 
@@ -1234,7 +1259,8 @@ Event names match [`architecture.md`](architecture.md) Section 6.
 
 - **Browser** owns pre-checkout journey events (`PageView` through `InitiateCheckout`) and optional on-page confirmation surfaces.
 - **Server** is the source of truth for confirmed checkout outcomes and CRM sync results. When browser and server both emit `DonationCompleted` or `PaymentFailed`, they must use the same event name and the same `donation_attempt_id`, but each emission keeps its own `analytics_event_id`.
-- **Consent (#43):** browser events must not fire marketing tags until consent rules pass. This contract defines names and properties only; consent gating is implemented separately.
+- **Consent:** browser events must not fire marketing events until the implemented
+  consent rules pass.
 
 ### Mapping From Existing Contracts
 
@@ -1251,7 +1277,7 @@ Inspect browser metadata on [`front-page.html`](../wordpress/wp-content/themes/h
 
 ### Browser Example
 
-After consent checks pass (#43), a donation click should be representable as:
+After consent checks pass, a donation click is represented as:
 
 ```javascript
 window.dataLayer = window.dataLayer || [];
@@ -1435,4 +1461,4 @@ A completed donation may produce both `checkout_event_ingested` (step log) and `
 - Keep human-readable labels available for debugging and dashboard views.
 - Make each handoff inspectable during local development.
 - Prefer small, explicit payloads over large unstructured blobs.
-- Mark planned contracts as planned until implemented.
+- Label any future contract explicitly until its implementation ships.

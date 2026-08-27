@@ -2,7 +2,7 @@
   "name": "hungry-4-joy",
   "description": "Real-world demo of a lean nonprofit donation ecosystem.",
   "scripts": {
-    "build:wp-css": "sass wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css",
+    "build:wp-css": "sass --no-source-map wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css",
     "build:dashboard": "cd dashboard && npm run build",
     "check:fixtures": "jq empty examples/checkout-events/*.json",
     "check:diff": "git diff --check",
@@ -17,7 +17,7 @@
     "test:dashboard-auth": "cd dashboard && npm run test:auth",
     "test:fixtures": "cd middleware-api && php artisan test --filter=CheckoutEventFixtureReceiverTest",
     "test:middleware": "cd middleware-api && composer test",
-    "watch:wp-css": "sass --watch wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss:wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css"
+    "watch:wp-css": "sass --no-source-map --watch wordpress/wp-content/themes/hungry-4-joy/assets/scss/style.scss:wordpress/wp-content/themes/hungry-4-joy/assets/css/style.css"
   },
   "devDependencies": {
     "sass": "^1.99.0"

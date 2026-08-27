@@ -15,8 +15,8 @@ Donor / visitor
 Laravel middleware/API
   -> application database
   -> synchronous queue jobs (current hosted demo)
-  -> CRM / Marketing
-  -> marketing analytics
+  -> HubSpot CRM
+  -> local browser/server conversion records
   -> observability/logging
   -> React status dashboard
 
@@ -30,15 +30,15 @@ WordPress is the first piece of the system.
 
 It acts as the public-facing nonprofit website where visitors discover campaigns and begin the donation flow.
 
-Implementation direction:
+Implemented structure:
 
-- Use a Twenty Twenty-Five child theme.
-- Use WordPress block editor patterns for simple campaign and donation layouts.
-- Use Sass/SCSS for child theme styling, compiled into the theme CSS that WordPress enqueues.
-- Add a small custom plugin only where needed for donation/campaign metadata and checkout handoff behavior.
-- Avoid a heavy page-builder dependency in the MVP so the project demonstrates WordPress fundamentals, theme structure, hooks, and maintainable PHP.
+- A Twenty Twenty-Five child theme supplies repository-owned presentation.
+- WordPress block patterns define campaign and donation layouts.
+- Sass/SCSS compiles into the child-theme CSS that WordPress enqueues.
+- A small custom plugin owns donation metadata and checkout handoff behavior.
+- The demo avoids a heavy page-builder dependency.
 
-MVP responsibilities:
+Responsibilities:
 
 - donation landing pages
 - project/campaign pages
@@ -62,7 +62,9 @@ What this demonstrates:
 
 The checkout layer uses Foxy.io / FoxyCart.
 
-Foxy.io / FoxyCart is the hosted cart/checkout layer. A separate payment gateway or test payment setup sits behind it. Local development can use simulated transaction events before connecting the full checkout workflow.
+Foxy.io / FoxyCart is the hosted cart/checkout layer with a sandbox payment
+gateway behind it. Local development uses tracked simulated transaction events;
+the hosted demo also receives signed Foxy webhooks.
 
 PCI boundary:
 
@@ -71,12 +73,12 @@ PCI boundary:
 - Payment authorization, declines, and sensitive payment method handling belong to FoxyCart and the connected test payment setup or gateway.
 - The detailed payment safety boundary is documented in [`payment-safety-boundary.md`](payment-safety-boundary.md).
 
-MVP event examples:
+Implemented event types:
 
 - `donation.created`
 - `payment.failed`
 
-Subscription and refund workflows are out of scope for the current milestone. They can be modeled later if the public site adds recurring donation controls or refund reconciliation work.
+Subscription and refund workflows are out of scope for this portfolio demo.
 
 What this demonstrates:
 
@@ -117,16 +119,18 @@ What this demonstrates:
 
 ## 4. Database
 
-The database stores the local integration state.
+The application database stores normalized integration state in five
+project-owned tables:
 
-MVP data areas:
+- `checkout_events` — safe normalized checkout/webhook records
+- `checkout_handoffs` — click-time attempt registration and reconciliation state
+- `crm_sync_attempts` — HubSpot status, safe references, warnings, errors, and
+  retry metadata
+- `server_analytics_events` — stored server conversion records
+- `integration_step_logs` — safe attempt-level pipeline chronology
 
-- donors
-- donations
-- campaigns
-- webhook events
-- CRM sync attempts
-- integration failures
+Donor, donation, campaign, webhook, and failure details are fields on these
+records; the application does not maintain separate tables for those concepts.
 
 What this demonstrates:
 
@@ -138,23 +142,21 @@ What this demonstrates:
 
 ## 5. CRM Integration
 
-The selected CRM and marketing-platform target is HubSpot.
+The selected CRM target is HubSpot.
 
-MVP responsibilities:
+Responsibilities:
 
-- find or create a donor/contact
-- send donation details to HubSpot
-- record sync success or failure
-- handle duplicate contacts
-- add or update campaign attribution
-- add donor to a campaign list/segment or mark follow-up status
-- retry failed syncs safely
+- upsert a Contact by donor email
+- create one donation Deal and associate it to the Contact
+- map safe donation and campaign attribution fields onto the Deal
+- enroll the Contact in one configured static list
+- store safe success, warning, error, and retry state locally
+- allow bounded manual retries while preventing duplicate clean-success work
 
 What this demonstrates:
 
 - CRM API integration
-- HubSpot forms, contacts, lists, and marketing follow-up concepts
-- contact/donor records
+- HubSpot Contacts, Deals, associations, and static lists
 - field mapping
 - duplicate handling
 - sync troubleshooting
@@ -167,12 +169,14 @@ Event names, safe properties, browser/server responsibilities, and debugging not
 
 This is separate from error monitoring.
 
-Implementation direction:
+Current implementation:
 
-- Use GTM-style event naming and a simple local `dataLayer` pattern.
-- Model browser-side Meta Pixel-style events for the donation journey.
-- Model server-side Meta Conversions API-style events after Laravel receives confirmed FoxyCart donation events.
-- Respect consent/cookie state before firing browser-side marketing tags.
+- Uses GTM-style event names in a local `dataLayer`.
+- Models browser-side marketing events for the donation journey.
+- Stores server conversion records after Laravel receives confirmed FoxyCart
+  donation events.
+- Respects consent/cookie state before firing browser-side marketing events.
+- Does not deliver events to external analytics providers.
 
 Example events:
 
@@ -200,7 +204,7 @@ What this demonstrates:
 
 Observability tracks whether the system is healthy, where failures happen, and what a developer should check during production-style support.
 
-MVP responsibilities:
+Responsibilities:
 
 - Laravel logs
 - `integration_step_logs` pipeline step records (see `docs/contracts.md` Section 7)
@@ -218,7 +222,7 @@ Optional later tools:
 - scheduled backup/restore check notes
 - access-control review checklist
 
-MVP boundary:
+Current boundary:
 
 - The admin dashboard uses application-owned tables as the source of truth for donation, CRM sync, and integration step status.
 - OpenTelemetry is an optional later layer for developer observability, not the business/integration dashboard itself.
@@ -227,7 +231,7 @@ MVP boundary:
 What this demonstrates:
 
 - production support
-- monitoring, logging, and alerting
+- monitoring and logging
 - incident debugging
 - exception handling
 - webhook and API troubleshooting
@@ -243,12 +247,13 @@ The dashboard reads from application tables: stored checkout events and CRM sync
 
 Current implementation:
 
-- Use the React/Vite dashboard front end.
-- Use Tailwind CSS for dashboard UI styling.
-- Use Laravel as the API and integration backend.
-- Start with the simplest useful dashboard; avoid turning the dashboard into a full admin product before the integration flow works.
+- React/Vite provides the dashboard front end.
+- Tailwind CSS provides dashboard UI styling.
+- Laravel provides the protected API and integration backend.
+- A seeded notification presentation remains in the portfolio UI. Automated
+  incident flags and external notification delivery are out of scope.
 
-MVP responsibilities:
+Responsibilities:
 
 - view checkout events and webhook ingest path
 - view CRM sync status and failure detail
@@ -277,16 +282,16 @@ What this demonstrates:
 
 ## 9. CI/CD and Code Quality
 
-GitHub and GitHub Actions should provide the public project workflow.
+GitHub and GitHub Actions provide the public project workflow.
 
-MVP responsibilities:
+Responsibilities:
 
 - run automated checks on pull requests or pushes
 - install PHP dependencies with Composer
 - run Laravel tests with PHPUnit or Pest
 - run Laravel Pint for PHP formatting
 - optionally run PHPStan or Larastan for static analysis after the core MVP stabilizes
-- run Sass/SCSS build checks for the WordPress child theme when the theme styling workflow is added
+- run Sass/SCSS build reproducibility checks for the WordPress child theme
 - run JavaScript/React/Vite/Tailwind lint, typecheck, and build checks for the dashboard
 - keep environment variables out of git
 
@@ -308,9 +313,9 @@ Visitor views WordPress campaign page
   -> FoxyCart creates transaction/webhook event
   -> Laravel receives, validates, and stores event
   -> synchronous queue job processes donation in the middleware request
-  -> donor/donation details sync to HubSpot
-  -> HubSpot campaign list/follow-up status is updated
-  -> marketing analytics event is logged
+  -> donor email upserts a Contact; one donation Deal is created and associated
+  -> Contact is enrolled in the configured static list
+  -> browser and server conversion events are recorded locally
   -> admin dashboard shows success/failure from application tables
 ```
 
@@ -321,46 +326,12 @@ The architecture supports several operational scenarios:
 - failed checkout
 - missing HubSpot gift
 - duplicate webhook event
-- campaign launch
 - HubSpot field mapping error
 - payment failure
 - failed retry job
 - reconciliation mismatch
 - analytics consent or duplicate-event issue
 - campaign page quality issue
-- repeated failure alert / incident review
-
-### Campaign Launch With HubSpot
-
-HubSpot is especially useful for the campaign-launch workflow.
-
-Example flow:
-
-```text
-WordPress campaign page
-  -> HubSpot form or contact capture
-  -> FoxyCart checkout metadata
-  -> Laravel webhook processing
-  -> HubSpot contact/activity/deal update with donation amount
-  -> HubSpot campaign list or segment
-  -> email follow-up or simulated follow-up status
-  -> analytics conversion event
-```
-
-What this demonstrates:
-
-- creating a campaign page
-- capturing or updating a HubSpot contact
-- preserving campaign attribution
-- mapping donation metadata into HubSpot
-- tracking donor and donation amount after FoxyCart confirms the donation
-- enrolling or marking the donor for campaign-related email follow-up
-- debugging CRM and marketing data flow
-
-Feasibility note:
-
-- If the HubSpot free account supports list membership, forms, and contact properties but not full automated workflows, the MVP can still model the workflow by updating contact properties, adding the donor to a campaign list/segment, and recording a `follow_up_status`.
-- If automated email workflows are available, the donor can be enrolled in an actual campaign follow-up workflow after the Laravel middleware syncs the donation details.
 
 ### Failed Checkout
 
@@ -379,7 +350,8 @@ What this demonstrates:
 
 Scenario:
 
-- FoxyCart confirms the donation, but HubSpot does not show the expected contact/activity/deal or follow-up status.
+- FoxyCart confirms the donation, but HubSpot does not show the expected Contact,
+  donation Deal, Contact-to-Deal association, or static-list membership.
 
 What this demonstrates:
 
@@ -464,18 +436,6 @@ What this demonstrates:
 - mobile layout review
 - accessibility and SEO hygiene
 - front-end troubleshooting
-
-### Repeated Failure Alert / Incident Review
-
-Scenario:
-
-- Webhook validation, queue processing, or HubSpot sync fails repeatedly and triggers an alert flag.
-
-What this demonstrates:
-
-- reviewing CRM sync errors and CRM sync issues in the dashboard
-- identifying cause from stored error summaries
-- verifying recovery after manual retry
 
 ## Deployment Direction
 

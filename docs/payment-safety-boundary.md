@@ -4,7 +4,7 @@ This document keeps the Hungry-4-Joy demo clear about which layer owns donation 
 
 It is not a full PCI compliance program. The practical goal is to keep raw payment details and production checkout writes out of this repo while still modeling the safe data a donation workflow needs.
 
-## Current Milestone Scope
+## Current boundary
 
 The current repo connects one-time donation buttons to a Foxy demo cart handoff, verifies local checkout event fixtures through the Laravel middleware receiver, and implements a signed Foxy webhook receiver for adapted transaction events.
 
@@ -26,10 +26,10 @@ Out of scope:
 - Production payment writes.
 - Raw payment method collection.
 - Subscription, recurring gift, or refund payloads.
-- Admin dashboard UI and dashboard API routes.
 - Storing real payment credentials, provider secrets, or webhook secrets in committed source files, docs, fixtures, logs, config examples, or database snapshots.
 - Provider API calls, API keys, access tokens, authorization headers, or committed provider/webhook secrets.
-- Production activation without environment-managed hosted secrets and provider test verification.
+- Hosted provider changes without environment-managed secrets, explicit
+  authorization, and provider-test verification.
 
 ## System Ownership
 

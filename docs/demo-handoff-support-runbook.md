@@ -11,8 +11,8 @@ commands and detailed procedures rather than copying those procedures here.
 | --- | --- | --- |
 | Portfolio visitor | Open the hosted [campaign site](https://hungry-4-joy-wordpress.onrender.com), then explore the dashboard's **Seeded** view | No credentials. Do not interpret seeded records or the notification preview as live operations. |
 | Local evaluator | Follow Tier 1 of the [MVP smoke-test checklist](mvp-smoke-test-checklist.md) | Local SQLite, tracked fictional fixtures, fake HubSpot, and no provider writes. |
-| Support operator | Use the [dashboard verification walkthrough](dashboard-verification-walkthrough.md) and [access-control boundary](access-control.md) | Live API data and actions require the privately supplied operator token. Provider mutations require separate authorization. |
-| Maintainer | Start with [architecture](architecture.md), [contracts](contracts.md), and [workflow](workflow.md), then run the smoke-test release gate | Repository and CI access does not imply access to Render, Foxy, HubSpot, or operator credentials. |
+| Support operator | Use the [dashboard setup](../dashboard/README.md) and [access-control boundary](access-control.md) | Live API data and actions require the privately supplied operator token. Provider mutations require separate authorization. |
+| Maintainer | Start with [architecture](architecture.md), [contracts](contracts.md), and the [smoke-test checklist](mvp-smoke-test-checklist.md) | Repository and CI access does not imply access to Render, Foxy, HubSpot, or operator credentials. |
 | Deployment or recovery administrator | Use the [Render deployment guide](render-deployment.md) and [backup/restore/rollback runbook](backup-restore-rollback.md) | Runtime configuration, deploys, database recovery, and secret rotation require explicit authority. |
 
 Roles, credential owners, public routes, and protected routes are authoritative
@@ -40,7 +40,7 @@ the [checkout fixtures](../examples/checkout-events/), the
 [`dashboard/`](../dashboard/) React app. Field ownership and status vocabulary
 come from [contracts.md](contracts.md); the Foxy handoff, webhook, and
 reconciliation rules come from
-[foxy-middleware-connection-plan.md](foxy-middleware-connection-plan.md).
+[Foxy integration guide](foxy-integration.md).
 
 Important current behavior:
 
@@ -64,9 +64,9 @@ Use these documents as the single sources of truth:
 | --- | --- |
 | Install, local WordPress/DDEV, middleware, dashboard, and CI entry points | [Repository README](../README.md) |
 | Required release rehearsal and exact safe commands | [MVP smoke-test checklist](mvp-smoke-test-checklist.md) |
-| Campaign fields and fixture meaning | [Checkout event verification](checkout-event-verification.md) |
-| Receiver replay and validation | [Middleware receiver verification](middleware-receiver-verification.md) |
-| Seeded and local/hosted dashboard inspection | [Dashboard verification walkthrough](dashboard-verification-walkthrough.md) |
+| Campaign fields and fixture meaning | [Data contracts](contracts.md) and [checkout fixtures](../examples/checkout-events/README.md) |
+| Receiver replay and validation | [Middleware setup](../middleware-api/README.md) |
+| Seeded and local/hosted dashboard inspection | [Dashboard setup](../dashboard/README.md) |
 | Payment and PCI-safe data boundary | [Payment safety boundary](payment-safety-boundary.md) |
 | Runtime variables and hosted deployment | [Render deployment](render-deployment.md) |
 | Tracked-content and secret-safety checks | [Repository safety audit](repository-safety-audit.md) |
@@ -92,8 +92,8 @@ are explicitly labeled; do not turn a local rehearsal into an external call.
    observability. Explain that the notification panel is a visual preview, not
    a delivered alert feed.
 5. Close with the safe operating boundaries: signed Foxy webhook, protected
-   Live API/actions, fake-by-default CRM, stored-only external analytics, and
-   explicit authorization for hosted mutations.
+   Live API/actions, fake-by-default CRM, stored analytics with no external
+   delivery, and explicit authorization for hosted mutations.
 
 The safe local evidence for this narrative is defined in the
 [smoke-test checklist](mvp-smoke-test-checklist.md). A hosted checkout, webhook
@@ -235,9 +235,8 @@ accessible.
 - Browser analytics use a consent-aware local `dataLayer`; server analytics are
   stored in the application database. No external analytics sender is
   implemented, even if the provider feature flag is enabled.
-- The notification UI is seeded/mock presentation. Repeated-failure incident
-  flags and external alert delivery from [issue #46](https://github.com/ChristopherMedrano/hungry-4-joy/issues/46)
-  are not implemented.
+- The notification UI is a seeded visual preview. Automated incident flags and
+  external notification delivery are out of scope.
 - There is no background worker or cron. CRM jobs are synchronous; automatic
   retry and scheduled reconciliation are unavailable. Reconcile and sweep are
   bounded operator actions that can call Foxy when configured.
@@ -246,8 +245,8 @@ accessible.
 
 ## Safe extension sequence
 
-1. Update [contracts.md](contracts.md) and the relevant architecture/workflow
-   boundary before changing a cross-system field, status, or ownership rule.
+1. Update [contracts.md](contracts.md) and the relevant architecture boundary
+   before changing a cross-system field, status, or ownership rule.
 2. Add fictional `@example.test` fixtures and focused fake/local tests first.
    Never copy production/provider payloads into the repository.
 3. Preserve idempotency, the canonical attempt identity, webhook signature,
@@ -277,8 +276,5 @@ accessible.
 - [ ] Known unavailable features and follow-up owners are acknowledged rather
   than represented as active.
 
-Project tracking: [MVP 7 milestone](https://github.com/ChristopherMedrano/hungry-4-joy/milestone/8),
-[launch-hardening epic #48](https://github.com/ChristopherMedrano/hungry-4-joy/issues/48),
-[smoke checklist #52](https://github.com/ChristopherMedrano/hungry-4-joy/issues/52),
-this [handoff issue #53](https://github.com/ChristopherMedrano/hungry-4-joy/issues/53),
-and [final repository review #54](https://github.com/ChristopherMedrano/hungry-4-joy/issues/54).
+Project tracking: [MVP 7 milestone](https://github.com/ChristopherMedrano/hungry-4-joy/milestone/8)
+and [launch-hardening epic #48](https://github.com/ChristopherMedrano/hungry-4-joy/issues/48).
