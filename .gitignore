@@ -5,6 +5,11 @@ ai/
 docs/superpowers/
 .archive/
 
+# Private/local study notes and worktrees
+/STUDY_ROADMAP.md
+/PROJECT_TRACKER.local.md
+.worktrees/
+
 # Local secrets (never commit)
 .env
 .env.*
