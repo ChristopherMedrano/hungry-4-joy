@@ -26,7 +26,7 @@ WordPress campaign button
   -> generates donation_attempt_id and registers a public handoff
   -> opens the Foxy cart with safe campaign/donation metadata
   -> Foxy owns payment data and sends a signed transaction webhook
-  -> Laravel validates, normalizes, deduplicates, and stores the event in Postgres
+  -> Laravel validates, normalizes, deduplicates, and stores the event in SQLite
   -> eligible completed donations run the HubSpot sync job inline
   -> browser code emits consent-aware dataLayer events
   -> Laravel stores server analytics and integration-step records
@@ -225,8 +225,9 @@ accessible.
 - The WordPress Render filesystem is ephemeral. Runtime admin edits, SQLite
   content, and uploads can disappear; repository-owned seed/theme state is the
   recovery source.
-- Free Render Postgres expires and has no managed backups or point-in-time
-  recovery. Manual off-repository dumps and restore drills are not automated.
+- The middleware Render filesystem is ephemeral SQLite. Checkout, handoff, CRM,
+  and analytics rows disappear on redeploy, restart, or spin-down. Startup
+  migrates an empty schema. There is no hosted database backup.
 - The public dashboard supports a credential-free Seeded preview. Live data,
   detailed readiness, retry, reconcile, and sweep actions require the shared
   operator bearer token. SSO and multi-user RBAC are not implemented.
@@ -263,7 +264,7 @@ accessible.
 
 - [ ] Repository, default branch, current commit, open milestones, and CI owners
   are identified.
-- [ ] WordPress, middleware, dashboard, and Postgres service owners are known;
+- [ ] WordPress, middleware, and dashboard service owners are known;
   no secret values are copied into the handoff record.
 - [ ] Foxy webhook/hAPI, HubSpot private-app, operator-token, database, and
   WordPress-admin credential owners and rotation paths are known.
@@ -271,8 +272,8 @@ accessible.
   API mode and can collect redacted evidence.
 - [ ] Tier 1 has been rehearsed from the current commit; manual and Tier 2 steps
   are recorded as passed, failed, not run, or not authorized.
-- [ ] Database expiration, latest off-repository dump status, rollback owner,
-  and known recovery limitations are recorded privately.
+- [ ] Rollback owner and the ephemeral SQLite recovery limitation are recorded
+  privately.
 - [ ] Known unavailable features and follow-up owners are acknowledged rather
   than represented as active.
 

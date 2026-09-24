@@ -443,25 +443,25 @@ Local WordPress development uses DDEV.
 
 In local development, DDEV runs the WordPress site, while the Laravel middleware/API can run separately with `php artisan serve` and local sqlite storage. This keeps the MVP reproducible and avoids depending on hosted infrastructure while the system is still changing quickly.
 
-The hosted demo currently runs four Render resources defined in `render.yaml`:
+The hosted demo currently runs three Render web services defined in `render.yaml`:
 
 - `hungry-4-joy-wordpress`, a Docker web service with intentionally ephemeral
   SQLite, uploads, and administrator edits; startup reseeds repository-owned
   demo content;
-- `hungry-4-joy-middleware`, a Docker web service connected to
-  `hungry-4-joy-middleware-db`, a free Render Postgres database;
+- `hungry-4-joy-middleware`, a Docker web service with intentionally ephemeral
+  SQLite for checkout events, handoffs, CRM sync, analytics, and the database
+  cache; startup migrates an empty schema;
 - `hungry-4-joy-dashboard`, a Docker web service that serves the Vite build
   through nginx and proxies `/api` requests to the middleware; and
 - no background worker or Render cron service. Queue jobs use the `sync` driver,
   and scheduled handoff reconciliation is disabled by default.
 
-Free Render Postgres expires after 30 days, has a 14-day paid-upgrade grace
-period, and provides no managed backups or point-in-time recovery. WordPress's
-ephemeral runtime and the dashboard's static build are recovered from Git, not
-from runtime backups. See [`render-deployment.md`](render-deployment.md) for
-deployment verification and
-[`backup-restore-rollback.md`](backup-restore-rollback.md) for ownership,
-database preservation, and service rollback procedures.
+Runtime rows on both application services disappear when the free Render
+filesystem is replaced. Recovery is a redeploy from Git, which reseeds WordPress
+and recreates the middleware schema. See [`render-deployment.md`](render-deployment.md)
+for deployment verification and
+[`backup-restore-rollback.md`](backup-restore-rollback.md) for ownership and
+service rollback procedures.
 
 ## Guiding Principle
 

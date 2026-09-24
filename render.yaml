@@ -60,11 +60,9 @@ services:
       - key: FOXY_STORE_ID
         sync: false
       - key: DB_CONNECTION
-        value: pgsql
-      - key: DB_URL
-        fromDatabase:
-          name: hungry-4-joy-middleware-db
-          property: connectionString
+        value: sqlite
+      - key: DB_DATABASE
+        value: /tmp/hungry-4-joy-middleware/demo.sqlite
       - key: LOG_CHANNEL
         value: stderr
       - key: CACHE_STORE
@@ -94,10 +92,3 @@ services:
           envVarKey: RENDER_EXTERNAL_URL
       - key: PORT
         value: "8080"
-
-databases:
-  - name: hungry-4-joy-middleware-db
-    plan: free
-    databaseName: hungry_4_joy_middleware
-    user: hungry_4_joy
-    ipAllowList: []

@@ -1146,7 +1146,7 @@ The dashboard contract must reflect how this practice app actually runs in local
 | `QUEUE_CONNECTION=sync` on Render | No separate queue worker; CRM sync runs inline in the web request after ingest, so `pending` states are usually short-lived |
 | `POST /api/checkout/events` returns `404` in production | Hosted dashboard data comes from signed Foxy webhooks at `POST /api/foxy/webhooks`, not fixture replay |
 | Fixture receiver remains local/test-only | Rows with `ingest.channel = fixture_receiver` are expected in local verification; production rows should usually have `ingest.channel = foxy_webhook` |
-| Render free Postgres for middleware | Checkout and CRM sync rows persist across service redeploys and are the dashboard source of truth, but the database expires under Render's free-database policy and has no managed backups or point-in-time recovery |
+| Render free middleware SQLite is ephemeral | Checkout and CRM sync rows are the dashboard source of truth only while that container filesystem exists; redeploy, restart, and spin-down start from an empty migrated schema |
 | Render free WordPress SQLite is ephemeral | Campaign-site state is not dashboard source data; do not treat WordPress DB contents as integration status |
 
 Expose `crm_sync.hubspot_mode` in detail responses so support users can tell whether stored HubSpot ids came from the fake client or a live portal write.

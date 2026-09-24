@@ -51,7 +51,6 @@ The middleware service is defined in the root [`render.yaml`](../render.yaml) Bl
 Render resources:
 
 - Web service: `hungry-4-joy-middleware`
-- Postgres database: `hungry-4-joy-middleware-db`
 - Runtime: Docker
 - Docker root: `middleware-api/`
 - Health check (liveness): `/api/health`
@@ -72,19 +71,9 @@ Set these secrets during Blueprint creation:
 
 WordPress receives `MIDDLEWARE_API_URL` from the middleware service URL via Blueprint wiring so browser handoff registration can reach `POST /api/checkout/handoffs`.
 
-Render injects the Postgres connection string into `DB_URL` from the Blueprint database reference.
+The middleware uses SQLite at `/tmp/hungry-4-joy-middleware/demo.sqlite`. Render free web services have an ephemeral filesystem, so checkout events, handoffs, CRM sync rows, analytics rows, and the database cache disappear on redeploy, restart, or spin-down. Startup creates the file if it is missing and runs `php artisan migrate --force`, so the schema comes back empty and ready for a new demo. Do not set `DB_URL` on this service. The start script unsets `DB_URL` before migrating so a leftover connection string cannot override `DB_DATABASE`. Remove any leftover `DB_URL` from the Render service so a shell session does not keep using the retired database.
 
-The Blueprint currently selects the free Postgres plan. Render documents that a
-free database expires 30 days after creation. At expiration it becomes
-inaccessible; it can be recovered by upgrading during a 14-day grace period,
-after which Render deletes the database and its data. Free Postgres has no
-Render-managed backups, logical exports, or point-in-time recovery. Create a
-manual `pg_dump` while the database is accessible if its demo history must be
-preserved. Never put the connection URL, dump, or donor data in Git or CI.
-
-See [`backup-restore-rollback.md`](backup-restore-rollback.md) for the
-credential-safe backup example, isolated restore validation, expiry response,
-and the distinction between service rollback and database recovery.
+See [`backup-restore-rollback.md`](backup-restore-rollback.md) for what a service rollback can and cannot recover.
 
 Reconciliation for the hosted demo is **manual by default**. Use the dashboard **Checkout attempts** tab buttons **Reconcile open handoffs** and **Sweep unfed transactions**, or run `php artisan checkout:reconcile-handoffs` from a shell during verification.
 
@@ -221,7 +210,6 @@ CI does not deploy or synchronize the Render Blueprint, change Render environmen
 
 - Render Laravel Docker guide: https://render.com/docs/deploy-php-laravel-docker
 - Render free service limitations: https://render.com/docs/free
-- Render Postgres recovery and backups: https://render.com/docs/postgresql-backups
 - Render service rollbacks: https://render.com/docs/rollbacks
 - Render WordPress guide: https://render.com/docs/deploy-wordpress
 - Render Blueprint reference: https://render.com/docs/blueprint-spec
