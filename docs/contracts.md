@@ -741,12 +741,13 @@ Route prefix:
 
 Implemented Laravel routes and the React dashboard consume these payload shapes.
 
-Every route under `/api/dashboard` requires the operator bearer token described in [`access-control.md`](access-control.md). The same protection applies to direct middleware calls and dashboard-proxied calls; CORS is not authorization.
+Dashboard `GET` routes and `GET /api/health/ready` are public reads. `GET /api/dashboard/operator/session` and the reconcile, sweep, and CRM retry `POST` routes require the operator bearer token described in [`access-control.md`](access-control.md). The same protection applies to direct middleware calls and dashboard-proxied calls; CORS is not authorization.
 
 ### API Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| `GET` | `/api/dashboard/operator/session` | Confirms the operator token before enabling reconcile, sweep, and CRM retry |
 | `GET` | `/api/dashboard/events` | Paginated list of checkout events with summary CRM sync state |
 | `GET` | `/api/dashboard/events/{checkout_event_id}` | Full detail for one stored checkout event |
 | `GET` | `/api/dashboard/events/by-attempt/{donation_attempt_id}` | Composite lookup: handoff + checkout event for one attempt id |
@@ -768,11 +769,11 @@ These routes are outside `/api/dashboard` but are consumed by the dashboard **Sy
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Liveness probe only — process responds. Render deploy health check uses this path. |
-| `GET` | `/api/health/ready` | Operator-protected readiness and integration configuration flags for ops UI |
+| `GET` | `/api/health/ready` | Public readiness and integration configuration flags for the ops UI |
 
 **`GET /api/health/ready`**
 
-Requires the operator bearer token. Basic unauthenticated deploy health checks use `GET /api/health` instead.
+Public read for the dashboard system status strip. Basic deploy health checks use `GET /api/health` instead.
 
 Returns `200` when the database is reachable; `503` when the database check fails. Overall `status` may still be `degraded` with HTTP `200` when optional integrations are not configured.
 

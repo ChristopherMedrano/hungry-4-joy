@@ -12,6 +12,7 @@ import {
   fetchHandoffReconcileOpen,
   fetchHandoffSweepUnfed,
   fetchHealthReady,
+  verifyOperatorSession,
   dashboardAccessGeneration,
   isCurrentDashboardAccessGeneration,
   isDashboardRequestCancelled,
@@ -155,7 +156,8 @@ function App() {
 
   const isSeededView = viewState === 'seeded'
   const isApiMode = isApiDataMode(viewState)
-  const isApiView = isApiMode && operatorUnlocked
+  const isApiView = isApiMode
+  const operatorActionsEnabled = isApiMode && operatorUnlocked
 
   const seededEvents = useMemo(
     () => filterEvents(seededDashboardEvents, filters),
@@ -193,10 +195,14 @@ function App() {
   const analyticsPagination = usePagination(analyticsTotalCount)
   const attemptsPagination = usePagination(attemptsTotalCount)
 
-  function lockOperatorAccess(error: string | null = null): void {
+  function revokeOperatorAccess(error: string | null = null): void {
     setDashboardOperatorToken(null)
     setOperatorUnlocked(false)
     setOperatorAuthError(error)
+  }
+
+  function lockOperatorAccess(error: string | null = null): void {
+    revokeOperatorAccess(error)
     setIsEventModalOpen(false)
     setAttemptTraceModal(closeAttemptTraceModal())
     setIsAnalyticsModalOpen(false)
@@ -219,9 +225,31 @@ function App() {
     setAttemptsTotal(0)
   }
 
+  async function handleOperatorUnlock(token: string): Promise<void> {
+    setDashboardOperatorToken(token)
+    setOperatorAuthError(null)
+
+    try {
+      await verifyOperatorSession()
+      setOperatorUnlocked(true)
+    } catch (error) {
+      if (isDashboardRequestCancelled(error)) {
+        return
+      }
+
+      setOperatorAuthError(
+        error instanceof Error ? error.message : 'Operator access was not accepted.',
+      )
+      setDashboardOperatorToken(null)
+      setOperatorUnlocked(false)
+    }
+  }
+
   useEffect(() => {
     setOperatorUnauthorizedHandler(() => {
-      lockOperatorAccess('Operator access was not accepted. Enter the token again.')
+      revokeOperatorAccess('Operator access was not accepted. Enter the token again.')
+      setReloadToken((current) => current + 1)
+      setHealthReloadToken((current) => current + 1)
     })
 
     return () => setOperatorUnauthorizedHandler(null)
@@ -1107,15 +1135,6 @@ function App() {
           </optgroup>
         </select>
       </label>
-      {operatorUnlocked ? (
-        <button
-          type="button"
-          onClick={() => lockOperatorAccess()}
-          className="rounded-md border border-slate-700 px-2.5 py-1.5 text-sm text-slate-300 hover:border-slate-600 hover:text-white"
-        >
-          Lock
-        </button>
-      ) : null}
     </div>
   )
 
@@ -1299,7 +1318,7 @@ function App() {
             onOpenEvent={openEventFromCrmSyncIssues}
             onRetry={handleCrmSyncIssueRetry}
             retryingEventId={crmRetryingEventId}
-            retryDisabled={isSeededView}
+            retryDisabled={!operatorActionsEnabled}
             embedded
           />
           <TablePagination
@@ -1351,7 +1370,12 @@ function App() {
               onSweepUnfed={handleSweepUnfedTransactions}
               isReconcilingOpen={isReconcilingOpenHandoffs}
               isSweepingUnfed={isSweepingUnfedTransactions}
-              batchActionsDisabled={isSeededView}
+              batchActionsDisabled={!operatorActionsEnabled}
+              batchActionsMessage={
+                isSeededView
+                  ? 'Bulk reconcile actions are available in Live API view.'
+                  : 'Unlock operator actions to reconcile or sweep.'
+              }
               batchSummary={handoffBatchSummary}
               batchSummaryKind={handoffBatchSummaryKind}
               batchError={handoffBatchError}
@@ -1386,7 +1410,12 @@ function App() {
               onSweepUnfed={handleSweepUnfedTransactions}
               isReconcilingOpen={isReconcilingOpenHandoffs}
               isSweepingUnfed={isSweepingUnfedTransactions}
-              batchActionsDisabled={isSeededView}
+              batchActionsDisabled={!operatorActionsEnabled}
+              batchActionsMessage={
+                isSeededView
+                  ? 'Bulk reconcile actions are available in Live API view.'
+                  : 'Unlock operator actions to reconcile or sweep.'
+              }
               batchSummary={handoffBatchSummary}
               batchSummaryKind={handoffBatchSummaryKind}
               batchError={handoffBatchError}
@@ -1460,28 +1489,6 @@ function App() {
   const displayAttemptTraceError = isSeededView ? null : attemptTraceError
   const displayHandoffReconcileError = isSeededView ? null : handoffReconcileError
 
-  if (isApiMode && !operatorUnlocked) {
-    return (
-      <Layout
-        previewControl={previewControl}
-        dataMode={viewState}
-        activeSection={dashboardSection}
-        onSectionChange={handleDashboardSectionChange}
-      >
-        <OperatorUnlock
-          error={operatorAuthError}
-          onUnlock={(token) => {
-            setDashboardOperatorToken(token)
-            setOperatorAuthError(null)
-            setOperatorUnlocked(true)
-            setReloadToken((current) => current + 1)
-            setHealthReloadToken((current) => current + 1)
-          }}
-        />
-      </Layout>
-    )
-  }
-
   return (
     <Layout
       previewControl={previewControl}
@@ -1553,7 +1560,7 @@ function App() {
                 : undefined
             }
             onHandoffReconcile={
-              isSeededView || !selectedDetail?.donation_attempt_id
+              !isApiMode || !selectedDetail?.donation_attempt_id
                 ? undefined
                 : async () => {
                     await handleHandoffReconcile(selectedDetail.donation_attempt_id!)
@@ -1561,7 +1568,7 @@ function App() {
             }
             isHandoffReconciling={isHandoffReconciling}
             handoffReconcileError={handoffReconcileError}
-            handoffReconcileDisabled={isSeededView}
+            handoffReconcileDisabled={!operatorActionsEnabled}
           />
         )}
       </Modal>
@@ -1588,7 +1595,7 @@ function App() {
             }
             isReconciling={isHandoffReconciling}
             reconcileError={displayHandoffReconcileError}
-            reconcileDisabled={isSeededView}
+            reconcileDisabled={!operatorActionsEnabled}
             onOpenCrmSyncIssues={
               displayAttemptTrace?.checkout_event?.donation_attempt_id
                 ? () => {
@@ -1619,6 +1626,16 @@ function App() {
           <AnalyticsEventDetailPanel event={selectedAnalyticsDetail} embedded />
         )}
       </Modal>
+      {isApiMode ? (
+        <OperatorUnlock
+          unlocked={operatorUnlocked}
+          error={operatorAuthError}
+          onUnlock={(token) => {
+            void handleOperatorUnlock(token)
+          }}
+          onLock={() => revokeOperatorAccess()}
+        />
+      ) : null}
     </Layout>
   )
 }

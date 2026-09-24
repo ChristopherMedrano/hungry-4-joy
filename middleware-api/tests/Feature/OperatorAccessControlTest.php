@@ -24,9 +24,8 @@ class OperatorAccessControlTest extends TestCase
     public function test_protected_route_families_reject_missing_and_invalid_credentials_generically(): void
     {
         foreach ([
-            ['GET', '/api/dashboard/events'],
+            ['GET', '/api/dashboard/operator/session'],
             ['POST', '/api/checkout/handoffs/reconcile'],
-            ['GET', '/api/health/ready'],
         ] as [$method, $uri]) {
             $missing = $this->withoutHeader('Authorization')->json($method, $uri);
             $missing->assertUnauthorized()
@@ -45,9 +44,13 @@ class OperatorAccessControlTest extends TestCase
 
     public function test_valid_credentials_preserve_each_protected_route_family(): void
     {
-        $this->getJson('/api/dashboard/events')->assertOk();
-        $this->getJson('/api/health/ready')->assertStatus(200);
-        $this->postJson('/api/checkout/handoffs/reconcile', [])
+        $this->withoutHeader('Authorization')->getJson('/api/dashboard/events')->assertOk();
+        $this->withoutHeader('Authorization')->getJson('/api/health/ready')->assertStatus(200);
+        $this->withToken('test-dashboard-operator-token')
+            ->getJson('/api/dashboard/operator/session')
+            ->assertOk();
+        $this->withToken('test-dashboard-operator-token')
+            ->postJson('/api/checkout/handoffs/reconcile', [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('donation_attempt_id');
     }
@@ -57,7 +60,7 @@ class OperatorAccessControlTest extends TestCase
         config(['services.dashboard.operator_token' => null]);
 
         $response = $this->withToken('presented-but-server-is-unconfigured')
-            ->getJson('/api/dashboard/events');
+            ->getJson('/api/dashboard/operator/session');
 
         $response->assertUnauthorized()
             ->assertHeader('WWW-Authenticate', 'Bearer')
@@ -74,13 +77,13 @@ class OperatorAccessControlTest extends TestCase
             'Basic test-dashboard-operator-token',
         ] as $authorization) {
             $this->withHeader('Authorization', $authorization)
-                ->getJson('/api/dashboard/events')
+                ->getJson('/api/dashboard/operator/session')
                 ->assertUnauthorized()
                 ->assertExactJson(['message' => 'Authentication required.']);
         }
     }
 
-    public function test_every_dashboard_route_inherits_authentication_and_rate_limits(): void
+    public function test_dashboard_reads_are_public_and_mutations_require_the_operator_token(): void
     {
         $dashboardRoutes = collect(Route::getRoutes()->getRoutes())
             ->filter(fn ($route) => str_starts_with($route->uri(), 'api/dashboard/'));
@@ -89,9 +92,16 @@ class OperatorAccessControlTest extends TestCase
 
         foreach ($dashboardRoutes as $route) {
             $middleware = $route->gatherMiddleware();
+            $requiresOperator = in_array('POST', $route->methods(), true)
+                || str_ends_with($route->uri(), 'api/dashboard/operator/session');
 
-            $this->assertContains('operator.auth', $middleware, $route->uri());
             $this->assertContains('throttle:operator-api', $middleware, $route->uri());
+
+            if ($requiresOperator) {
+                $this->assertContains('operator.auth', $middleware, $route->uri());
+            } else {
+                $this->assertNotContains('operator.auth', $middleware, $route->uri());
+            }
         }
     }
 
@@ -101,6 +111,8 @@ class OperatorAccessControlTest extends TestCase
         $this->withoutHeader('Authorization');
 
         $this->getJson('/api/health')->assertOk();
+        $this->getJson('/api/health/ready')->assertStatus(200);
+        $this->getJson('/api/dashboard/events')->assertOk();
         $this->postJson('/api/checkout/handoffs', $this->validHandoffPayload(1))
             ->assertAccepted();
         $this->postJson('/api/foxy/webhooks', [])
@@ -188,16 +200,16 @@ class OperatorAccessControlTest extends TestCase
     {
         for ($index = 1; $index <= 60; $index++) {
             $this->withToken("invalid-operator-token-{$index}")
-                ->getJson('/api/dashboard/events')
+                ->getJson('/api/dashboard/operator/session')
                 ->assertUnauthorized();
         }
 
         $this->withToken('one-more-invalid-operator-token')
-            ->getJson('/api/dashboard/events')
+            ->getJson('/api/dashboard/operator/session')
             ->assertTooManyRequests();
 
         $this->withToken('test-dashboard-operator-token')
-            ->getJson('/api/dashboard/events')
+            ->getJson('/api/dashboard/operator/session')
             ->assertOk();
     }
 
@@ -205,12 +217,12 @@ class OperatorAccessControlTest extends TestCase
     {
         for ($index = 1; $index <= 60; $index++) {
             $this->withToken('test-dashboard-operator-token')
-                ->getJson('/api/dashboard/events')
+                ->getJson('/api/dashboard/operator/session')
                 ->assertOk();
         }
 
         $this->withToken('invalid-after-valid-traffic')
-            ->getJson('/api/dashboard/events')
+            ->getJson('/api/dashboard/operator/session')
             ->assertUnauthorized();
     }
 

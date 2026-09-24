@@ -228,9 +228,9 @@ accessible.
 - The middleware Render filesystem is ephemeral SQLite. Checkout, handoff, CRM,
   and analytics rows disappear on redeploy, restart, or spin-down. Startup
   migrates an empty schema. There is no hosted database backup.
-- The public dashboard supports a credential-free Seeded preview. Live data,
-  detailed readiness, retry, reconcile, and sweep actions require the shared
-  operator bearer token. SSO and multi-user RBAC are not implemented.
+- The public dashboard opens on live read-only middleware data. Seeded mode is a
+  credential-free fixture preview. Reconcile, sweep, and CRM retry require the
+  shared operator bearer token. SSO and multi-user RBAC are not implemented.
 - Live HubSpot writes are off by default and require private runtime
   configuration. Local/test flows use `FakeHubSpotClient`.
 - Browser analytics use a consent-aware local `dataLayer`; server analytics are

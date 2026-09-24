@@ -179,7 +179,7 @@ export function HandoffDetailSection({
         ) : null}
         {reconcileDisabled && reconcileUi.kind === 'eligible' ? (
           <p className="text-xs text-slate-500">
-            Manual reconcile is available in API view modes only.
+            Manual reconcile requires unlocked operator actions.
           </p>
         ) : null}
         {reconcileUi.kind === 'ineligible' && handoff.status === 'cart_handoff_created' ? (

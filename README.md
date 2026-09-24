@@ -154,9 +154,7 @@ Start the dashboard in another terminal:
 npm run dev:dashboard
 ```
 
-The dashboard offers a credential-free Seeded mode. Live API modes begin locked
-and require a private `DASHBOARD_OPERATOR_TOKEN` configured on the middleware
-and supplied at runtime; it is never bundled into the browser application.
+The dashboard opens on live read-only middleware data. Seeded mode is a credential-free fixture preview. Reconcile, sweep, and CRM retry require a private `DASHBOARD_OPERATOR_TOKEN` configured on the middleware and supplied at runtime; it is never bundled into the browser application.
 Component-specific setup lives in [dashboard/README.md](dashboard/README.md)
 and [middleware-api/README.md](middleware-api/README.md).
 

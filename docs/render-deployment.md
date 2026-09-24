@@ -184,7 +184,7 @@ curl -I https://hungry-4-joy-dashboard.onrender.com
 curl https://hungry-4-joy-dashboard.onrender.com/api/health
 ```
 
-Open the dashboard in a browser, confirm **Live API** begins locked, and enter the privately supplied operator token. Confirm **System status** and checkout events load, then use **Lock** and verify live data is no longer accessible. Manual CRM retry actions call through the same authenticated proxied `/api` path. Seeded view remains public and credential-free.
+Open the dashboard in a browser. Live API loads checkout events and system status without a token, and reconcile, sweep, and CRM retry stay disabled. Enter the privately supplied operator token in the bottom-right card, confirm those actions enable, then use **Lock** and verify the live rows remain visible while the actions disable again. Seeded view remains a credential-free fixture preview.
 
 The token belongs only on the middleware service. `render.yaml` declares it with `sync: false`; Blueprint sync does not provide a value. See [`access-control.md`](access-control.md) for ownership and rotation.
 

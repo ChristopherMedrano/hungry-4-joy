@@ -36,7 +36,7 @@ Start the local Laravel server:
 php artisan serve
 ```
 
-Set a private, high-entropy `DASHBOARD_OPERATOR_TOKEN` in the local `.env` to use dashboard, reconciliation, and detailed readiness routes. Those routes fail closed with a generic `401` when the server token is missing or a request does not carry a matching bearer token. Basic liveness, public handoff registration, and signed Foxy webhooks keep their separate public/provider boundaries. See [`docs/access-control.md`](../docs/access-control.md).
+Set a private, high-entropy `DASHBOARD_OPERATOR_TOKEN` in the local `.env` to run reconcile, sweep, and CRM retry. Those mutation routes fail closed with a generic `401` when the server token is missing or a request does not carry a matching bearer token. Dashboard reads, readiness, basic liveness, public handoff registration, and signed Foxy webhooks stay available without that token. See [`docs/access-control.md`](../docs/access-control.md).
 
 Use the URL printed by Artisan. If another local service already uses port `8000`, Laravel may choose the next available port, such as `8001`.
 

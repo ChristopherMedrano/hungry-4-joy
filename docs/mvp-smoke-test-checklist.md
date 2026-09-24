@@ -259,7 +259,7 @@ servers; no database reset is required.
 ### 6. Local observability and unavailable features
 
 - [ ] `GET /api/health` returns `200` and `status: ok` locally.
-- [ ] The unlocked System status view calls protected `GET /api/health/ready`.
+- [ ] The System status view calls public `GET /api/health/ready`.
   A degraded optional integration is acceptable; an unreachable database or
   pending migration is a failure.
 - [ ] Event detail and attempt trace expose safe chronological integration-step
@@ -286,12 +286,15 @@ returns `404` there by design.
 ### Read-only hosted checks
 
 - [ ] Campaign page, dashboard shell, and middleware `GET /api/health` load.
-- [ ] The dashboard opens locked. Enter the privately supplied operator token
-  only in its unlock form; never put it in a URL, command argument, shell
-  history, screenshot, or evidence file.
-- [ ] Without a token, detailed readiness and `/api/dashboard/*` return `401`.
-- [ ] After unlock, System status loads and distinguishes optional degradation
-  from database/readiness failure.
+- [ ] The dashboard opens on live read-only data. Reconcile, sweep, and CRM retry
+  stay disabled until the operator token is entered in the unlock card. Never
+  put the token in a URL, command argument, shell history, screenshot, or
+  evidence file.
+- [ ] Without a token, dashboard `GET` routes and `GET /api/health/ready` return
+  data, and reconcile, sweep, and CRM retry return `401`.
+- [ ] After unlock, those actions are enabled. **Lock** disables them again
+  while the live rows stay on screen. System status distinguishes optional
+  degradation from database/readiness failure.
 
 ### Authorized write path
 

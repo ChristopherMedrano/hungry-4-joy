@@ -6,9 +6,9 @@ Hungry-4-Joy is a public portfolio demo, but its support data and provider-trigg
 
 | Caller | Public endpoints | Protected endpoints |
 | --- | --- | --- |
-| Anonymous donor/browser | `GET /api/health`, `POST /api/checkout/handoffs` | None |
+| Anonymous donor/browser | `GET /api/health`, `GET /api/health/ready`, `GET /api/dashboard/*`, `POST /api/checkout/handoffs` | None |
 | Foxy webhook sender | Signed `POST /api/foxy/webhooks` | None |
-| Support operator | Public endpoints | All `/api/dashboard/*`, `POST /api/checkout/handoffs/reconcile`, `GET /api/health/ready` |
+| Support operator | Public endpoints | `GET /api/dashboard/operator/session`, `POST /api/dashboard/handoffs/reconcile`, `POST /api/dashboard/handoffs/reconcile-open`, `POST /api/dashboard/handoffs/sweep-unfed`, `POST /api/dashboard/crm-sync/{id}/retry`, `POST /api/checkout/handoffs/reconcile` |
 
 The local fixture receiver, `POST /api/checkout/events`, remains unavailable in production. Foxy webhook authentication continues to use its own signature; it does not use the operator token.
 
@@ -24,7 +24,7 @@ Public handoff registration (300/minute), Foxy webhooks (600/minute), failed ope
 | --- | --- | --- |
 | Anonymous donor | Campaign pages, Foxy checkout, public handoff registration, basic liveness | No project credential |
 | Foxy webhook sender | Signed webhook delivery only | Foxy webhook signing secret is held by Foxy and the middleware runtime |
-| Support operator | Unlock the dashboard; inspect safe support records/readiness; run bounded retry/reconciliation actions | Operator token shared only through an approved private channel |
+| Support operator | Unlock reconcile, sweep, and CRM retry while live dashboard reads stay public | Operator token shared only through an approved private channel |
 | WordPress administrator | WordPress content and demo-site administration | WordPress admin credential; no implied dashboard or provider access |
 | GitHub maintainer | Repository, review, and CI administration | GitHub account permissions; no implied runtime secret access |
 | Render/deployment administrator | Service configuration, secret injection, deployment, and rotation | Render account/team permissions |
@@ -38,12 +38,12 @@ Generate a high-entropy token on a trusted machine, for example with `openssl ra
 
 1. A Render/deployment administrator sets `DASHBOARD_OPERATOR_TOKEN` on the middleware service. The Blueprint declares it with `sync: false`; no value is checked in.
 2. Share it with the intended support operator through an approved private channel.
-3. The operator enters it into the dashboard unlock form. It is retained in JavaScript memory only, sent in the Authorization header, and cleared on **Lock**, switching to Seeded/preview mode, refresh, tab close, or any `401` response. Clearing or replacing it aborts in-flight requests and invalidates responses from the previous access generation.
+3. The operator enters it into the dashboard unlock card. It is retained in JavaScript memory only, sent in the Authorization header on operator actions, and cleared on **Lock**, switching away from Live API, refresh, tab close, or any `401` response from an operator action. Clearing or replacing it aborts in-flight requests and invalidates responses from the previous access generation.
 4. To rotate, generate a new token, update the middleware secret, deploy/restart the middleware as required, privately distribute the replacement, and revoke the old value by completing the runtime update.
 
 Do not configure the token on the dashboard service. Anything exposed through `VITE_*` is public build output.
 
-The public dashboard shell and Seeded view remain portfolio-visible without credentials. Live API/readiness data and all live actions require an unlock. This is intentionally a small demo support boundary; full SSO and multi-user RBAC are deferred until the project has real user-management requirements.
+The public dashboard opens on live read-only data. Seeded view remains a credential-free fixture preview. Reconcile, sweep, and CRM retry require the operator token. This is intentionally a small demo support boundary; full SSO and multi-user RBAC are deferred until the project has real user-management requirements.
 
 ## Verification
 
@@ -54,4 +54,4 @@ cd middleware-api
 php artisan test --filter=OperatorAccessControlTest
 ```
 
-After an authorized secret update and deployment, open the dashboard and verify that Live API starts locked, an invalid token returns to the unlock prompt, a valid token loads readiness/data, **Lock** removes access, and Seeded view remains available without a token. Never put a token in a curl URL, command history, browser address bar, or captured output.
+After an authorized secret update and deployment, open the dashboard and verify that Live API loads checkout rows and system status without a token, reconcile/sweep/retry stay disabled, an invalid token stays on the unlock card, a valid token enables those actions, **Lock** disables them again without clearing the live rows, and Seeded view remains available without a token. Never put a token in a curl URL, command history, browser address bar, or captured output.

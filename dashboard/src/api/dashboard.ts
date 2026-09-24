@@ -66,6 +66,15 @@ function apiUrl(path: string): string {
   return `${dashboardApiBase}${path}`
 }
 
+export async function verifyOperatorSession(): Promise<void> {
+  const response = await operatorAuthenticatedFetch(apiUrl('/api/dashboard/operator/session'))
+  assertDashboardResponseCurrent(response)
+
+  if (!response.ok) {
+    throw new Error('Operator access was not accepted.')
+  }
+}
+
 function toQuery(filters: EventFilters, page = 1, perPage = 25): string {
   const params = new URLSearchParams()
 

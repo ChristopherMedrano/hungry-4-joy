@@ -13,6 +13,7 @@ interface CheckoutAttemptsFiltersBarProps {
   isReconcilingOpen?: boolean
   isSweepingUnfed?: boolean
   batchActionsDisabled?: boolean
+  batchActionsMessage?: string
   batchSummary?: HandoffBatchReconcileSummary | HandoffSweepUnfedSummary | null
   batchSummaryKind?: 'reconcile-open' | 'sweep-unfed' | null
   batchError?: string | null
@@ -42,6 +43,7 @@ export function CheckoutAttemptsFiltersBar({
   isReconcilingOpen = false,
   isSweepingUnfed = false,
   batchActionsDisabled = false,
+  batchActionsMessage = 'Bulk reconcile actions are available in Live API view.',
   batchSummary = null,
   batchSummaryKind = null,
   batchError = null,
@@ -95,9 +97,7 @@ export function CheckoutAttemptsFiltersBar({
       {hasMessages ? (
         <div className="mt-2 space-y-1">
           {batchActionsDisabled ? (
-            <p className="text-xs text-slate-500">
-              Bulk reconcile actions are available in API view modes only.
-            </p>
+            <p className="text-xs text-slate-500">{batchActionsMessage}</p>
           ) : null}
           {showReconcileSummary ? (
             <p className="text-xs text-teal-200" role="status">

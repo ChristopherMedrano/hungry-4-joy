@@ -30,7 +30,7 @@ Route::get('/health', function () {
 });
 
 Route::get('/health/ready', HealthReadyController::class)
-    ->middleware(['operator.auth', 'throttle:operator-api']);
+    ->middleware('throttle:operator-api');
 
 $checkoutEventResponse = fn (string $status, int $code = Response::HTTP_OK) => response()->json([
     'service' => 'hungry-4-joy-middleware-api',
@@ -215,8 +215,15 @@ Route::post('/foxy/webhooks', function (
 })->middleware('throttle:foxy-webhooks')->name('foxy.webhooks.store');
 
 Route::prefix('dashboard')
-    ->middleware(['operator.auth', 'throttle:operator-api'])
+    ->middleware('throttle:operator-api')
     ->group(function () {
+        Route::get('/operator/session', function () {
+            return response()->json([
+                'service' => 'hungry-4-joy-middleware-api',
+                'status' => 'ok',
+            ]);
+        })->middleware('operator.auth')->name('dashboard.operator.session');
+
         Route::get('/integration-events', [DashboardIntegrationStepController::class, 'index'])
             ->name('dashboard.integration-events.index');
         Route::get('/analytics-events/by-attempt/{donationAttemptId}', [DashboardServerAnalyticsController::class, 'showByAttempt'])
@@ -228,18 +235,18 @@ Route::prefix('dashboard')
             ->name('dashboard.analytics-events.index');
         Route::post('/crm-sync/{crmSyncAttempt}/retry', [DashboardCrmSyncRetryController::class, 'store'])
             ->whereNumber('crmSyncAttempt')
-            ->middleware('throttle:operator-mutations')
+            ->middleware(['operator.auth', 'throttle:operator-mutations'])
             ->name('dashboard.crm-sync.retry');
         Route::get('/handoffs', [DashboardHandoffController::class, 'index'])
             ->name('dashboard.handoffs.index');
         Route::post('/handoffs/reconcile', [DashboardHandoffReconcileController::class, 'store'])
-            ->middleware('throttle:operator-mutations')
+            ->middleware(['operator.auth', 'throttle:operator-mutations'])
             ->name('dashboard.handoffs.reconcile');
         Route::post('/handoffs/reconcile-open', [DashboardHandoffBatchController::class, 'reconcileOpen'])
-            ->middleware('throttle:operator-mutations')
+            ->middleware(['operator.auth', 'throttle:operator-mutations'])
             ->name('dashboard.handoffs.reconcile-open');
         Route::post('/handoffs/sweep-unfed', [DashboardHandoffBatchController::class, 'sweepUnfed'])
-            ->middleware('throttle:operator-mutations')
+            ->middleware(['operator.auth', 'throttle:operator-mutations'])
             ->name('dashboard.handoffs.sweep-unfed');
         Route::get('/events/by-attempt/{donationAttemptId}', [DashboardEventController::class, 'showByAttempt'])
             ->name('dashboard.events.by-attempt');

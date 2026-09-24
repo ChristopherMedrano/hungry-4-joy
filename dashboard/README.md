@@ -14,11 +14,11 @@ npm run dev
 
 Open the URL Vite prints (default `http://127.0.0.1:5173`).
 
-Use **View mode → Seeded preview** to browse every transaction and CRM badge state without running the API seeder or entering a credential.
+Use **View mode → Seeded** to browse every transaction and CRM badge state without running the API seeder.
 
 On localhost, **Hosted API (Render)** is the default and reads the hosted middleware database. Use **Local API (demo fixtures)** when testing against `php artisan serve` and seeded demo rows. **Seeded** and shell preview modes work on hosted and local builds.
 
-Live API modes begin locked. Enter the operator token at runtime to load support data and readiness or run actions. The token is held in page memory only: it is not a Vite variable, persistent browser storage, cookie, or URL value. **Lock**, switching to Seeded/preview mode, page refresh, tab close, and API `401` responses clear access and invalidate in-flight requests. See [`docs/access-control.md`](../docs/access-control.md).
+Live API loads without a token and stays read-only. The bottom-right operator card unlocks reconcile, sweep, and CRM retry. The token is held in page memory only: it is not a Vite variable, persistent browser storage, cookie, or URL value. **Lock**, switching away from Live API, page refresh, tab close, and an operator-action `401` clear the token. See [`docs/access-control.md`](../docs/access-control.md).
 
 ### Hosted API data
 
@@ -98,7 +98,7 @@ php artisan dashboard:seed-status-demo
 php artisan serve
 ```
 
-Set a private `DASHBOARD_OPERATOR_TOKEN` in the middleware's local `.env` before starting Laravel, then enter that same value in the unlock form. Never add it to the dashboard environment or source.
+Set a private `DASHBOARD_OPERATOR_TOKEN` in the middleware's local `.env` before using reconcile, sweep, or CRM retry. Enter that same value in the dashboard unlock card. Never add it to the dashboard environment or source. Live reads work without it.
 
 The status demo seeder loads one row for every CRM and Foxy badge state. To also include the original checkout contract fixtures:
 
