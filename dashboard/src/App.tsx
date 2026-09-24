@@ -1090,10 +1090,11 @@ function App() {
   const previewControl = (
     <div className="flex items-center gap-2">
       <label className="flex items-center gap-2 text-sm text-slate-400">
-        <span className="hidden text-xs font-medium uppercase tracking-wide lg:inline">
+        <span className="hidden text-xs font-medium uppercase tracking-wide lg:inline" aria-hidden="true">
           View mode
         </span>
         <select
+          aria-label="View mode"
           value={viewState}
           onChange={(event) => {
             const nextView = event.target.value as DashboardDataMode

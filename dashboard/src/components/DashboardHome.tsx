@@ -29,7 +29,7 @@ interface MetricCardProps {
 }
 
 const hintToneClass: Record<NonNullable<MetricCardProps['hintTone']>, string> = {
-  muted: 'text-slate-500',
+  muted: 'text-slate-400',
   positive: 'text-emerald-400',
   negative: 'text-rose-400',
 }
@@ -175,11 +175,11 @@ export function DashboardHome({
         <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Activity feed</h2>
-            <span className="text-xs text-slate-500">Recent events</span>
+            <span className="text-xs text-slate-400">Recent events</span>
           </div>
           <div className="mt-4">
             {recentEvents.length === 0 ? (
-              <p className="py-10 text-center text-sm text-slate-500">
+              <p className="py-10 text-center text-sm text-slate-400">
                 No recent checkout activity.
               </p>
             ) : (
@@ -195,7 +195,7 @@ export function DashboardHome({
                         <p className="truncate text-sm font-medium text-slate-100">
                           {event.donor.display_name}
                         </p>
-                        <p className="truncate text-xs text-slate-500">
+                        <p className="truncate text-xs text-slate-400">
                           {event.campaign.campaign_name} · ${event.donation.amount.toFixed(2)}{' '}
                           {event.donation.currency}
                         </p>
@@ -203,7 +203,7 @@ export function DashboardHome({
                       <div className="flex shrink-0 items-center gap-2">
                         <TransactionStatusBadge status={event.transaction_status} />
                         <CrmStatusBadge summary={event.crm_status_summary} />
-                        <span className="hidden text-xs text-slate-500 md:inline">
+                        <span className="hidden text-xs text-slate-400 md:inline">
                           {formatShortDateTime(event.event_created_at)}
                         </span>
                       </div>
@@ -217,7 +217,7 @@ export function DashboardHome({
       </div>
 
       {isPreview ? (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-400">
           Preview metrics are derived from seeded fixture rows. Switch view mode to hosted or local
           API for live data.
         </p>
