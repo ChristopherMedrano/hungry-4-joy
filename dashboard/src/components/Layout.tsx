@@ -77,7 +77,7 @@ export function Layout({
         <div className="flex h-14 items-center justify-between gap-4 px-4">
           <div className="flex items-baseline gap-2">
             <span className="text-base font-bold text-teal-400">Hungry-4-Joy</span>
-            <span className="text-slate-600">|</span>
+            <span className="inline-block h-4 w-px self-center bg-slate-600" aria-hidden="true" />
             <span className="text-base font-semibold text-white">Dashboard</span>
           </div>
 

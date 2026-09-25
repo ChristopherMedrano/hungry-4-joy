@@ -35,12 +35,12 @@ export function IntegrationTimeline({ steps }: IntegrationTimelineProps) {
               <p className="text-sm font-medium text-slate-200">
                 {integrationStepLabel(step.step)}
               </p>
-              <time className="text-xs text-slate-500">
+              <time className="text-xs text-slate-400">
                 {formatIntegrationTimestamp(step.recorded_at)}
               </time>
             </div>
             <p className="mt-1 text-sm text-slate-400">{step.summary}</p>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
               <span className={integrationStepStatusClass(step.status)}>{step.status}</span>
               <span>{step.producer}</span>
               {step.error_code ? <span className="font-mono text-slate-400">{step.error_code}</span> : null}

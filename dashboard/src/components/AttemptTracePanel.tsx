@@ -27,17 +27,17 @@ function FoxyCartSummary({ trace }: { trace: AttemptTraceData }) {
       <h3 className={sectionHeadingClass}>Foxy cart summary</h3>
       <dl className="mt-3">
         <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Cart id</dt>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Cart id</dt>
           <dd className="font-mono text-sm text-slate-200">{trace.foxy_cart_id ?? 'N/A'}</dd>
         </div>
         <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Total</dt>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Total</dt>
           <dd className="font-mono text-sm text-slate-200">
             {cart.total_order !== null ? String(cart.total_order) : 'N/A'}
           </dd>
         </div>
         <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Attempt ids on cart
           </dt>
           <dd className="break-all font-mono text-sm text-slate-200">

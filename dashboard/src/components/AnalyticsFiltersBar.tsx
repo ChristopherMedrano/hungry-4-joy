@@ -18,7 +18,7 @@ export function AnalyticsFiltersBar({ filters, onChange }: AnalyticsFiltersBarPr
   return (
     <div className="grid gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-4 sm:grid-cols-2">
       <label className="text-sm text-slate-300">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
           Event
         </span>
         <select
@@ -34,7 +34,7 @@ export function AnalyticsFiltersBar({ filters, onChange }: AnalyticsFiltersBarPr
         </select>
       </label>
       <label className="text-sm text-slate-300">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
           Search
         </span>
         <input

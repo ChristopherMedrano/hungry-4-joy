@@ -46,7 +46,7 @@ export function TablePagination({
             </option>
           ))}
         </select>
-        <span className="text-slate-500">
+        <span className="text-slate-400">
           {start}–{end} of {total}
         </span>
       </label>

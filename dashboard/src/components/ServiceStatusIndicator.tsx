@@ -13,7 +13,7 @@ interface ServiceStatusIndicatorProps {
 const badgeStyles: Record<ServiceBannerStatus, string> = {
   healthy: 'bg-emerald-500 text-white',
   error: 'bg-rose-500 text-white',
-  disabled: 'bg-slate-500 text-slate-200',
+  disabled: 'bg-slate-600 text-white',
 }
 
 function StatusGlyph({ status }: { status: ServiceBannerStatus }) {

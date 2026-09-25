@@ -23,7 +23,7 @@ interface HandoffDetailSectionProps {
 function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</dt>
       <dd className="min-w-0 break-all font-mono text-sm text-slate-200">{value ?? 'N/A'}</dd>
     </div>
   )
@@ -151,7 +151,7 @@ export function HandoffDetailSection({
           <>
             <DetailRow label="Reconcile note" value={handoff.reconciliation.note} />
             <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Note meaning
               </dt>
               <dd className={`min-w-0 break-words ${reconciliationNoteMeaningClass}`}>
@@ -178,12 +178,12 @@ export function HandoffDetailSection({
           </button>
         ) : null}
         {reconcileDisabled && reconcileUi.kind === 'eligible' ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-400">
             Manual reconcile requires unlocked operator actions.
           </p>
         ) : null}
         {reconcileUi.kind === 'ineligible' && handoff.status === 'cart_handoff_created' ? (
-          <p className="text-xs text-slate-500">{reconcileUi.reason}</p>
+          <p className="text-xs text-slate-400">{reconcileUi.reason}</p>
         ) : null}
         {reconcileError ? (
           <p className="text-sm text-rose-300" role="alert">

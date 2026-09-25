@@ -11,7 +11,7 @@ interface AnalyticsEventDetailPanelProps {
 function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="grid gap-1 border-b border-slate-800 py-3 sm:grid-cols-[9rem_1fr]">
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</dt>
       <dd className="break-all font-mono text-sm text-slate-200">{displayOptional(value)}</dd>
     </div>
   )
@@ -48,10 +48,10 @@ export function AnalyticsEventDetailPanel({ event, embedded = false }: Analytics
       </section>
 
       <section className="mt-6">
-        <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
           Analytics payload (condensed)
         </h4>
-        <p className="mb-2 text-xs text-slate-500">
+        <p className="mb-2 text-xs text-slate-400">
           Emission-only fields. Campaign and checkout attribution appear in the summary above and
           the full contract payload below.
         </p>
@@ -61,7 +61,7 @@ export function AnalyticsEventDetailPanel({ event, embedded = false }: Analytics
       </section>
 
       <section className="mt-6">
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
           Contract payload (full)
         </h4>
         <pre className="max-h-[28rem] overflow-auto rounded-md border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed text-teal-100">

@@ -163,7 +163,7 @@ export function DashboardHome({
                         <p className="text-sm font-medium text-amber-100">{item.label}</p>
                         <p className="mt-0.5 text-xs text-slate-400">{item.body}</p>
                       </div>
-                      <Icon name="chevron-right" className="h-4 w-4 shrink-0 text-slate-500" />
+                      <Icon name="chevron-right" className="h-4 w-4 shrink-0 text-slate-400" />
                     </button>
                   </li>
                 ))}

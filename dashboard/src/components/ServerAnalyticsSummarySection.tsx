@@ -33,7 +33,7 @@ export function ServerAnalyticsSummarySection({
             <div className="mt-1 font-mono text-xs text-slate-400">
               {event.analytics_event_id}
             </div>
-            <div className="mt-1 text-xs text-slate-500">
+            <div className="mt-1 text-xs text-slate-400">
               Attempt {formatAttemptId(event.donation_attempt_id)}
             </div>
           </li>

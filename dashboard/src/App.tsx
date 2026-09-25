@@ -1523,7 +1523,7 @@ function App() {
               'system-status' ? null : (
               <EventFiltersBar filters={filters} onChange={handleEventFiltersChange} />
             )}
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               {dashboardSection === 'system-status'
                 ? 'Middleware readiness from GET /api/health/ready. Liveness probe stays at GET /api/health for deploy checks.'
                 : dashboardSection === 'crm-sync-issues'

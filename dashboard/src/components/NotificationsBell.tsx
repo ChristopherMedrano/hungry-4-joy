@@ -86,7 +86,7 @@ export function NotificationsBell() {
       >
         <Icon name="bell" className="h-5 w-5" />
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-900">
+          <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold leading-none text-slate-950 ring-2 ring-slate-900">
             {unreadCount}
           </span>
         ) : null}
@@ -112,7 +112,7 @@ export function NotificationsBell() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-100">{item.title}</p>
                   <p className="mt-0.5 text-xs text-slate-400">{item.body}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">{item.when}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">{item.when}</p>
                 </div>
               </li>
             ))}

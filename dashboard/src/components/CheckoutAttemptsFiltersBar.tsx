@@ -67,7 +67,7 @@ export function CheckoutAttemptsFiltersBar({
 
         {onReconcileOpen || onSweepUnfed ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="hidden text-xs uppercase tracking-wide text-slate-500 lg:inline">
+            <span className="hidden text-xs uppercase tracking-wide text-slate-400 lg:inline">
               Bulk
             </span>
             {onReconcileOpen ? (
@@ -97,7 +97,7 @@ export function CheckoutAttemptsFiltersBar({
       {hasMessages ? (
         <div className="mt-2 space-y-1">
           {batchActionsDisabled ? (
-            <p className="text-xs text-slate-500">{batchActionsMessage}</p>
+            <p className="text-xs text-slate-400">{batchActionsMessage}</p>
           ) : null}
           {showReconcileSummary ? (
             <p className="text-xs text-teal-200" role="status">

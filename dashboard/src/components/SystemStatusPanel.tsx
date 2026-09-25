@@ -89,18 +89,18 @@ export function SystemStatusPanel({
                 <SystemStatusBadge checkKey={key} check={check} />
               </div>
               <p className="mt-2 text-sm text-slate-200">{check.summary}</p>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-400">
                 Status: <span className="text-slate-400">{statusLabel}</span>
               </p>
               {key === 'queue' && 'driver' in check ? (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-400">
                   Driver: <span className="text-slate-400">{check.driver}</span>
                   {' · '}
                   Failed jobs:{' '}
                   <span className="text-slate-400">{check.failed_jobs}</span>
                 </p>
               ) : null}
-              <p className="mt-3 text-xs text-slate-500">{healthCheckRemediation[key]}</p>
+              <p className="mt-3 text-xs text-slate-400">{healthCheckRemediation[key]}</p>
             </article>
           )
         })}

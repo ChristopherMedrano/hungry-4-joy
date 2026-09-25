@@ -102,7 +102,7 @@ export function CrmSyncIssuesTable({
                       {errorLabel ?? '—'}
                     </div>
                     {event.crm_sync.error_code ? (
-                      <div className="font-mono text-xs text-slate-500">
+                      <div className="font-mono text-xs text-slate-400">
                         {event.crm_sync.error_code}
                       </div>
                     ) : null}

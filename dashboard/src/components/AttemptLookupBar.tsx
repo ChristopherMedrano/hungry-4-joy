@@ -60,7 +60,7 @@ export function AttemptLookupBar({
           </button>
         </div>
       </div>
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 text-xs text-slate-400">
         {mode === 'attempt'
           ? 'Pull the full handoff and checkout-event trace for one attempt id — works even when it is not in the table below.'
           : 'Resolve an attempt id from a Foxy error-log cart id when a reconcile cannot find the transaction.'}
@@ -85,7 +85,7 @@ export function AttemptLookupBar({
           type="button"
           disabled={!canLookup || isLoading}
           onClick={onLookup}
-          className="shrink-0 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-md bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? 'Looking up…' : 'Look up'}
         </button>
